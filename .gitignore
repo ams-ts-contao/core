@@ -28,3 +28,12 @@ system/config/pathconfig.php
 system/cron/cron.txt
 system/logs/*
 system/tmp/*
+
+# AMS
+.svn
+assets/html5shiv
+contao-check*
+system/modules/*
+templates/*
+tl_files
+googlefabb*.html
