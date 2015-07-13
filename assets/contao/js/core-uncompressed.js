@@ -1,20 +1,16 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Typolinks
- * @see     https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
 /**
- * Class AjaxRequest
- *
  * Provide methods to handle Ajax requests.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 var AjaxRequest =
 {
@@ -527,10 +523,10 @@ var AjaxRequest =
 		// Send request
 		if (publish) {
 			image.src = image.src.replace('invisible.gif', 'visible.gif');
-			new Request.Contao({'url':window.location.href, 'followRedirects':false}).get({'tid':id, 'state':1});
+			new Request.Contao({'url':window.location.href, 'followRedirects':false}).get({'tid':id, 'state':1, 'rt':Contao.request_token});
 		} else {
 			image.src = image.src.replace('visible.gif', 'invisible.gif');
-			new Request.Contao({'url':window.location.href, 'followRedirects':false}).get({'tid':id, 'state':0});
+			new Request.Contao({'url':window.location.href, 'followRedirects':false}).get({'tid':id, 'state':0, 'rt':Contao.request_token});
 		}
 
 		return false;
@@ -695,11 +691,9 @@ var AjaxRequest =
 
 
 /**
- * Class Backend
- *
  * Provide methods to handle back end tasks.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 var Backend =
 {
@@ -839,16 +833,9 @@ var Backend =
 			this.hide();
 		});
 		M.addButton(Contao.lang.apply, 'btn primary', function() {
-			var val = [],
-				frm = null,
-				frms = window.frames;
-			for (i=0; i<frms.length; i++) {
-				if (frms[i].name == 'simple-modal-iframe') {
-					frm = frms[i];
-					break;
-				}
-			}
-			if (frm === null) {
+			var frm = window.frames['simple-modal-iframe'],
+				val = [], inp, i;
+			if (frm === undefined) {
 				alert('Could not find the SimpleModal frame');
 				return;
 			}
@@ -856,8 +843,8 @@ var Backend =
 				alert(Contao.lang.picker);
 				return; // see #5704
 			}
-			var inp = frm.document.getElementById('tl_listing').getElementsByTagName('input');
-			for (var i=0; i<inp.length; i++) {
+			inp = frm.document.getElementById('tl_listing').getElementsByTagName('input');
+			for (i=0; i<inp.length; i++) {
 				if (!inp[i].checked || inp[i].id.match(/^check_all_/)) continue;
 				if (!inp[i].id.match(/^reset_/)) val.push(inp[i].get('value'));
 			}
@@ -1594,8 +1581,10 @@ var Backend =
 				}
 				tr.inject(parent, 'after');
 				tr.getElement('.chzn-container').destroy();
+				tr.getElement('.tl_select_column').destroy();
 				new Chosen(tr.getElement('select.tl_select'));
 				Stylect.convertSelects();
+				Backend.convertEnableModules();
 				break;
 			case 'up':
 				if (tr = parent.getPrevious('tr')) {
@@ -1886,9 +1875,6 @@ var Backend =
 			li.destroy();
 			opt.fireEvent('liszt:updated');
 		}
-
-		// Remove the tool tip of the delete button
-		$$('div.tip-wrap').destroy();
 	},
 
 	/**
@@ -1929,7 +1915,9 @@ var Backend =
 	 * Convert the "enable module" checkboxes
 	 */
 	convertEnableModules: function() {
-		$$('img.mw_enable').each(function(el) {
+		$$('img.mw_enable').filter(function(el) {
+			return !el.hasEvent('click');
+		}).each(function(el) {
 			el.addEvent('click', function() {
 				Backend.getScrollOffset();
 				var cbx = el.getNext('input');
@@ -1995,11 +1983,9 @@ window.addEvent('ajax_change', function() {
 
 
 /**
- * Class TinyCallback
- *
  * Provide callback functions for TinyMCE.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 var TinyCallback =
 {
@@ -2035,19 +2021,13 @@ var TinyCallback =
 			this.hide();
 		});
 		M.addButton(Contao.lang.apply, 'btn primary', function() {
-			var frms = window.frames,
-				frm, val, prev, i;
-			for (i=0; i<frms.length; i++) {
-				if (frms[i].name == 'simple-modal-iframe') {
-					frm = frms[i];
-					break;
-				}
-			}
-			if (frm === null) {
+			var frm = window.frames['simple-modal-iframe'],
+				val, inp, i;
+			if (frm === undefined) {
 				alert('Could not find the SimpleModal frame');
 				return;
 			}
-			var inp = frm.document.getElementById('tl_listing').getElementsByTagName('input');
+			inp = frm.document.getElementById('tl_listing').getElementsByTagName('input');
 			for (i=0; i<inp.length; i++) {
 				if (inp[i].checked && !inp[i].id.match(/^reset_/)) {
 					val = inp[i].get('value');

@@ -53,10 +53,6 @@
         <source>A newer Contao version %s is available</source>
         <target>Na voljo je nova različica %s Contao urejevalnika</target>
       </trans-unit>
-      <trans-unit id="tl_maintenance.emptyLuId">
-        <source>Please enter your Live Update ID</source>
-        <target>Prosimo, vnesite ID enostavne posodobitve</target>
-      </trans-unit>
       <trans-unit id="tl_maintenance.notWriteable">
         <source>The temporary folder (system/tmp) is not writeable</source>
         <target>Imenik začasnih datotek (system/tmp) ni zapisljiv</target>
@@ -122,6 +118,7 @@
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.undo.1">
         <source>Truncates the &lt;em&gt;tl_undo&lt;/em&gt; table which stores the deleted records. This job permanently deletes these records.</source>
+        <target>Izbriše vse vrstice v tabeli &lt;em&gt;tl_undo&lt;/em&gt;, ki hrani vse izbrisane elemente. S tem bodo ti elementi za vedno izbrisani.</target>
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.versions.0">
         <source>Purge the version table</source>
@@ -134,6 +131,7 @@
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.log.1">
         <source>Truncates the &lt;em&gt;tl_log&lt;/em&gt; table which stores all the system log entries. This job permanently deletes these records.</source>
+        <target>Izbriše vse vrstice v tabeli &lt;em&gt;tl_log&lt;/em&gt;, ki hrani vse vnose v sistemski dnevnik. S tem bodo ti vnosi za vedno izbrisani.</target>
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.images.0">
         <source>Purge the image cache</source>
@@ -161,6 +159,7 @@
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.search.1">
         <source>Removes the cached versions of the search results.</source>
+        <target>Odstrani rezultate iskanja iz predpomnilnika.</target>
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.internal.0">
         <source>Purge the internal cache</source>

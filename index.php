@@ -3,12 +3,16 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
+
+
+/**
+ * Set the script name
+ */
+define('TL_SCRIPT', 'index.php');
 
 
 /**
@@ -19,12 +23,9 @@ require 'system/initialize.php';
 
 
 /**
- * Class Index
- *
  * Main front end controller.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Index extends Frontend
 {
@@ -118,7 +119,7 @@ class Index extends Frontend
 			}
 			else
 			{
-				$arrLangs = $arrPages['*']; // empty domain
+				$arrLangs = $arrPages['*'] ?: array(); // empty domain
 			}
 
 			// Use the first result (see #4872)
@@ -126,6 +127,7 @@ class Index extends Frontend
 			{
 				$objNewPage = current($arrLangs);
 			}
+
 			// Try to find a page matching the language parameter
 			elseif (($lang = Input::get('language')) != '' && isset($arrLangs[$lang]))
 			{
@@ -159,9 +161,6 @@ class Index extends Frontend
 			$objHandler = new $GLOBALS['TL_PTY']['root']();
 			$objHandler->generate($objPage->id);
 		}
-
-		// Prevent the instance from being saved (see #6506)
-		$objPage->preventSaving();
 
 		// Inherit the settings from the parent pages if it has not been done yet
 		if (!is_bool($objPage->protected))
@@ -231,6 +230,12 @@ class Index extends Frontend
 		// Load the page object depending on its type
 		$objHandler = new $GLOBALS['TL_PTY'][$objPage->type]();
 
+		// Backup some globals (see #7659)
+		$arrHead = $GLOBALS['TL_HEAD'];
+		$arrBody = $GLOBALS['TL_BODY'];
+		$arrMootools = $GLOBALS['TL_MOOTOOLS'];
+		$arrJquery = $GLOBALS['TL_JQUERY'];
+
 		try
 		{
 			// Generate the page
@@ -252,6 +257,12 @@ class Index extends Frontend
 		}
 		catch (UnusedArgumentsException $e)
 		{
+			// Restore the globals (see #7659)
+			$GLOBALS['TL_HEAD'] = $arrHead;
+			$GLOBALS['TL_BODY'] = $arrBody;
+			$GLOBALS['TL_MOOTOOLS'] = $arrMootools;
+			$GLOBALS['TL_JQUERY'] = $arrJquery;
+
 			// Render the error page (see #5570)
 			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
 			$objHandler->generate($pageId);
@@ -306,12 +317,13 @@ class Index extends Frontend
 		}
 
 		$blnFound = false;
+		$strCacheFile = null;
 
 		// Check for a mobile layout
 		if (Input::cookie('TL_VIEW') == 'mobile' || (Environment::get('agent')->mobile && Input::cookie('TL_VIEW') != 'desktop'))
 		{
-			$strCacheKey = md5($strCacheKey . '.mobile');
-			$strCacheFile = TL_ROOT . '/system/cache/html/' . substr($strCacheKey, 0, 1) . '/' . $strCacheKey . '.html';
+			$strMd5CacheKey = md5($strCacheKey . '.mobile');
+			$strCacheFile = TL_ROOT . '/system/cache/html/' . substr($strMd5CacheKey, 0, 1) . '/' . $strMd5CacheKey . '.html';
 
 			if (file_exists($strCacheFile))
 			{
@@ -322,8 +334,8 @@ class Index extends Frontend
 		// Check for a regular layout
 		if (!$blnFound)
 		{
-			$strCacheKey = md5($strCacheKey);
-			$strCacheFile = TL_ROOT . '/system/cache/html/' . substr($strCacheKey, 0, 1) . '/' . $strCacheKey . '.html';
+			$strMd5CacheKey = md5($strCacheKey);
+			$strCacheFile = TL_ROOT . '/system/cache/html/' . substr($strMd5CacheKey, 0, 1) . '/' . $strMd5CacheKey . '.html';
 
 			if (file_exists($strCacheFile))
 			{
@@ -406,17 +418,16 @@ class Index extends Frontend
 		if ($expire !== null && ($GLOBALS['TL_CONFIG']['cacheMode'] == 'both' || $GLOBALS['TL_CONFIG']['cacheMode'] == 'browser'))
 		{
 			header('Cache-Control: public, max-age=' . ($expire - time()));
-			header('Expires: ' . gmdate('D, d M Y H:i:s', $expire) . ' GMT');
-			header('Last-Modified: ' . gmdate('D, d M Y H:i:s', time()) . ' GMT');
 			header('Pragma: public');
+			header('Last-Modified: ' . gmdate('D, d M Y H:i:s', time()) . ' GMT');
+			header('Expires: ' . gmdate('D, d M Y H:i:s', $expire) . ' GMT');
 		}
 		else
 		{
-			header('Cache-Control: no-cache');
-			header('Cache-Control: pre-check=0, post-check=0', false);
+			header('Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
+			header('Pragma: no-cache');
 			header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
 			header('Expires: Fri, 06 Jun 1975 15:10:00 GMT');
-			header('Pragma: no-cache');
 		}
 
 		echo $strBuffer;

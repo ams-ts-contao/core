@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Newsletter
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class Newsletter
- *
  * Provide methods to handle newsletters.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Newsletter
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Newsletter extends \Backend
 {
@@ -97,8 +88,8 @@ class Newsletter extends \Backend
 		}
 
 		// Replace insert tags
-		$html = $this->replaceInsertTags($objNewsletter->content);
-		$text = $this->replaceInsertTags($objNewsletter->text);
+		$html = $this->replaceInsertTags($objNewsletter->content, false);
+		$text = $this->replaceInsertTags($objNewsletter->text, false);
 
 		// Convert relative URLs
 		if ($objNewsletter->externalImages)
@@ -263,7 +254,7 @@ class Newsletter extends \Backend
 ' . $html . '
 </div>' : '') . '
 <div class="preview_text">
-' . nl2br_html5($text) . '
+<pre style="white-space:pre-wrap">' . $text . '</pre>
 </div>
 
 <div class="tl_tbox">
@@ -381,6 +372,7 @@ class Newsletter extends \Backend
 			$objTemplate->body = \String::parseSimpleTokens($html, $arrRecipient);
 			$objTemplate->charset = $GLOBALS['TL_CONFIG']['characterSet'];
 			$objTemplate->css = $css; // Backwards compatibility
+			$objTemplate->recipient = $arrRecipient['email'];
 
 			// Parse template
 			$objEmail->html = $objTemplate->parse();

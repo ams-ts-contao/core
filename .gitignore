@@ -13,21 +13,26 @@ nbproject/
 # Contao
 /.htaccess
 /*.xml
-contao/update.phar.php
-files/*
-assets/css/*
-assets/images/*
-assets/js/*
-share/*.xml
-system/cache/*
-system/config/dcaconfig.php
-system/config/initconfig.php
-system/config/langconfig.php
-system/config/localconfig.php
-system/config/pathconfig.php
-system/cron/cron.txt
-system/logs/*
-system/tmp/*
+/composer
+/contao/update.phar.php
+/files/*
+/assets/css/*
+/assets/images/*
+/assets/js/*
+/share/*.xml
+/system/cache/*
+/system/config/dcaconfig.php
+/system/config/initconfig.php
+/system/config/langconfig.php
+/system/config/localconfig.php
+/system/config/pathconfig.php
+/system/cron/cron.txt
+/system/logs/*
+/system/modules/!composer
+/system/modules/*/.skip
+/system/tmp/*
+/templates/*
+/vendor/
 
 # AMS
 .svn
@@ -37,3 +42,4 @@ system/modules/*
 templates/*
 tl_files
 googlefabb*.html
+

@@ -3,17 +3,11 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
@@ -23,9 +17,7 @@ namespace Contao;
  * The files themselves reside in the files directory. This class only handles
  * the corresponding database entries (database aided file system).
  *
- * @package   Models
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class FilesModel extends \Model
 {
@@ -71,7 +63,7 @@ class FilesModel extends \Model
 			return static::findByUuid($intId, $arrOptions);
 		}
 
-		return static::findBy('id', $intId, $arrOptions);
+		return static::findOneBy('id', $intId, $arrOptions);
 	}
 
 
@@ -102,8 +94,8 @@ class FilesModel extends \Model
 	/**
 	 * Find a file by its UUID
 	 *
-	 * @param array $strUuid    The UUID string
-	 * @param array $arrOptions An optional options array
+	 * @param string $strUuid    The UUID string
+	 * @param array  $arrOptions An optional options array
 	 *
 	 * @return \Model|null A model or null if there is no file
 	 */
@@ -112,7 +104,7 @@ class FilesModel extends \Model
 		$t = static::$strTable;
 
 		// Convert UUIDs to binary
-		if (strlen($strUuid) == 36)
+		if (\Validator::isStringUuid($strUuid))
 		{
 			$strUuid = \String::uuidToBin($strUuid);
 		}
@@ -141,7 +133,7 @@ class FilesModel extends \Model
 		foreach ($arrUuids as $k=>$v)
 		{
 			// Convert UUIDs to binary
-			if (strlen($v) == 36)
+			if (\Validator::isStringUuid($v))
 			{
 				$v = \String::uuidToBin($v);
 			}
@@ -228,7 +220,7 @@ class FilesModel extends \Model
 		foreach ($arrUuids as $k=>$v)
 		{
 			// Convert UUIDs to binary
-			if (strlen($v) == 36)
+			if (\Validator::isStringUuid($v))
 			{
 				$v = \String::uuidToBin($v);
 			}

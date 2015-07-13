@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -36,9 +34,7 @@ namespace Contao;
  *         }
  *     }
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class Widget extends \Controller
 {
@@ -434,6 +430,60 @@ abstract class Widget extends \Controller
 
 
 	/**
+	 * Check whether an object property exists
+	 *
+	 * @param string $strKey The property name
+	 *
+	 * @return boolean True if the property exists
+	 */
+	public function __isset($strKey)
+	{
+		switch ($strKey)
+		{
+			case 'id':
+				return isset($this->strId);
+				break;
+
+			case 'name':
+				return isset($this->strName);
+				break;
+
+			case 'label':
+				return isset($this->strLabel);
+				break;
+
+			case 'value':
+				return isset($this->varValue);
+				break;
+
+			case 'class':
+				return isset($this->strClass);
+				break;
+
+			case 'template':
+				return isset($this->strTemplate);
+				break;
+
+			case 'wizard':
+				return isset($this->strWizard);
+				break;
+
+			case 'required':
+				return isset($this->arrConfiguration[$strKey]);
+				break;
+
+			case 'forAttribute':
+				return isset($this->blnForAttribute);
+				break;
+
+			default:
+				return isset($this->arrAttributes[$strKey]) || isset($this->arrConfiguration[$strKey]);
+				break;
+		}
+	}
+
+
+	/**
 	 * Add an attribute
 	 *
 	 * @param string $strName  The attribute name
@@ -623,9 +673,36 @@ abstract class Widget extends \Controller
 	 */
 	public function getAttributes($arrStrip=array())
 	{
+		$strAttributes = '';
+
+		foreach (array_keys($this->arrAttributes) as $strKey)
+		{
+			if (!in_array($strKey, $arrStrip))
+			{
+				$strAttributes .= $this->getAttribute($strKey);
+			}
+		}
+
+		return $strAttributes;
+	}
+
+
+	/**
+	 * Return a single attribute
+	 *
+	 * @param string $strKey The attribute name
+	 *
+	 * @return string The attribute markup
+	 */
+	public function getAttribute($strKey)
+	{
+		if (!isset($this->arrAttributes[$strKey]))
+		{
+			return '';
+		}
+
 		$blnIsXhtml = false;
 
-		// Remove HTML5 attributes in XHTML code
 		if (TL_MODE == 'FE')
 		{
 			global $objPage;
@@ -633,47 +710,39 @@ abstract class Widget extends \Controller
 			if ($objPage->outputFormat == 'xhtml')
 			{
 				$blnIsXhtml = true;
-				unset($this->arrAttributes['autofocus']);
-				unset($this->arrAttributes['placeholder']);
-				unset($this->arrAttributes['required']);
 			}
 		}
 
-		// Optionally strip certain attributes
-		if (is_array($arrStrip))
+		if ($blnIsXhtml)
 		{
-			foreach ($arrStrip as $strAttribute)
+			if ($strKey == 'autofocus' || $strKey == 'placeholder' || $strKey == 'required')
 			{
-				unset($this->arrAttributes[$strAttribute]);
+				return '';
 			}
 		}
 
-		$strAttributes = '';
+		$varValue = $this->arrAttributes[$strKey];
 
-		// Add the remaining attributes
-		foreach ($this->arrAttributes as $k=>$v)
+		if ($strKey == 'disabled' || $strKey == 'readonly' || $strKey == 'required' || $strKey == 'autofocus' || $strKey == 'multiple')
 		{
-			if ($k == 'disabled' || $k == 'readonly' || $k == 'required' || $k == 'autofocus' || $k == 'multiple')
+			if (TL_MODE == 'FE') // see #3878
 			{
-				if (TL_MODE == 'FE') // see #3878
-				{
-					$strAttributes .= $blnIsXhtml ? ' ' . $k . '="' . $v . '"' : ' ' . $k;
-				}
-				elseif ($k == 'disabled' || $k == 'readonly' || $k == 'multiple') // see #4131
-				{
-					$strAttributes .= ' ' . $k;
-				}
+				return $blnIsXhtml ? ' ' . $strKey . '="' . $varValue . '"' : ' ' . $strKey;
 			}
-			else
+			elseif ($strKey == 'disabled' || $strKey == 'readonly' || $strKey == 'multiple') // see #4131
 			{
-				if ($v != '')
-				{
-					$strAttributes .= ' ' . $k . '="' . $v . '"';
-				}
+				return ' ' . $strKey;
+			}
+		}
+		else
+		{
+			if ($varValue != '')
+			{
+				return ' ' . $strKey . '="' . $varValue . '"';
 			}
 		}
 
-		return $strAttributes;
+		return '';
 	}
 
 
@@ -701,7 +770,7 @@ abstract class Widget extends \Controller
 	 */
 	public function validate()
 	{
-		$varValue = $this->validator(deserialize($this->getPost($this->strName)));
+		$varValue = $this->validator($this->getPost($this->strName));
 
 		if ($this->hasErrors())
 		{
@@ -732,7 +801,7 @@ abstract class Widget extends \Controller
 		$arrParts = explode('[', str_replace(']', '', $strKey));
 
 		if (!empty($arrParts))
-    	{
+		{
 			$varValue = \Input::$strMethod(array_shift($arrParts), $this->decodeEntities);
 
 			foreach($arrParts as $part)
@@ -746,7 +815,7 @@ abstract class Widget extends \Controller
 			}
 
 			return $varValue;
-    	}
+		}
 
 		return \Input::$strMethod($strKey, $this->decodeEntities);
 	}
@@ -865,7 +934,7 @@ abstract class Widget extends \Controller
 						// Validate the date (see #5086)
 						try
 						{
-							new \Date($varInput);
+							new \Date($varInput, \Date::getNumericDateFormat());
 						}
 						catch (\OutOfBoundsException $e)
 						{
@@ -893,7 +962,7 @@ abstract class Widget extends \Controller
 						// Validate the date (see #5086)
 						try
 						{
-							new \Date($varInput);
+							new \Date($varInput, \Date::getNumericDatimFormat());
 						}
 						catch (\OutOfBoundsException $e)
 						{
@@ -991,6 +1060,14 @@ abstract class Widget extends \Controller
 					}
 					break;
 
+				// Check whether the current value is a Google+ ID or vanity name
+				case 'google+':
+					if (!\Validator::isGooglePlusId($varInput))
+					{
+						$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalidGoogleId'], $this->strLabel));
+					}
+					break;
+
 				// HOOK: pass unknown tags to callback functions
 				default:
 					if (isset($GLOBALS['TL_HOOKS']['addCustomRegexp']) && is_array($GLOBALS['TL_HOOKS']['addCustomRegexp']))
@@ -1063,7 +1140,7 @@ abstract class Widget extends \Controller
 	 */
 	protected function isChecked($arrOption)
 	{
-		if (empty($this->varValue) && $arrOption['default'])
+		if (empty($this->varValue) && empty($_POST) && $arrOption['default'])
 		{
 			return static::optionChecked(1, 1);
 		}
@@ -1081,7 +1158,7 @@ abstract class Widget extends \Controller
 	 */
 	protected function isSelected($arrOption)
 	{
-		if (empty($this->varValue) && $arrOption['default'])
+		if (empty($this->varValue) && empty($_POST) && $arrOption['default'])
 		{
 			return static::optionSelected(1, 1);
 		}
@@ -1273,15 +1350,11 @@ abstract class Widget extends \Controller
 		{
 			$arrKey = explode('.', $arrData['foreignKey'], 2);
 			$objOptions = \Database::getInstance()->query("SELECT id, " . $arrKey[1] . " AS value FROM " . $arrKey[0] . " WHERE tstamp>0 ORDER BY value");
+			$arrData['options'] = array();
 
-			if ($objOptions->numRows)
+			while($objOptions->next())
 			{
-				$arrData['options'] = array();
-
-				while($objOptions->next())
-				{
-					$arrData['options'][$objOptions->id] = $objOptions->value;
-				}
+				$arrData['options'][$objOptions->id] = $objOptions->value;
 			}
 		}
 
@@ -1331,9 +1404,9 @@ abstract class Widget extends \Controller
 		$arrAttributes['value'] = deserialize($varValue);
 
 		// Convert timestamps
-		if ($varValue != '' && ($arrData['eval']['rgxp'] == 'date' || $arrData['eval']['rgxp'] == 'time' || $arrData['eval']['rgxp'] == 'datim'))
+		if ($varValue != '' && in_array($arrData['eval']['rgxp'], array('date', 'time', 'datim')))
 		{
-			$objDate = new \Date($varValue);
+			$objDate = new \Date($varValue, \Date::getFormatFromRgxp($arrData['eval']['rgxp']));
 			$arrAttributes['value'] = $objDate->{$arrData['eval']['rgxp']};
 		}
 

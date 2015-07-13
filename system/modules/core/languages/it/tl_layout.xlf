@@ -199,19 +199,19 @@
       </trans-unit>
       <trans-unit id="tl_layout.tinymce.css.1">
         <source>Includes the &lt;em&gt;tinymce.css&lt;/em&gt; style sheet from your upload directory.</source>
-        <target>Include il foglio di stile &lt;em&gt;tinymce.css&lt;/ em&gt; dalla directory di upload.</target>
+        <target>Include il foglio di stile &lt;em&gt;tinymce.css&lt;/em&gt; dalla directory di upload.</target>
       </trans-unit>
       <trans-unit id="tl_layout.external.0">
         <source>Additional style sheets</source>
         <target>Fogli di stile aggiuntivi</target>
       </trans-unit>
       <trans-unit id="tl_layout.external.1">
-        <source>Here you can add style sheets from the file system (e.g. &lt;em&gt;files/css/style.css|screen|static&lt;/em&gt;).</source>
-        <target>Aggiungi i fogli di stile dal file system (es: &lt;em&gt;files/css/style.css|screen|static&lt;/em&gt;).</target>
+        <source>Here you can add additional CSS files from the file system.</source>
+        <target>Qui è possibile aggiungere un file CSS presente sul file system.</target>
       </trans-unit>
       <trans-unit id="tl_layout.orderExt.0">
         <source>Sort order</source>
-        <target>Ordina per</target>
+        <target>Ordinamento</target>
       </trans-unit>
       <trans-unit id="tl_layout.orderExt.1">
         <source>The sort order of the style sheets.</source>

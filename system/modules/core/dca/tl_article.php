@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -332,12 +330,9 @@ $GLOBALS['TL_DCA']['tl_article'] = array
 
 
 /**
- * Class tl_article
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_article extends Backend
 {
@@ -579,6 +574,12 @@ class tl_article extends Backend
 			$varValue = standardize(String::restoreBasicEntities($dc->activeRecord->title));
 		}
 
+		// Add a prefix to reserved names (see #6066)
+		if (in_array($varValue, array('top', 'wrapper', 'header', 'container', 'main', 'left', 'right', 'footer')))
+		{
+			$varValue = 'article-' . $varValue;
+		}
+
 		$objAlias = $this->Database->prepare("SELECT id FROM tl_article WHERE id=? OR alias=?")
 								   ->execute($dc->id, $varValue);
 
@@ -591,12 +592,6 @@ class tl_article extends Backend
 			}
 
 			$varValue .= '-' . $dc->id;
-		}
-
-		// Add a prefix to reserved names (see #6066)
-		if (in_array($varValue, array('top', 'wrapper', 'header', 'container', 'main', 'left', 'right', 'footer')))
-		{
-			$varValue = 'article-' . $varValue;
 		}
 
 		return $varValue;
@@ -687,7 +682,7 @@ class tl_article extends Backend
 			$arrSections = array_merge($arrSections, $arrCustom);
 		}
 
-		return array_unique($arrSections);
+		return array_values(array_unique($arrSections));
 	}
 
 
@@ -843,7 +838,7 @@ class tl_article extends Backend
 	{
 		if (strlen(Input::get('tid')))
 		{
-			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1));
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
 			$this->redirect($this->getReferer());
 		}
 
@@ -877,8 +872,9 @@ class tl_article extends Backend
 	 * Disable/enable a user group
 	 * @param integer
 	 * @param boolean
+	 * @param \DataContainer
 	 */
-	public function toggleVisibility($intId, $blnVisible)
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
 		// Check permissions to edit
 		Input::setGet('id', $intId);
@@ -903,11 +899,11 @@ class tl_article extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, $this);
+					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
-					$blnVisible = $callback($blnVisible, $this);
+					$blnVisible = $callback($blnVisible, ($dc ?: $this));
 				}
 			}
 		}

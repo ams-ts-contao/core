@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -19,12 +17,9 @@ require '../initialize.php';
 
 
 /**
- * Class CronJob
- *
  * Cron job controller.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class CronJob extends Frontend
 {
@@ -97,7 +92,12 @@ class CronJob extends Frontend
 
 			// Update the database before the jobs are executed, in case one of them fails
 			$this->Database->query("UPDATE tl_cron SET value=$intCurrent WHERE name='$strInterval'");
-			$this->log('Running the ' . $strInterval . ' cron jobs', __METHOD__, TL_CRON);
+
+			// Add a log entry if in debug mode (see #4729)
+			if (Config::get('debugMode'))
+			{
+				$this->log('Running the ' . $strInterval . ' cron jobs', __METHOD__, TL_CRON);
+			}
 
 			foreach ($GLOBALS['TL_CRON'][$strInterval] as $callback)
 			{
@@ -105,8 +105,11 @@ class CronJob extends Frontend
 				$this->$callback[0]->$callback[1]();
 			}
 
-			$this->log(ucfirst($strInterval) . ' cron jobs complete', __METHOD__, TL_CRON);
-			break;
+			// Add a log entry if in debug mode (see #4729)
+			if (Config::get('debugMode'))
+			{
+				$this->log(ucfirst($strInterval) . ' cron jobs complete', __METHOD__, TL_CRON);
+			}
 		}
 	}
 

@@ -3,26 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
  * Reads and writes pages
  *
- * @package   Models
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class PageModel extends \Model
 {
@@ -242,7 +234,7 @@ class PageModel extends \Model
 	 * @param array $arrAliases An array of possible alias names
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model_Collection|null A collection of Models or null if there is no matching pages
+	 * @return \Model\Collection|null A collection of Models or null if there is no matching pages
 	 */
 	public static function findByAliases($arrAliases, array $arrOptions=array())
 	{
@@ -410,15 +402,20 @@ class PageModel extends \Model
 	 */
 	public static function findParentsById($intId)
 	{
-		$objPages = \Database::getInstance()->prepare("SELECT *, @pid:=pid FROM tl_page WHERE id=?" . str_repeat(" UNION SELECT *, @pid:=pid FROM tl_page WHERE id=@pid", 9))
-											->execute($intId);
+		$arrModels = array();
 
-		if ($objPages->numRows < 1)
+		while ($intId > 0 && ($objPage = static::findByPk($intId)) !== null)
+		{
+			$intId = $objPage->pid;
+			$arrModels[] = $objPage;
+		}
+
+		if (empty($arrModels))
 		{
 			return null;
 		}
 
-		return \Model\Collection::createFromDbResult($objPages, 'tl_page');
+		return new \Model\Collection($arrModels, 'tl_page');
 	}
 
 
@@ -485,7 +482,7 @@ class PageModel extends \Model
 
 			if ($objParentPage !== null)
 			{
-				while ($objParentPage->next() && $pid > 0 && $type != 'root')
+				while ($pid > 0 && $type != 'root' && $objParentPage->next())
 				{
 					$pid = $objParentPage->pid;
 					$type = $objParentPage->type;
@@ -550,7 +547,9 @@ class PageModel extends \Model
 		if ($objParentPage !== null && $objParentPage->type == 'root')
 		{
 			$this->rootId = $objParentPage->id;
-			$this->rootTitle = $objParentPage->pageTitle ?: $objParentPage->title;
+			$this->rootAlias = $objParentPage->alias;
+			$this->rootTitle = $objParentPage->title;
+			$this->rootPageTitle = $objParentPage->pageTitle ?: $objParentPage->title;
 			$this->domain = $objParentPage->dns;
 			$this->rootLanguage = $objParentPage->language;
 			$this->language = $objParentPage->language;
@@ -607,7 +606,10 @@ class PageModel extends \Model
 			$this->datimFormat = $GLOBALS['TL_CONFIG']['datimFormat'];
 		}
 
+		// Prevent saving (see #6506 and #7199)
+		$this->preventSaving();
 		$this->blnDetailsLoaded = true;
+
 		return $this;
 	}
 

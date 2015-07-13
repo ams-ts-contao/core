@@ -3,12 +3,16 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
+
+
+/**
+ * Set the script name
+ */
+define('TL_SCRIPT', 'contao/popup.php');
 
 
 /**
@@ -19,12 +23,9 @@ require_once '../system/initialize.php';
 
 
 /**
- * Class Popup
- *
  * Pop-up file preview (file manager).
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Popup extends Backend
 {
@@ -94,21 +95,7 @@ class Popup extends Backend
 		if (Input::get('download') && $this->strFile)
 		{
 			$objFile = new File($this->strFile, true);
-
-			header('Content-Type: ' . $objFile->mime);
-			header('Content-Transfer-Encoding: binary');
-			header('Content-Disposition: attachment; filename="' . $objFile->basename . '"');
-			header('Content-Length: ' . $objFile->filesize);
-			header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-			header('Pragma: public');
-			header('Expires: 0');
-
-			$resFile = fopen(TL_ROOT . '/' . $this->strFile, 'rb');
-			fpassthru($resFile);
-			fclose($resFile);
-			ob_flush(); // see #3595
-
-			$this->redirect(str_replace('&download=1', '', Environment::get('request')));
+			$objFile->sendToBrowser();
 		}
 
 		$this->Template = new BackendTemplate('be_popup');
@@ -143,7 +130,7 @@ class Popup extends Backend
 			$this->Template->atime = Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $objFile->atime);
 			$this->Template->filesize = $this->getReadableSize($objFile->filesize) . ' (' . number_format($objFile->filesize, 0, $GLOBALS['TL_LANG']['MSC']['decimalSeparator'], $GLOBALS['TL_LANG']['MSC']['thousandsSeparator']) . ' Byte)';
 			$this->Template->href = ampersand(Environment::get('request'), true) . '&amp;download=1';
-			$this->Template->path = $this->strFile;
+			$this->Template->path = specialchars($this->strFile);
 
 			// Image
 			if ($objFile->isGdImage)

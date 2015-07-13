@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -593,8 +591,9 @@ $GLOBALS['TL_DCA']['tl_style'] = array
 		'own' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_style']['own'],
+			'search'                  => true,
 			'inputType'               => 'textarea',
-			'eval'                    => array('decodeEntities'=>true, 'style'=>'height:120px'),
+			'eval'                    => array('preserveTags'=>true, 'style'=>'height:120px'),
 			'sql'                     => "text NULL"
 		),
 		'invisible' => array
@@ -609,12 +608,9 @@ $GLOBALS['TL_DCA']['tl_style'] = array
 
 
 /**
- * Class tl_style
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_style extends Backend
 {
@@ -766,7 +762,7 @@ class tl_style extends Backend
 	{
 		if (strlen(Input::get('tid')))
 		{
-			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1));
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
 			$this->redirect($this->getReferer());
 		}
 
@@ -785,8 +781,9 @@ class tl_style extends Backend
 	 * Toggle the visibility of a format definition
 	 * @param integer
 	 * @param boolean
+	 * @param \DataContainer
 	 */
-	public function toggleVisibility($intId, $blnVisible)
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
 		$objVersions = new Versions('tl_style', $intId);
 		$objVersions->initialize();
@@ -799,11 +796,11 @@ class tl_style extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, $this);
+					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
-					$blnVisible = $callback($blnVisible, $this);
+					$blnVisible = $callback($blnVisible, ($dc ?: $this));
 				}
 			}
 		}

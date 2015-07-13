@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao\Database;
@@ -16,9 +14,7 @@ namespace Contao\Database;
 /**
  * MySQLi-specific database class
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Mysqli extends \Database
 {
@@ -119,7 +115,7 @@ class Mysqli extends \Database
 	protected function list_fields($strTable)
 	{
 		$arrReturn = array();
-		$objFields = $this->query("SELECT * FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` LIKE '{$this->arrConfig['dbDatabase']}' AND `TABLE_NAME` LIKE '%$strTable'");
+		$objFields = $this->query("SELECT * FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` LIKE '{$this->arrConfig['dbDatabase']}' AND `TABLE_NAME` LIKE '$strTable'");
 
 		while ($objFields->next())
 		{

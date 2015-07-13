@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class Frontend
- *
  * Provide methods to manage front end controllers.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class Frontend extends \Controller
 {
@@ -181,7 +172,7 @@ abstract class Frontend extends \Controller
 				}
 				else
 				{
-					$arrLangs = $arrPages['*']; // Empty domain
+					$arrLangs = $arrPages['*'] ?: array(); // empty domain
 				}
 
 				$arrAliases = array();
@@ -344,7 +335,7 @@ abstract class Frontend extends \Controller
 			// Redirect to the language root (e.g. en/)
 			if ($GLOBALS['TL_CONFIG']['addLanguageToUrl'] && !$GLOBALS['TL_CONFIG']['doNotRedirectEmpty'] && \Environment::get('request') == '')
 			{
-				static::redirect((!$GLOBALS['TL_CONFIG']['rewriteURL'] ? 'index.php/' : '') . $objRootPage->language . '/', 302);
+				static::redirect((!$GLOBALS['TL_CONFIG']['rewriteURL'] ? 'index.php/' : '') . $objRootPage->language . '/', 301);
 			}
 		}
 

@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class FormFileUpload
- *
  * File upload field.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class FormFileUpload extends \Widget implements \uploadable
 {
@@ -236,16 +227,6 @@ class FormFileUpload extends \Widget implements \uploadable
 					$this->Files->move_uploaded_file($file['tmp_name'], $strUploadFolder . '/' . $file['name']);
 					$this->Files->chmod($strUploadFolder . '/' . $file['name'], $GLOBALS['TL_CONFIG']['defaultFileChmod']);
 
-					$_SESSION['FILES'][$this->strName] = array
-					(
-						'name' => $file['name'],
-						'type' => $file['type'],
-						'tmp_name' => TL_ROOT . '/' . $strUploadFolder . '/' . $file['name'],
-						'error' => $file['error'],
-						'size' => $file['size'],
-						'uploaded' => true
-					);
-
 					// Generate the DB entries
 					$strFile = $strUploadFolder . '/' . $file['name'];
 					$objFile = \FilesModel::findByPath($strFile);
@@ -260,11 +241,23 @@ class FormFileUpload extends \Widget implements \uploadable
 					}
 					else
 					{
-						\Dbafs::addResource($strFile);
+						$objFile = \Dbafs::addResource($strFile);
 					}
 
 					// Update the hash of the target folder
 					\Dbafs::updateFolderHashes($strUploadFolder);
+
+					// Add the session entry (see #6986)
+					$_SESSION['FILES'][$this->strName] = array
+					(
+						'name'     => $file['name'],
+						'type'     => $file['type'],
+						'tmp_name' => TL_ROOT . '/' . $strFile,
+						'error'    => $file['error'],
+						'size'     => $file['size'],
+						'uploaded' => true,
+						'uuid'     => \String::binToUuid($objFile->uuid)
+					);
 
 					// Add a log entry
 					$this->log('File "'.$file['name'].'" has been moved to "'.$strUploadFolder.'"', __METHOD__, TL_FILES);

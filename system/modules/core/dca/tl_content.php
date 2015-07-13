@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -33,8 +31,7 @@ $GLOBALS['TL_DCA']['tl_content'] = array
 			'keys' => array
 			(
 				'id' => 'primary',
-				'pid' => 'index',
-				'ptable' => 'index'
+				'pid' => 'index'
 			)
 		)
 	),
@@ -254,7 +251,7 @@ $GLOBALS['TL_DCA']['tl_content'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['tl_content']['imagemargin'],
 			'exclude'                 => true,
 			'inputType'               => 'trbl',
-			'options'                 => array('px', '%', 'em', 'ex', 'pt', 'pc', 'in', 'cm', 'mm'),
+			'options'                 => array('px', '%', 'em', 'rem', 'ex', 'pt', 'pc', 'in', 'cm', 'mm'),
 			'eval'                    => array('includeBlankOption'=>true, 'tl_class'=>'w50'),
 			'sql'                     => "varchar(128) NOT NULL default ''"
 		),
@@ -814,12 +811,9 @@ if (Input::get('do') == 'article' || Input::get('do') == 'page')
 
 
 /**
- * Class tl_content
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_content extends Backend
 {
@@ -1616,7 +1610,7 @@ class tl_content extends Backend
 	{
 		if (strlen(Input::get('tid')))
 		{
-			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1));
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
 			$this->redirect($this->getReferer());
 		}
 
@@ -1641,8 +1635,9 @@ class tl_content extends Backend
 	 * Toggle the visibility of an element
 	 * @param integer
 	 * @param boolean
+	 * @param \DataContainer
 	 */
-	public function toggleVisibility($intId, $blnVisible)
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
 		// Check permissions to edit
 		Input::setGet('id', $intId);
@@ -1656,11 +1651,11 @@ class tl_content extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($this);
+					$this->$callback[0]->$callback[1](($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
-					$callback($this);
+					$callback(($dc ?: $this));
 				}
 			}
 		}
@@ -1683,11 +1678,11 @@ class tl_content extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, $this);
+					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
-					$blnVisible = $callback($blnVisible, $this);
+					$blnVisible = $callback($blnVisible, ($dc ?: $this));
 				}
 			}
 		}

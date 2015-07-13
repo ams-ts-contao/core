@@ -15,6 +15,7 @@
       </trans-unit>
       <trans-unit id="tl_files.protected.1">
         <source>Prevent accessing the folder via HTTP. The files can still be made available e.g. with the downloads element.</source>
+        <target>از دسترسی به پوشه از طریق اچ‌تی‌تی‌پی جلوگیری شد. ولی پرونده‌ها مثلا از طریق المان بارگیری در دسترس خواهند بود.</target>
       </trans-unit>
       <trans-unit id="tl_files.meta.0">
         <source>Meta information</source>
@@ -22,10 +23,11 @@
       </trans-unit>
       <trans-unit id="tl_files.meta.1">
         <source>Here you can enter the file meta information.</source>
-        <target>می‌توانید اطلاعات متا پرونده را وارد نمایید.</target>
+        <target>اینجا می‌توانید اطلاعات متا پرونده را وارد نمایید.</target>
       </trans-unit>
       <trans-unit id="tl_files.htaccessInfo">
         <source>Folder protection is accomplished by adding a .htaccess file which denies access to the folder. It seems that you are not using an Apache server, therefore the feature might not work at all or require to adjust your server configuration. Please double-check before uploading any non-public resources!</source>
+        <target>حفاظت پوشه با اضافه کردن پرونده .htaccess که جلوی دسترسی به پوشه را می‌گیرد، انجام شد. ولی به نظر می‌رسد که شما از سامانه آپاچی استفاده نمی‌کنید، بنابراین این ویژگی ممکن است همیشه کار نکند یا نیاز به تنظیمات سامانه داشته باشد. لطفا قبل از بارگذاری هر منبع غیرعمومی دوباره بررسی نمایید.</target>
       </trans-unit>
       <trans-unit id="tl_files.fileupload.0">
         <source>File upload</source>
@@ -33,7 +35,7 @@
       </trans-unit>
       <trans-unit id="tl_files.fileupload.1">
         <source>Browse your local computer and select the files you want to upload to the server.</source>
-        <target>مرور کامپیوتر محلی و انتخاب پرونده‌هایی که می‌خواهید در سرور بارگذاری کنید.</target>
+        <target>مرور کامپیوتر محلی و انتخاب پرونده‌هایی که می‌خواهید در سامانه بارگذاری کنید.</target>
       </trans-unit>
       <trans-unit id="tl_files.editor.0">
         <source>Source editor</source>
@@ -41,6 +43,7 @@
       </trans-unit>
       <trans-unit id="tl_files.editor.1">
         <source>Here you can edit the file source (press F11 to toggle full screen mode).</source>
+        <target>اینجا می‌توانید منبع پرونده را ویرایش کنید (F11 را برای تغییر به وضعیت صفحه کامل فشار دهید).</target>
       </trans-unit>
       <trans-unit id="tl_files.upload">
         <source>Upload files</source>
@@ -48,7 +51,7 @@
       </trans-unit>
       <trans-unit id="tl_files.uploadNback">
         <source>Upload files and go back</source>
-        <target>بارگذاری پرونده‌ها و بازگشتن به عقب</target>
+        <target>بارگذاری پرونده‌ها و بازگشت</target>
       </trans-unit>
       <trans-unit id="tl_files.editFF">
         <source>Edit a file or folder</source>
@@ -68,7 +71,7 @@
       </trans-unit>
       <trans-unit id="tl_files.clearList">
         <source>Clear list</source>
-        <target>پاک کردن لیست</target>
+        <target>پاک کردن فهرست</target>
       </trans-unit>
       <trans-unit id="tl_files.startUpload">
         <source>Start upload</source>
@@ -80,6 +83,7 @@
       </trans-unit>
       <trans-unit id="tl_files.syncChanged">
         <source>Updated the hash of the file or folder &quot;%s&quot;</source>
+        <target>هش پرونده یا پوشه &quot;%s&quot; روزآمد شد</target>
       </trans-unit>
       <trans-unit id="tl_files.syncUnchanged">
         <source>Found the file or folder &quot;%s&quot;</source>
@@ -99,6 +103,7 @@
       </trans-unit>
       <trans-unit id="tl_files.syncResult">
         <source>&lt;strong&gt;Result:&lt;/strong&gt; %s added | %s modified | %s unchanged | %s moved | %s deleted</source>
+        <target>&lt;strong&gt;نتیجه:&lt;/strong&gt; %s اضافه شد | %s تغییر یافت | %s بدون تغییر | %s جابجا شد | %s deleted</target>
       </trans-unit>
       <trans-unit id="tl_files.syncShowUnchanged">
         <source>Show unchanged</source>
@@ -130,9 +135,11 @@
       </trans-unit>
       <trans-unit id="tl_files.edit.0">
         <source>Edit file or folder</source>
+        <target>ویرایش پرونده یا پوشه</target>
       </trans-unit>
       <trans-unit id="tl_files.edit.1">
         <source>Edit file or folder &quot;%s&quot;</source>
+        <target>ویرایش پرونده یا پوشه &quot;%s&quot;</target>
       </trans-unit>
       <trans-unit id="tl_files.delete.0">
         <source>Delete file or folder</source>
@@ -144,9 +151,11 @@
       </trans-unit>
       <trans-unit id="tl_files.show.0">
         <source>File or folder details</source>
+        <target>جزئیات پرونده یا پوشه</target>
       </trans-unit>
       <trans-unit id="tl_files.show.1">
         <source>Show the details of file or folder &quot;%s&quot;</source>
+        <target>نمایش جزئیات پرونده یا پوشه &quot;%s&quot;</target>
       </trans-unit>
       <trans-unit id="tl_files.source.0">
         <source>Edit file</source>
@@ -158,19 +167,19 @@
       </trans-unit>
       <trans-unit id="tl_files.protect.0">
         <source>Protect folder</source>
-        <target>محافظت از پوشه</target>
+        <target>حافظت از پوشه</target>
       </trans-unit>
       <trans-unit id="tl_files.protect.1">
         <source>Protect folder &quot;%s&quot;</source>
-        <target>محافظت از پوشه &quot;%s&quot;</target>
+        <target>حافظت از پوشه &quot;%s&quot;</target>
       </trans-unit>
       <trans-unit id="tl_files.unlock.0">
         <source>Remove protection</source>
-        <target>حذف محافظت</target>
+        <target>حذف حافظت</target>
       </trans-unit>
       <trans-unit id="tl_files.unlock.1">
         <source>Unprotect folder &quot;%s&quot;</source>
-        <target>حذف محافظت پوشه &quot;%s&quot;</target>
+        <target>حذف حافظت پوشه &quot;%s&quot;</target>
       </trans-unit>
       <trans-unit id="tl_files.move.0">
         <source>File upload</source>
@@ -178,7 +187,7 @@
       </trans-unit>
       <trans-unit id="tl_files.move.1">
         <source>Upload files to the server</source>
-        <target>بارگذاری یک یا چند پرونده</target>
+        <target>بارگذاری پرونده‌ها به سامانه</target>
       </trans-unit>
       <trans-unit id="tl_files.pasteinto.0">
         <source>Paste into</source>

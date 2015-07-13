@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -30,9 +28,7 @@ namespace Contao;
  *         }
  *     }
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class System
 {
@@ -459,7 +455,7 @@ abstract class System
 	{
 		if ($strPath == '')
 		{
-			$strPath = $GLOBALS['TL_CONFIG']['websitePath'] ?: '/'; // see #4390
+			$strPath = TL_PATH ?: '/'; // see #4390
 		}
 
 		$objCookie = new \stdClass();
@@ -598,7 +594,9 @@ abstract class System
 		// Read the .xlf file
 		$xml = new \DOMDocument();
 		$xml->preserveWhiteSpace = false;
-		$xml->load(TL_ROOT . '/' . $strName);
+
+		// Use loadXML() instead of load() (see 7192)
+		$xml->loadXML(file_get_contents(TL_ROOT . '/' . $strName));
 
 		$return = "\n// $strName\n";
 		$units = $xml->getElementsByTagName('trans-unit');
@@ -641,7 +639,7 @@ abstract class System
 			// Quote the value
 			if (strpos($value, '\n') !== false)
 			{
-				$value = '"' . str_replace('"', '\\"', $value) . '"';
+				$value = '"' . str_replace(array('$', '"'), array('\\$', '\\"'), $value) . '"';
 			}
 			else
 			{

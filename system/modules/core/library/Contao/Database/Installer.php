@@ -3,25 +3,19 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao\Database;
 
 
 /**
- * Handles database updates
- *
  * Compares the existing database structure with the DCA table settings and
  * calculates the queries needed to update the database.
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Installer extends \Controller
 {
@@ -252,6 +246,13 @@ class Installer extends \Controller
 				$this->import($callback[0]);
 				$return = $this->$callback[0]->$callback[1]($return);
 			}
+		}
+
+		// Remove the DROP statements if the safe mode is active (see #7085)
+		if (\Config::get('coreOnlyMode'))
+		{
+			unset($return['DROP']);
+			unset($return['ALTER_DROP']);
 		}
 
 		return $return;

@@ -3,28 +3,19 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class CheckBoxWizard
- *
  * Provide methods to handle sortable checkboxes.
- * @copyright  Leo Feyer 2005-2013
- * @author     John Brand <http://www.thyon.com>
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author John Brand <http://www.thyon.com>
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class CheckBoxWizard extends \Widget
 {
@@ -67,7 +58,7 @@ class CheckBoxWizard extends \Widget
 	 */
 	public function validate()
 	{
-		$varValue = deserialize($this->getPost($this->strName));
+		$varValue = $this->getPost($this->strName);
 
 		if (!empty($varValue) && !$this->isValidOption($varValue))
 		{
@@ -157,8 +148,8 @@ class CheckBoxWizard extends \Widget
 			$blnCheckAll = false;
 		}
 
-        return sprintf('<fieldset id="ctrl_%s" class="tl_checkbox_container tl_checkbox_wizard%s"><legend>%s%s%s%s</legend><input type="hidden" name="%s" value="">%s<div class="sortable">%s</div></fieldset>%s',
-        				$this->strId,
+		return sprintf('<fieldset id="ctrl_%s" class="tl_checkbox_container tl_checkbox_wizard%s"><legend>%s%s%s%s</legend><input type="hidden" name="%s" value="">%s<div class="sortable">%s</div></fieldset>%s',
+						$this->strId,
 						(($this->strClass != '') ? ' ' . $this->strClass : ''),
 						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
 						$this->strLabel,

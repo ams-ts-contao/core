@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -165,7 +163,7 @@ $GLOBALS['TL_DCA']['tl_page'] = array
 		'regular'                     => '{title_legend},title,alias,type;{meta_legend},pageTitle,robots,description;{protected_legend:hide},protected;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{search_legend},noSearch;{expert_legend:hide},cssClass,sitemap,hide,guests;{tabnav_legend:hide},tabindex,accesskey;{publish_legend},published,start,stop',
 		'forward'                     => '{title_legend},title,alias,type;{meta_legend},pageTitle;{redirect_legend},redirect,jumpTo;{protected_legend:hide},protected;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass,sitemap,hide,guests;{tabnav_legend:hide},tabindex,accesskey;{publish_legend},published,start,stop',
 		'redirect'                    => '{title_legend},title,alias,type;{meta_legend},pageTitle;{redirect_legend},redirect,url,target;{protected_legend:hide},protected;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass,sitemap,hide,guests;{tabnav_legend:hide},tabindex,accesskey;{publish_legend},published,start,stop',
-		'root'                        => '{title_legend},title,alias,type;{meta_legend},pageTitle;{dns_legend},dns,staticFiles,staticPlugins,language,fallback;{global_legend:hide},dateFormat,timeFormat,datimFormat,adminEmail;{sitemap_legend:hide},createSitemap;{protected_legend:hide},protected;{layout_legend},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{publish_legend},published,start,stop',
+		'root'                        => '{title_legend},title,alias,type;{meta_legend},pageTitle;{dns_legend},dns,useSSL,staticFiles,staticPlugins,language,fallback;{global_legend:hide},dateFormat,timeFormat,datimFormat,adminEmail;{sitemap_legend:hide},createSitemap;{protected_legend:hide},protected;{layout_legend},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{publish_legend},published,start,stop',
 		'error_403'                   => '{title_legend},title,alias,type;{meta_legend},pageTitle,robots,description;{forward_legend},autoforward;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass;{publish_legend},published,start,stop',
 		'error_404'                   => '{title_legend},title,alias,type;{meta_legend},pageTitle,robots,description;{forward_legend},autoforward;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass;{publish_legend},published,start,stop'
 	),
@@ -175,7 +173,7 @@ $GLOBALS['TL_DCA']['tl_page'] = array
 	(
 		'autoforward'                 => 'redirect,jumpTo',
 		'protected'                   => 'groups',
-		'createSitemap'               => 'sitemapName,useSSL',
+		'createSitemap'               => 'sitemapName',
 		'includeLayout'               => 'layout,mobileLayout',
 		'includeCache'                => 'cache',
 		'includeChmod'                => 'cuser,cgroup,chmod'
@@ -322,7 +320,7 @@ $GLOBALS['TL_DCA']['tl_page'] = array
 			'exclude'                 => true,
 			'inputType'               => 'text',
 			'search'                  => true,
-			'eval'                    => array('rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'tl_class'=>'long'),
+			'eval'                    => array('rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'tl_class'=>'w50'),
 			'save_callback' => array
 			(
 				array('tl_page', 'checkDns')
@@ -332,6 +330,7 @@ $GLOBALS['TL_DCA']['tl_page'] = array
 		'staticFiles' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['staticFiles'],
+			'exclude'                 => true,
 			'inputType'               => 'text',
 			'eval'                    => array('rgxp'=>'url', 'trailingSlash'=>false, 'tl_class'=>'w50'),
 			'save_callback' => array
@@ -343,6 +342,7 @@ $GLOBALS['TL_DCA']['tl_page'] = array
 		'staticPlugins' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['staticPlugins'],
+			'exclude'                 => true,
 			'inputType'               => 'text',
 			'eval'                    => array('rgxp'=>'url', 'trailingSlash'=>false, 'tl_class'=>'w50'),
 			'save_callback' => array
@@ -632,12 +632,9 @@ if (Input::get('popup'))
 
 
 /**
- * Class tl_page
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_page extends Backend
 {
@@ -963,7 +960,6 @@ class tl_page extends Backend
 			// Generate folder URL aliases (see #4933)
 			if ($GLOBALS['TL_CONFIG']['folderUrl'])
 			{
-				$dc->activeRecord->alias = $varValue;
 				$objPage = PageModel::findWithDetails($dc->activeRecord->id);
 
 				if ($objPage->folderUrl != '')
@@ -1098,11 +1094,17 @@ class tl_page extends Backend
 			return;
 		}
 
-		$this->Database->prepare("DELETE FROM tl_search_index WHERE pid IN(SELECT id FROM tl_search WHERE pid=?)")
-					   ->execute($dc->id);
+		$objResult = $this->Database->prepare("SELECT id FROM tl_search WHERE pid=?")
+									->execute($dc->id);
 
-		$this->Database->prepare("DELETE FROM tl_search WHERE pid=?")
-					   ->execute($dc->id);
+		while ($objResult->next())
+		{
+			$this->Database->prepare("DELETE FROM tl_search WHERE id=?")
+						   ->execute($objResult->id);
+
+			$this->Database->prepare("DELETE FROM tl_search_index WHERE pid=?")
+						   ->execute($objResult->id);
+		}
 	}
 
 
@@ -1198,9 +1200,9 @@ class tl_page extends Backend
 	 */
 	public function checkStaticUrl($varValue)
 	{
-		if ($varValue != '' && !preg_match('@^https?://@', $varValue))
+		if ($varValue != '')
 		{
-			$varValue = (Environment::get('ssl') ? 'https://' : 'http://') . $varValue;
+			$varValue = preg_replace('@https?://@', '', $varValue);
 		}
 
 		return $varValue;
@@ -1481,9 +1483,10 @@ class tl_page extends Backend
 	/**
 	 * Automatically generate the folder URL aliases
 	 * @param array
+	 * @param DataContainer
 	 * @return array
 	 */
-	public function addAliasButton($arrButtons)
+	public function addAliasButton($arrButtons, DataContainer $dc)
 	{
 		// Generate the aliases
 		if (Input::post('FORM_SUBMIT') == 'tl_select' && isset($_POST['alias']))
@@ -1500,13 +1503,23 @@ class tl_page extends Backend
 					continue;
 				}
 
-				// Set the new alias
-				$strAlias = standardize(String::restoreBasicEntities($objPage->title));
+				$dc->id = $id;
+				$dc->activeRecord = $objPage;
 
-				// Prepend the folder URL
-				if ($GLOBALS['TL_CONFIG']['folderUrl'])
+				$strAlias = '';
+
+				// Generate new alias through save callbacks
+				foreach ($GLOBALS['TL_DCA'][$dc->table]['fields']['alias']['save_callback'] as $callback)
 				{
-					$strAlias = $objPage->folderUrl . $strAlias;
+					if (is_array($callback))
+					{
+						$this->import($callback[0]);
+						$strAlias = $this->$callback[0]->$callback[1]($strAlias, $dc);
+					}
+					elseif (is_callable($callback))
+					{
+						$strAlias = $callback($strAlias, $dc);
+					}
 				}
 
 				// The alias has not changed
@@ -1562,7 +1575,7 @@ class tl_page extends Backend
 	{
 		if (strlen(Input::get('tid')))
 		{
-			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1));
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
 			$this->redirect($this->getReferer());
 		}
 
@@ -1596,8 +1609,9 @@ class tl_page extends Backend
 	 * Disable/enable a user group
 	 * @param integer
 	 * @param boolean
+	 * @param \DataContainer
 	 */
-	public function toggleVisibility($intId, $blnVisible)
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
 		// Check permissions to edit
 		Input::setGet('id', $intId);
@@ -1622,11 +1636,11 @@ class tl_page extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, $this);
+					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
-					$blnVisible = $callback($blnVisible, $this);
+					$blnVisible = $callback($blnVisible, ($dc ?: $this));
 				}
 			}
 		}

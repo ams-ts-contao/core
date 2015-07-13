@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class FileSelector
- *
  * Provide methods to handle input field "file tree".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class FileSelector extends \Widget
 {
@@ -73,30 +64,37 @@ class FileSelector extends \Widget
 			\Backend::addFilesBreadcrumb('tl_files_picker');
 		}
 
+		$tree = '';
+
 		// Root nodes (breadcrumb menu)
 		if (!empty($GLOBALS['TL_DCA']['tl_files']['list']['sorting']['root']))
 		{
-			$tree = $this->renderFiletree(TL_ROOT . '/' . $GLOBALS['TL_DCA']['tl_files']['list']['sorting']['root'][0], 0, true);
+			$nodes = $this->eliminateNestedPaths($GLOBALS['TL_DCA']['tl_files']['list']['sorting']['root']);
+
+			foreach ($nodes as $node)
+			{
+				$tree .= $this->renderFiletree(TL_ROOT . '/' . $node, 0, true);
+			}
 		}
 
 		// Show a custom path (see #4926)
 		elseif (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['path']))
 		{
-			$tree = $this->renderFiletree(TL_ROOT . '/' . $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['path'], 0);
+			$tree .= $this->renderFiletree(TL_ROOT . '/' . $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['path'], 0);
 		}
 
 		// Start from root
 		elseif ($this->User->isAdmin)
 		{
-			$tree = $this->renderFiletree(TL_ROOT . '/' . $GLOBALS['TL_CONFIG']['uploadPath'], 0);
+			$tree .= $this->renderFiletree(TL_ROOT . '/' . $GLOBALS['TL_CONFIG']['uploadPath'], 0);
 		}
 
 		// Show mounted files to regular users
 		else
 		{
-			$tree = '';
+			$nodes = $this->eliminateNestedPaths($this->User->filemounts);
 
-			foreach ($this->eliminateNestedPaths($this->User->filemounts) as $node)
+			foreach ($nodes as $node)
 			{
 				$tree .= $this->renderFiletree(TL_ROOT . '/' . $node, 0, true);
 			}

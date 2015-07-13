@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -265,6 +263,7 @@ TemplateLoader::addFiles(array
 	'be_rebuild_index'    => 'system/modules/core/templates/backend',
 	'be_referer'          => 'system/modules/core/templates/backend',
 	'be_switch'           => 'system/modules/core/templates/backend',
+	'be_unavailable'      => 'system/modules/core/templates/backend',
 	'be_welcome'          => 'system/modules/core/templates/backend',
 	'be_widget'           => 'system/modules/core/templates/backend',
 	'be_widget_chk'       => 'system/modules/core/templates/backend',

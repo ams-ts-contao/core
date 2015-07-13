@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Calendar
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class Calendar
- *
  * Provide methods regarding calendars.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Calendar
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Calendar extends \Frontend
 {
@@ -38,11 +29,10 @@ class Calendar extends \Frontend
 	/**
 	 * Update a particular RSS feed
 	 * @param integer
-	 * @param boolean
 	 */
-	public function generateFeed($intId, $blnIsFeedId=false)
+	public function generateFeed($intId)
 	{
-		$objCalendar = $blnIsFeedId ? \CalendarFeedModel::findByPk($intId) : \CalendarFeedModel::findByCalendar($intId);
+		$objCalendar = \CalendarFeedModel::findByPk($intId);
 
 		if ($objCalendar === null)
 		{
@@ -84,6 +74,28 @@ class Calendar extends \Frontend
 				$objCalendar->feedName = $objCalendar->alias ?: 'calendar' . $objCalendar->id;
 				$this->generateFiles($objCalendar->row());
 				$this->log('Generated calendar feed "' . $objCalendar->feedName . '.xml"', __METHOD__, TL_CRON);
+			}
+		}
+	}
+
+
+	/**
+	 * Generate all feeds including a certain calendar
+	 * @param integer
+	 */
+	public function generateFeedsByCalendar($intId)
+	{
+		$objFeed = \CalendarFeedModel::findByCalendar($intId);
+
+		if ($objFeed !== null)
+		{
+			while ($objFeed->next())
+			{
+				$objFeed->feedName = $objFeed->alias ?: 'calendar' . $objFeed->id;
+
+				// Update the XML file
+				$this->generateFiles($objFeed->row());
+				$this->log('Generated calendar feed "' . $objFeed->feedName . '.xml"', __METHOD__, TL_CRON);
 			}
 		}
 	}
@@ -213,7 +225,7 @@ class Calendar extends \Frontend
 					$objItem->title = $event['title'];
 					$objItem->link = $event['link'];
 					$objItem->published = $event['tstamp'];
-					$objItem->start = $event['start'];
+					$objItem->begin = $event['begin'];
 					$objItem->end = $event['end'];
 					$objItem->author = $event['authorName'];
 
@@ -236,7 +248,7 @@ class Calendar extends \Frontend
 						$strDescription = $event['teaser'];
 					}
 
-					$strDescription = $this->replaceInsertTags($strDescription);
+					$strDescription = $this->replaceInsertTags($strDescription, false);
 					$objItem->description = $this->convertRelativeUrls($strDescription, $strLink);
 
 					if (is_array($event['enclosure']))
@@ -253,7 +265,7 @@ class Calendar extends \Frontend
 		}
 
 		// Create the file
-		\File::putContent('share/' . $strFile . '.xml', $this->replaceInsertTags($objFeed->$strType()));
+		\File::putContent('share/' . $strFile . '.xml', $this->replaceInsertTags($objFeed->$strType(), false));
 	}
 
 

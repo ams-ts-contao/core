@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class Pagination
- *
  * Provide methodes to render a pagination menu.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Library
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Pagination
 {
@@ -227,7 +218,7 @@ class Pagination
 		$this->strUrl = preg_replace('/\?.*$/', '', \Environment::get('request'));
 
 		// Prepare the URL
-		foreach (preg_split('/&(amp;)?/', $_SERVER['QUERY_STRING'], -1, PREG_SPLIT_NO_EMPTY) as $fragment)
+		foreach (preg_split('/&(amp;)?/', \Environment::get('queryString'), -1, PREG_SPLIT_NO_EMPTY) as $fragment)
 		{
 			if (strpos($fragment, $this->strParameter . '=') === false)
 			{

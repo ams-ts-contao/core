@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -23,11 +21,9 @@ namespace Contao;
  *
  *     $session = Session::getInstance();
  *     $session->set('foo', 'bar');
- *     echo $session::->('foo');
+ *     echo $session->get('foo');
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Session
 {
@@ -53,15 +49,15 @@ class Session
 		switch (TL_MODE)
 		{
 			case 'BE':
-				$this->arrSession = $_SESSION['BE_DATA'];
+				$this->arrSession = (array) $_SESSION['BE_DATA'];
 				break;
 
 			case 'FE':
-				$this->arrSession = $_SESSION['FE_DATA'];
+				$this->arrSession = (array) $_SESSION['FE_DATA'];
 				break;
 
 			default:
-				$this->arrSession = $_SESSION;
+				$this->arrSession = (array) $_SESSION;
 				break;
 		}
 	}

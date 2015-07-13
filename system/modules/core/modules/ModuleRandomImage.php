@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleRandomImage
- *
  * Front end module "random image".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleRandomImage extends \Module
 {
@@ -104,7 +95,7 @@ class ModuleRandomImage extends \Module
 				// Use the file name as title if none is given
 				if ($arrMeta['title'] == '')
 				{
-					$arrMeta['title'] = specialchars(str_replace('_', ' ', preg_replace('/^[0-9]+_/', '', $objFile->filename)));
+					$arrMeta['title'] = specialchars($objFile->basename);
 				}
 
 				// Add the image
@@ -149,7 +140,7 @@ class ModuleRandomImage extends \Module
 					// Use the file name as title if none is given
 					if ($arrMeta['title'] == '')
 					{
-						$arrMeta['title'] = specialchars(str_replace('_', ' ', preg_replace('/^[0-9]+_/', '', $objFile->filename)));
+						$arrMeta['title'] = specialchars($objFile->basename);
 					}
 
 					// Add the image

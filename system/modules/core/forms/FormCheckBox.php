@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class FormCheckBox
- *
  * Form field "check box".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class FormCheckBox extends \Widget
 {
@@ -95,7 +86,7 @@ class FormCheckBox extends \Widget
 	public function validate()
 	{
 		$mandatory = $this->mandatory;
-		$options = deserialize($this->getPost($this->strName));
+		$options = $this->getPost($this->strName);
 
 		// Check if there is at least one value
 		if ($mandatory && is_array($options))
@@ -115,7 +106,7 @@ class FormCheckBox extends \Widget
 		// Check for a valid option (see #4383)
 		if (!empty($varInput) && !$this->isValidOption($varInput))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalid'], (is_array($varValue) ? implode(', ', $varValue) : $varValue)));
+			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalid'], (is_array($varInput) ? implode(', ', $varInput) : $varInput)));
 		}
 
 		// Add class "error"
@@ -184,7 +175,7 @@ class FormCheckBox extends \Widget
 
 		if ($this->strLabel != '')
 		{
-        	return sprintf('<fieldset id="ctrl_%s" class="checkbox_container%s"><legend>%s%s%s</legend>%s<input type="hidden" name="%s" value=""%s%s</fieldset>',
+			return sprintf('<fieldset id="ctrl_%s" class="checkbox_container%s"><legend>%s%s%s</legend>%s<input type="hidden" name="%s" value=""%s%s</fieldset>',
 	        				$this->strId,
 							(($this->strClass != '') ? ' ' . $this->strClass : ''),
 							($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
@@ -198,7 +189,7 @@ class FormCheckBox extends \Widget
 		else
 		{
 	        return sprintf('<fieldset id="ctrl_%s" class="checkbox_container%s">%s<input type="hidden" name="%s" value=""%s%s</fieldset>',
-    	    				$this->strId,
+							$this->strId,
 							(($this->strClass != '') ? ' ' . $this->strClass : ''),
 							$this->strError,
 							$this->strName,

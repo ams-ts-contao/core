@@ -1,12 +1,15 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
+
+/* HTML */
+html {
+	font-size:100%;
+}
 
 /* Body */
 html,body,form,pre,figure,ul,li {
@@ -31,13 +34,16 @@ fieldset,form,input,optgroup,select,textarea {
 /* Font size and color */
 a,body,div,label,legend,li,ol,p,td,th,ul,fieldset,form,input,optgroup,select,textarea {
 	font-size:11px;
+	font-size:.6875rem;
 	color:#555;
 }
 fieldset,form,input,optgroup,select,textarea {
 	font-size:12px;
+	font-size:.75rem;
 }
 h1,h2,h3,h4,h5,h6 {
 	font-size:12px;
+	font-size:.75rem;
 	color:#555;
 }
 table {
@@ -50,6 +56,7 @@ th,td {
 }
 .tl_small {
 	font-size:9px;
+	font-size:.5625rem;
 }
 .tl_small,.tl_gray {
 	color:#999;
@@ -101,13 +108,14 @@ p {
 	font-size:0.1px;
 }
 .invisible {
-	width:0;
-	height:0;
-	left:-1000px;
-	top:-1000px;
-	position:absolute;
+	border:0;
+	clip:rect(0 0 0 0);
+	height:1px;
+	margin:-1px;
 	overflow:hidden;
-	display:inline;
+	padding:0;
+	position:absolute;
+	width:1px;
 }
 
 /* Forms */
@@ -187,6 +195,7 @@ fieldset.checkbox_container,fieldset.radio_container {
 pre,.tl_textarea.monospace {
 	font-family:Courier,monospace;
 	font-size:12px;
+	font-size:.75rem;
 }
 .tl_textarea.monospace:focus {
 	background:none;
@@ -337,6 +346,8 @@ a.tl_submit {
 	padding:4px 12px 4px 13px;
 	font-family:"Trebuchet MS",Verdana,sans-serif;
 	font-size:12px;
+	font-size:.75rem;
+	display:inline-block;
 }
 a.tl_submit:hover {
 	color:#555;
@@ -416,7 +427,7 @@ a.tl_submit:hover {
 	z-index:99;
 }
 .tip {
-	max-width:690px;
+	max-width:320px;
 	padding:3px 6px 4px;
 	border-radius:3px;
 	box-shadow:1px 1px 3px #666;

@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -416,7 +414,11 @@ $GLOBALS['TL_DCA']['tl_settings'] = array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['smtpPass'],
 			'inputType'               => 'textStore',
-			'eval'                    => array('decodeEntities'=>true, 'tl_class'=>'w50')
+			'eval'                    => array('decodeEntities'=>true, 'tl_class'=>'w50'),
+			'save_callback' => array
+			(
+				array('tl_settings', 'storeSmtpPass')
+			)
 		),
 		'smtpEnc' => array
 		(
@@ -500,12 +502,9 @@ $GLOBALS['TL_DCA']['tl_settings'] = array
 
 
 /**
- * Class tl_settings
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_settings extends Backend
 {
@@ -607,7 +606,7 @@ class tl_settings extends Backend
 			$strTitle = (is_array($GLOBALS['TL_LANG']['MOD'][$strModule]) ? $GLOBALS['TL_LANG']['MOD'][$strModule][0] : $GLOBALS['TL_LANG']['MOD'][$strModule]);
 
 			$return .= '
-    <input type="checkbox" name="' . $dc->inputName . '[]" id="opt_' . $dc->inputName . '_' . $i . '" class="tl_checkbox" value="' . $strModule . '" onfocus="Backend.getScrollOffset()"' . ($blnActive ?: ' checked') . '>
+    <input type="checkbox" name="' . $dc->inputName . '[]" id="opt_' . $dc->inputName . '_' . $i . '" class="tl_checkbox" value="' . $strModule . '" onfocus="Backend.getScrollOffset()"' . ($blnActive ? '' : ' checked') . '>
     <label for="opt_' . $dc->inputName . '_' . $i++ . '"><span style="color:#b3b3b3">[' . $strModule . ']</span> ' . $strTitle . '</label><br>';
 		}
 
@@ -648,6 +647,23 @@ class tl_settings extends Backend
 		if (!$varValue)
 		{
 			$this->Database->execute("DELETE FROM tl_search WHERE protected=1");
+		}
+
+		return $varValue;
+	}
+
+
+	/**
+	 * Store the unfiltered SMTP password
+	 * @param mixed
+	 * @param \DataContainer
+	 * @return mixed
+	 */
+	public function storeSmtpPass($varValue, DataContainer $dc)
+	{
+		if (isset($_POST[$dc->field]))
+		{
+			return Input::postUnsafeRaw($dc->field);
 		}
 
 		return $varValue;
@@ -714,13 +730,12 @@ class tl_settings extends Backend
 	 */
 	public function checkUploadPath($varValue)
 	{
-		$varValue = str_replace(array('../', '/..', '/.', './', '://'), '', $varValue);
-
-		if ($varValue == '.' || $varValue == '..' || $varValue == '')
+		if ($varValue == '' || Validator::isInsecurePath($varValue))
 		{
-			$varValue = 'files';
+			throw new Exception($GLOBALS['TL_LANG']['ERR']['invalidName']);
 		}
-		elseif (preg_match('@^(assets|contao|plugins|share|system|templates)(/|$)@', $varValue))
+
+		if (preg_match('@^(assets|contao|plugins|share|system|templates)(/|$)@', $varValue))
 		{
 			throw new Exception($GLOBALS['TL_LANG']['ERR']['invalidName']);
 		}
@@ -736,9 +751,9 @@ class tl_settings extends Backend
 	 */
 	public function checkStaticUrl($varValue)
 	{
-		if ($varValue != '' && !preg_match('@^https?://@', $varValue))
+		if ($varValue != '')
 		{
-			$varValue = (Environment::get('ssl') ? 'https://' : 'http://') . $varValue;
+			$varValue = preg_replace('@https?://@', '', $varValue);
 		}
 
 		return $varValue;

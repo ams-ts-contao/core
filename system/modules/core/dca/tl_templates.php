@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -122,31 +120,36 @@ $GLOBALS['TL_DCA']['tl_templates'] = array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_files']['name'],
 			'inputType'               => 'text',
-			'eval'                    => array('mandatory'=>true, 'maxlength'=>64, 'spaceToUnderscore'=>true)
+			'eval'                    => array('mandatory'=>true, 'maxlength'=>32, 'spaceToUnderscore'=>true)
 		)
 	)
 );
 
 
 /**
- * Class tl_templates
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_templates extends Backend
 {
 
 	/**
 	 * Add the breadcrumb menu
+	 *
+	 * @throws RuntimeException
 	 */
 	public function addBreadcrumb()
 	{
 		// Set a new node
 		if (isset($_GET['node']))
 		{
+			// Check the path (thanks to Arnaud Buchoux)
+			if (Validator::isInsecurePath(Input::get('node', true)))
+			{
+				throw new RuntimeException('Insecure path ' . Input::get('node', true));
+			}
+
 			$this->Session->set('tl_templates_node', Input::get('node', true));
 			$this->redirect(preg_replace('/(&|\?)node=[^&]*/', '', Environment::get('request')));
 		}
@@ -156,6 +159,12 @@ class tl_templates extends Backend
 		if ($strNode == '')
 		{
 			return;
+		}
+
+		// Check the path (thanks to Arnaud Buchoux)
+		if (Validator::isInsecurePath($strNode))
+		{
+			throw new RuntimeException('Insecure path ' . $strNode);
 		}
 
 		// Currently selected folder does not exist
@@ -212,7 +221,18 @@ class tl_templates extends Backend
 		if (Input::post('FORM_SUBMIT') == 'tl_create_template')
 		{
 			$strOriginal = Input::post('original');
-			$strTarget = str_replace('../', '', Input::post('target'));
+
+			if (Validator::isInsecurePath($strOriginal))
+			{
+				throw new RuntimeException('Invalid path ' . $strOriginal);
+			}
+
+			$strTarget = Input::post('target');
+
+			if (Validator::isInsecurePath($strTarget))
+			{
+				throw new RuntimeException('Invalid path ' . $strTarget);
+			}
 
 			// Validate the source path
 			if (strncmp($strOriginal, 'system/modules/', 15) !== 0 || !file_exists(TL_ROOT . '/' . $strOriginal))

@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -23,9 +21,7 @@ namespace Contao;
  *
  *     $file = Dbafs::addResource('files/james-wilson.jpg');
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Dbafs
 {
@@ -89,12 +85,12 @@ class Dbafs
 					unset($arrPaths[$i]);
 					$arrPids[$objModels->path] = $objModels->uuid;
 				}
-			}
 
-			// Store the model if it exists
-			if ($objModels->path == $strResource)
-			{
-				$objModel = $objModels->current();
+				// Store the model if it exists
+				if ($objModels->path == $strResource)
+				{
+					$objModel = $objModels->current();
+				}
 			}
 		}
 
@@ -450,6 +446,21 @@ class Dbafs
 	 */
 	public static function syncFiles()
 	{
+		@ini_set('max_execution_time', 0);
+
+		// Consider the suhosin.memory_limit (see #7035)
+		if (extension_loaded('suhosin'))
+		{
+			if (($limit = ini_get('suhosin.memory_limit')) !== '0')
+			{
+				@ini_set('memory_limit', $limit);
+			}
+		}
+		else
+		{
+			@ini_set('memory_limit', -1);
+		}
+
 		$objDatabase = \Database::getInstance();
 
 		// Lock the files table
@@ -542,6 +553,7 @@ class Dbafs
 					$objModel->type      = 'file';
 					$objModel->path      = $objFile->path;
 					$objModel->extension = $objFile->extension;
+					$objModel->found     = 2;
 					$objModel->hash      = $objFile->hash;
 					$objModel->uuid      = $objDatabase->getUuid();
 					$objModel->save();
@@ -557,6 +569,7 @@ class Dbafs
 					$objModel->type      = 'folder';
 					$objModel->path      = $objFolder->path;
 					$objModel->extension = '';
+					$objModel->found     = 2;
 					$objModel->hash      = $objFolder->hash;
 					$objModel->uuid      = $objDatabase->getUuid();
 					$objModel->save();
@@ -588,7 +601,7 @@ class Dbafs
 
 			while ($objFiles->next())
 			{
-				$objFound = \FilesModel::findBy(array('hash=?', 'found=1'), $objFiles->hash);
+				$objFound = \FilesModel::findBy(array('hash=?', 'found=2'), $objFiles->hash);
 
 				if ($objFound !== null)
 				{
@@ -669,6 +682,9 @@ class Dbafs
 
 		// Close the log file
 		$objLog->close();
+
+		// Reset the found flag
+		$objDatabase->query("UPDATE tl_files SET found=1 WHERE found=2");
 
 		// Unlock the tables
 		$objDatabase->unlockTables();

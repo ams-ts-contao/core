@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -30,9 +28,7 @@ namespace Contao;
  *         return $this->getArticle(2);
  *     }
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class Controller extends \System
 {
@@ -45,7 +41,8 @@ abstract class Controller extends \System
 	 *
 	 * @return string The path to the template file
 	 *
-	 * @throws \Exception If $strFormat is unknown
+	 * @throws \InvalidArgumentException If $strFormat is unknown
+	 * @throws \RuntimeException         If the template group folder is insecure
 	 */
 	public static function getTemplate($strTemplate, $strFormat='html5')
 	{
@@ -54,7 +51,7 @@ abstract class Controller extends \System
 
 		if (!in_array($strFormat, $arrAllowed))
 		{
-			throw new \Exception("Invalid output format $strFormat");
+			throw new \InvalidArgumentException('Invalid output format ' . $strFormat);
 		}
 
 		$strTemplate = basename($strTemplate);
@@ -63,11 +60,15 @@ abstract class Controller extends \System
 		if (TL_MODE == 'FE')
 		{
 			global $objPage;
-			$strCustom = str_replace('../', '', $objPage->templateGroup);
 
-			if ($strCustom != '')
+			if ($objPage->templateGroup != '')
 			{
-				return \TemplateLoader::getPath($strTemplate, $strFormat, $strCustom);
+				if (\Validator::isInsecurePath($objPage->templateGroup))
+				{
+					throw new \RuntimeException('Invalid path ' . $objPage->templateGroup);
+				}
+
+				return \TemplateLoader::getPath($strTemplate, $strFormat, $objPage->templateGroup);
 			}
 		}
 
@@ -618,7 +619,7 @@ abstract class Controller extends \System
 			{
 				$groups = deserialize($objElement->groups);
 
-				if (!is_array($groups) || empty($groups) || !count(array_intersect($groups, \FrontendUser::getInstance()->groups)))
+				if (empty($groups) || !is_array($groups) || !count(array_intersect($groups, \FrontendUser::getInstance()->groups)))
 				{
 					$blnReturn = false;
 				}
@@ -685,7 +686,8 @@ abstract class Controller extends \System
 			}
 
 			$flags = explode('|', $strTag);
-			$elements = explode('::', array_shift($flags));
+			$tag = array_shift($flags);
+			$elements = explode('::', $tag);
 
 			// Load the value from cache
 			if (isset($arrCache[$strTag]) && !in_array('refresh', $flags))
@@ -774,7 +776,42 @@ abstract class Controller extends \System
 						break;
 					}
 
-					\System::loadLanguageFile($keys[0]);
+					$file = $keys[0];
+
+					// Map the key (see #7217)
+					switch ($file)
+					{
+						case 'CNT':
+							$file = 'countries';
+							break;
+
+						case 'LNG':
+							$file = 'languages';
+							break;
+
+						case 'MOD':
+						case 'FMD':
+							$file = 'modules';
+							break;
+
+						case 'FFL':
+							$file = 'tl_form_field';
+							break;
+
+						case 'CACHE':
+							$file = 'tl_page';
+							break;
+
+						case 'XPL':
+							$file = 'explain';
+							break;
+
+						case 'XPT':
+							$file = 'exception';
+							break;
+					}
+
+					\System::loadLanguageFile($file);
 
 					if (count($keys) == 2)
 					{
@@ -851,6 +888,9 @@ abstract class Controller extends \System
 				case 'link_open':
 				case 'link_url':
 				case 'link_title':
+				case 'link_target':
+					$strTarget = null;
+
 					// Back link
 					if ($elements[1] == 'back')
 					{
@@ -900,7 +940,7 @@ abstract class Controller extends \System
 						switch ($objNextPage->type)
 						{
 							case 'redirect':
-								$strUrl = $objNextPage->url;
+								$strUrl = $this->replaceInsertTags($objNextPage->url); // see #6765
 
 								if (strncasecmp($strUrl, 'mailto:', 7) === 0)
 								{
@@ -934,7 +974,7 @@ abstract class Controller extends \System
 									// Add the domain if it differs from the current one (see #3765)
 									if ($objNext->domain != '' && $objNext->domain != \Environment::get('host'))
 									{
-										$strUrl = (\Environment::get('ssl') ? 'https://' : 'http://') . $objNext->domain . TL_PATH . '/' . $strUrl;
+										$strUrl = ($objNext->rootUseSSL ? 'https://' : 'http://') . $objNext->domain . TL_PATH . '/' . $strUrl;
 									}
 									break;
 								}
@@ -955,7 +995,7 @@ abstract class Controller extends \System
 								// Add the domain if it differs from the current one (see #3765)
 								if ($objNextPage->domain != '' && $objNextPage->domain != \Environment::get('host'))
 								{
-									$strUrl = (\Environment::get('ssl') ? 'https://' : 'http://') . $objNextPage->domain . TL_PATH . '/' . $strUrl;
+									$strUrl = ($objNext->rootUseSSL ? 'https://' : 'http://') . $objNextPage->domain . TL_PATH . '/' . $strUrl;
 								}
 								break;
 						}
@@ -1100,6 +1140,8 @@ abstract class Controller extends \System
 						break;
 					}
 
+					$strUrl = '';
+
 					if ($objNews->source == 'external')
 					{
 						$strUrl = $objNews->url;
@@ -1158,6 +1200,8 @@ abstract class Controller extends \System
 						break;
 					}
 
+					$strUrl = '';
+
 					if ($objEvent->source == 'external')
 					{
 						$strUrl = $objEvent->url;
@@ -1214,11 +1258,11 @@ abstract class Controller extends \System
 					{
 						if ($objPage->outputFormat == 'xhtml')
 						{
-							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser), $blnCache);
+							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 						else
 						{
-							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser), $blnCache);
+							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 					}
 					break;
@@ -1231,11 +1275,11 @@ abstract class Controller extends \System
 					{
 						if ($objPage->outputFormat == 'xhtml')
 						{
-							$arrCache[$strTag] = \String::toXhtml($objTeaser->teaser);
+							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 						else
 						{
-							$arrCache[$strTag] = \String::toHtml5($objTeaser->teaser);
+							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 					}
 					break;
@@ -1248,11 +1292,11 @@ abstract class Controller extends \System
 					{
 						if ($objPage->outputFormat == 'xhtml')
 						{
-							$arrCache[$strTag] = \String::toXhtml($objTeaser->teaser);
+							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 						else
 						{
-							$arrCache[$strTag] = \String::toHtml5($objTeaser->teaser);
+							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 					}
 					break;
@@ -1551,8 +1595,11 @@ abstract class Controller extends \System
 					}
 					else
 					{
-						// Sanitize the path
-						$strFile = str_replace('../', '', $strFile);
+						// Check the path
+						if (\Validator::isInsecurePath($strFile))
+						{
+							throw new \RuntimeException('Invalid path ' . $strFile);
+						}
 					}
 
 					// Check the maximum image width
@@ -1633,8 +1680,11 @@ abstract class Controller extends \System
 						$strFile = $arrChunks[0];
 					}
 
-					// Sanitize path
-					$strFile = str_replace('../', '', $strFile);
+					// Check the path
+					if (\Validator::isInsecurePath($strFile))
+					{
+						throw new \RuntimeException('Invalid path ' . $strFile);
+					}
 
 					// Include .php, .tpl, .xhtml and .html5 files
 					if (preg_match('/\.(php|tpl|xhtml|html5)$/', $strFile) && file_exists(TL_ROOT . '/templates/' . $strFile))
@@ -1656,7 +1706,7 @@ abstract class Controller extends \System
 						foreach ($GLOBALS['TL_HOOKS']['replaceInsertTags'] as $callback)
 						{
 							$this->import($callback[0]);
-							$varValue = $this->$callback[0]->$callback[1]($strTag, $blnCache);
+							$varValue = $this->$callback[0]->$callback[1]($tag, $blnCache, $arrCache[$strTag], $flags, $tags, $arrCache, $_rit, $_cnt); // see #6672
 
 							// Replace the tag and stop the loop
 							if ($varValue !== false)
@@ -1699,8 +1749,6 @@ abstract class Controller extends \System
 						case 'ltrim':
 						case 'utf8_romanize':
 						case 'strrev':
-						case 'base64_encode':
-						case 'base64_decode':
 							$arrCache[$strTag] = $flag($arrCache[$strTag]);
 							break;
 
@@ -1728,7 +1776,7 @@ abstract class Controller extends \System
 								foreach ($GLOBALS['TL_HOOKS']['insertTagFlags'] as $callback)
 								{
 									$this->import($callback[0]);
-									$varValue = $this->$callback[0]->$callback[1]($flag, $strTag, $arrCache[$strTag], $flags, $blnCache, $tags, $arrCache, $_rit, $_cnt); // see #5806
+									$varValue = $this->$callback[0]->$callback[1]($flag, $tag, $arrCache[$strTag], $flags, $blnCache, $tags, $arrCache, $_rit, $_cnt); // see #5806
 
 									// Replace the tag and stop the loop
 									if ($varValue !== false)
@@ -1998,15 +2046,16 @@ abstract class Controller extends \System
 	/**
 	 * Add a request string to the current URL
 	 *
-	 * @param string $strRequest The string to be added
+	 * @param string  $strRequest The string to be added
+	 * @param boolean $blnAddRef  Add the referer ID
 	 *
 	 * @return string The new URL
 	 */
-	public static function addToUrl($strRequest)
+	public static function addToUrl($strRequest, $blnAddRef=true)
 	{
 		$strRequest = preg_replace('/^&(amp;)?/i', '', $strRequest);
 
-		if ($strRequest != '')
+		if ($strRequest != '' && $blnAddRef)
 		{
 			$strRequest .= '&amp;ref=' . TL_REFERER_ID;
 		}
@@ -2372,7 +2421,7 @@ abstract class Controller extends \System
 
 		if ($objPage->domain != '' && $objPage->domain != \Environment::get('host'))
 		{
-			$strUrl = (\Environment::get('ssl') ? 'https://' : 'http://') . $objPage->domain . TL_PATH . '/' . $strUrl;
+			$strUrl = ($objPage->rootUseSSL ? 'https://' : 'http://') . $objPage->domain . TL_PATH . '/' . $strUrl;
 		}
 		else
 		{
@@ -2514,18 +2563,7 @@ abstract class Controller extends \System
 			$intMaxWidth = (TL_MODE == 'BE') ? 320 : $GLOBALS['TL_CONFIG']['maxImageWidth'];
 		}
 
-		// Provide an ID for single lightbox images in HTML5 (see #3742)
-		if ($strLightboxId === null && $arrItem['fullsize'])
-		{
-			if ($objPage->outputFormat == 'xhtml')
-			{
-				$strLightboxId = 'lightbox';
-			}
-			else
-			{
-				$strLightboxId = 'lightbox[' . substr(md5($objTemplate->getName() . '_' . $arrItem['id']), 0, 6) . ']';
-			}
-		}
+		$arrMargin = (TL_MODE == 'BE') ? array() : deserialize($arrItem['imagemargin']);
 
 		// Store the original dimensions
 		$objTemplate->width = $imgSize[0];
@@ -2534,12 +2572,21 @@ abstract class Controller extends \System
 		// Adjust the image size
 		if ($intMaxWidth > 0)
 		{
-			$arrMargin = deserialize($arrItem['imagemargin']);
-
 			// Subtract the margins before deciding whether to resize (see #6018)
 			if (is_array($arrMargin) && $arrMargin['unit'] == 'px')
 			{
-				$intMaxWidth = $intMaxWidth - $arrMargin['left'] - $arrMargin['right'];
+				$intMargin = $arrMargin['left'] + $arrMargin['right'];
+
+				// Reset the margin if it exceeds the maximum width (see #7245)
+				if ($intMaxWidth - $intMargin < 1)
+				{
+					$arrMargin['left'] = '';
+					$arrMargin['right'] = '';
+				}
+				else
+				{
+					$intMaxWidth = $intMaxWidth - $intMargin;
+				}
 			}
 
 			if ($size[0] > $intMaxWidth || (!$size[0] && !$size[1] && $imgSize[0] > $intMaxWidth))
@@ -2559,6 +2606,19 @@ abstract class Controller extends \System
 		{
 			$objTemplate->arrSize = $imgSize;
 			$objTemplate->imgSize = ' ' . $imgSize[3];
+		}
+
+		// Provide an ID for single lightbox images in HTML5 (see #3742)
+		if ($strLightboxId === null && $arrItem['fullsize'])
+		{
+			if ($objPage->outputFormat == 'xhtml')
+			{
+				$strLightboxId = 'lightbox';
+			}
+			else
+			{
+				$strLightboxId = 'lightbox[' . substr(md5($objTemplate->getName() . '_' . $arrItem['id']), 0, 6) . ']';
+			}
 		}
 
 		// Float image
@@ -2616,7 +2676,7 @@ abstract class Controller extends \System
 		$objTemplate->linkTitle = $objTemplate->title;
 		$objTemplate->fullsize = $arrItem['fullsize'] ? true : false;
 		$objTemplate->addBefore = ($arrItem['floating'] != 'below');
-		$objTemplate->margin = static::generateMargin(deserialize($arrItem['imagemargin']));
+		$objTemplate->margin = static::generateMargin($arrMargin);
 		$objTemplate->caption = $arrItem['caption'];
 		$objTemplate->singleSRC = $arrItem['singleSRC'];
 		$objTemplate->addImage = true;
@@ -2748,12 +2808,7 @@ abstract class Controller extends \System
 			}
 			else
 			{
-				if (\Environment::get('ssl'))
-				{
-					$url = str_replace('http://', 'https://', $url);
-				}
-
-				define($strConstant, $url . TL_PATH . '/');
+				define($strConstant, '//' . preg_replace('@https?://@', '', $url) . TL_PATH . '/');
 			}
 		}
 

@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class PageRegular
- *
  * Provide methods to handle a regular front end page.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class PageRegular extends \Frontend
 {
@@ -78,7 +69,7 @@ class PageRegular extends \Frontend
 		// Filter the disabled modules
 		foreach ($arrModules as $module)
 		{
-			if (!$module['disable'])
+			if ($module['enable'])
 			{
 				$arrModuleIds[] = $module['mod'];
 			}
@@ -157,7 +148,7 @@ class PageRegular extends \Frontend
 		}
 
 		// Set the page title and description AFTER the modules have been generated
-		$this->Template->mainTitle = $objPage->rootTitle;
+		$this->Template->mainTitle = $objPage->rootPageTitle;
 		$this->Template->pageTitle = $objPage->pageTitle ?: $objPage->title;
 
 		// Meta robots tag
@@ -370,8 +361,7 @@ class PageRegular extends \Frontend
 		{
 			if ($objLayout->jSource == 'j_googleapis' || $objLayout->jSource == 'j_fallback')
 			{
-				$protocol = \Environment::get('ssl') ? 'https://' : 'http://';
-				$this->Template->mooScripts .= '<script' . ($blnXhtml ? ' type="text/javascript"' : '') . ' src="' . $protocol . 'ajax.googleapis.com/ajax/libs/jquery/' . JQUERY . '/jquery.min.js"></script>' . "\n";
+				$this->Template->mooScripts .= '<script' . ($blnXhtml ? ' type="text/javascript"' : '') . ' src="//ajax.googleapis.com/ajax/libs/jquery/' . JQUERY . '/jquery.min.js"></script>' . "\n";
 
 				// Local fallback (thanks to DyaGa)
 				if ($objLayout->jSource == 'j_fallback')
@@ -397,8 +387,7 @@ class PageRegular extends \Frontend
 		{
 			if ($objLayout->mooSource == 'moo_googleapis' || $objLayout->mooSource == 'moo_fallback')
 			{
-				$protocol = \Environment::get('ssl') ? 'https://' : 'http://';
-				$this->Template->mooScripts .= '<script' . ($blnXhtml ? ' type="text/javascript"' : '') . ' src="' . $protocol . 'ajax.googleapis.com/ajax/libs/mootools/' . MOOTOOLS . '/mootools-yui-compressed.js"></script>' . "\n";
+				$this->Template->mooScripts .= '<script' . ($blnXhtml ? ' type="text/javascript"' : '') . ' src="//ajax.googleapis.com/ajax/libs/mootools/' . MOOTOOLS . '/mootools-yui-compressed.js"></script>' . "\n";
 
 				// Local fallback (thanks to DyaGa)
 				if ($objLayout->mooSource == 'moo_fallback')
@@ -479,8 +468,7 @@ class PageRegular extends \Frontend
 		// Google web fonts
 		if ($objLayout->webfonts != '')
 		{
-			$protocol = \Environment::get('ssl') ? 'https://' : 'http://';
-			$strStyleSheets .= '<link' . ($blnXhtml ? ' type="text/css"' : '') .' rel="stylesheet" href="' . $protocol . 'fonts.googleapis.com/css?family=' . $objLayout->webfonts . '"' . $strTagEnding . "\n";
+			$strStyleSheets .= '<link' . ($blnXhtml ? ' type="text/css"' : '') .' rel="stylesheet" href="//fonts.googleapis.com/css?family=' . str_replace('|', '%7C', $objLayout->webfonts) . '"' . $strTagEnding . "\n";
 		}
 
 		// Add the Contao CSS framework style sheets
@@ -615,7 +603,7 @@ class PageRegular extends \Frontend
 				while($objFeeds->next())
 				{
 					$base = $objFeeds->feedBase ?: \Environment::get('base');
-					$strStyleSheets .= '<link rel="alternate" href="' . $base . 'share/' . $objFeeds->alias . '.xml" type="application/' . $objFeeds->format . '+xml" title="' . $objFeeds->title . '"' . $strTagEnding . "\n";
+					$strStyleSheets .= '<link rel="alternate" href="' . $base . 'share/' . $objFeeds->alias . '.xml" type="application/' . $objFeeds->format . '+xml" title="' . specialchars($objFeeds->title) . '"' . $strTagEnding . "\n";
 				}
 			}
 		}
@@ -630,7 +618,7 @@ class PageRegular extends \Frontend
 				while($objFeeds->next())
 				{
 					$base = $objFeeds->feedBase ?: \Environment::get('base');
-					$strStyleSheets .= '<link rel="alternate" href="' . $base . 'share/' . $objFeeds->alias . '.xml" type="application/' . $objFeeds->format . '+xml" title="' . $objFeeds->title . '"' . $strTagEnding . "\n";
+					$strStyleSheets .= '<link rel="alternate" href="' . $base . 'share/' . $objFeeds->alias . '.xml" type="application/' . $objFeeds->format . '+xml" title="' . specialchars($objFeeds->title) . '"' . $strTagEnding . "\n";
 				}
 			}
 		}

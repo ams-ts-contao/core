@@ -1,11 +1,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 /* Body */
@@ -23,6 +21,7 @@ h2 {
 	padding:7px 0 7px 36px;
 	background:url("images/help.gif") left center no-repeat;
 	font-size:14px;
+	font-size:.875rem;
 	color:#8ab858;
 }
 

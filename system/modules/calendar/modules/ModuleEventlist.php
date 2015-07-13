@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Calendar
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleEventlist
- *
  * Front end module "event list".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Calendar
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleEventlist extends \Events
 {
@@ -86,21 +77,25 @@ class ModuleEventlist extends \Events
 		global $objPage;
 		$blnClearInput = false;
 
+		$intYear = \Input::get('year');
+		$intMonth = \Input::get('month');
+		$intDay = \Input::get('day');
+
 		// Jump to the current period
 		if (!isset($_GET['year']) && !isset($_GET['month']) && !isset($_GET['day']))
 		{
 			switch ($this->cal_format)
 			{
 				case 'cal_year':
-					\Input::setGet('year', date('Y'));
+					$intYear = date('Y');
 					break;
 
 				case 'cal_month':
-					\Input::setGet('month', date('Ym'));
+					$intMonth = date('Ym');
 					break;
 
 				case 'cal_day':
-					\Input::setGet('day', date('Ymd'));
+					$intDay = date('Ymd');
 					break;
 			}
 
@@ -110,26 +105,29 @@ class ModuleEventlist extends \Events
 		$blnDynamicFormat = (!$this->cal_ignoreDynamic && in_array($this->cal_format, array('cal_day', 'cal_month', 'cal_year')));
 
 		// Display year
-		if ($blnDynamicFormat && \Input::get('year'))
+		if ($blnDynamicFormat && $intYear)
 		{
-			$this->Date = new \Date(\Input::get('year'), 'Y');
+			$this->Date = new \Date($intYear, 'Y');
 			$this->cal_format = 'cal_year';
 			$this->headline .= ' ' . date('Y', $this->Date->tstamp);
 		}
+
 		// Display month
-		elseif ($blnDynamicFormat && \Input::get('month'))
+		elseif ($blnDynamicFormat && $intMonth)
 		{
-			$this->Date = new \Date(\Input::get('month'), 'Ym');
+			$this->Date = new \Date($intMonth, 'Ym');
 			$this->cal_format = 'cal_month';
 			$this->headline .= ' ' . \Date::parse('F Y', $this->Date->tstamp);
 		}
+
 		// Display day
-		elseif ($blnDynamicFormat && \Input::get('day'))
+		elseif ($blnDynamicFormat && $intDay)
 		{
-			$this->Date = new \Date(\Input::get('day'), 'Ymd');
+			$this->Date = new \Date($intDay, 'Ymd');
 			$this->cal_format = 'cal_day';
 			$this->headline .= ' ' . \Date::parse($objPage->dateFormat, $this->Date->tstamp);
 		}
+
 		// Display all events or upcoming/past events
 		else
 		{
@@ -271,11 +269,12 @@ class ModuleEventlist extends \Events
 				$objTemplate->details = $event['teaser'];
 			}
 
-			// Add template variables
+			// Add the template variables
 			$objTemplate->classList = $event['class'] . ((($headerCount % 2) == 0) ? ' even' : ' odd') . (($headerCount == 0) ? ' first' : '') . ($blnIsLastEvent ? ' last' : '') . ' cal_' . $event['parent'];
 			$objTemplate->classUpcoming = $event['class'] . ((($eventCount % 2) == 0) ? ' even' : ' odd') . (($eventCount == 0) ? ' first' : '') . ((($offset + $eventCount + 1) >= $limit) ? ' last' : '') . ' cal_' . $event['parent'];
 			$objTemplate->readMore = specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['readMore'], $event['title']));
 			$objTemplate->more = $GLOBALS['TL_LANG']['MSC']['more'];
+			$objTemplate->locationLabel = $GLOBALS['TL_LANG']['MSC']['location'];
 
 			// Short view
 			if ($this->cal_noSpan)

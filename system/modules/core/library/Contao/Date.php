@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -29,9 +27,7 @@ namespace Contao;
  *
  *     Date::formatToJs('m/d/Y H:i');
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Date
 {
@@ -257,7 +253,7 @@ class Date
 					'Y' => '(?P<Y>[0-9]{4})',
 					'y' => '(?P<y>[0-9]{2})',
 				);
-	
+
 				return isset($arrRegexp[$matches[0]]) ? $arrRegexp[$matches[0]] : $matches[0];
 			}
 		, preg_quote($strFormat));
@@ -486,9 +482,9 @@ class Date
 
 	/**
 	 * Check for a numeric date format
-	 * 
+	 *
 	 * @param string $strFormat The PHP format string
-	 * 
+	 *
 	 * @return boolean True if the date format is numeric
 	 */
 	public static function isNumericFormat($strFormat)
@@ -499,7 +495,7 @@ class Date
 
 	/**
 	 * Return the numeric date format string
-	 * 
+	 *
 	 * @return string The numeric date format string
 	 */
 	public static function getNumericDateFormat()
@@ -520,7 +516,7 @@ class Date
 
 	/**
 	 * Return the numeric time format string
-	 * 
+	 *
 	 * @return string The numeric time format string
 	 */
 	public static function getNumericTimeFormat()
@@ -541,7 +537,7 @@ class Date
 
 	/**
 	 * Return the numeric datim format string
-	 * 
+	 *
 	 * @return string The numeric datim format string
 	 */
 	public static function getNumericDatimFormat()
@@ -557,6 +553,32 @@ class Date
 		}
 
 		return $GLOBALS['TL_CONFIG']['datimFormat'];
+	}
+
+
+	/**
+	 * Return a numeric format string depending on the regular expression name
+	 *
+	 * @return string The numeric format string
+	 */
+	public static function getFormatFromRgxp($strRgxp)
+	{
+		switch ($strRgxp)
+		{
+			case 'date':
+				return static::getNumericDateFormat();
+				break;
+
+			case 'time':
+				return static::getNumericTimeFormat();
+				break;
+
+			case 'datim':
+				return static::getNumericDatimFormat();
+				break;
+		}
+
+		return null;
 	}
 
 

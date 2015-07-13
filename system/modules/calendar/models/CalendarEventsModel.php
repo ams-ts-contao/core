@@ -3,26 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Calendar
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
  * Reads and writes events
  *
- * @package   Models
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class CalendarEventsModel extends \Model
 {
@@ -87,7 +79,12 @@ class CalendarEventsModel extends \Model
 			$arrColumns[] = "($t.start='' OR $t.start<$time) AND ($t.stop='' OR $t.stop>$time) AND $t.published=1";
 		}
 
-		return static::findBy($arrColumns, $intPid, array('order'=>"$t.startTime"), $arrOptions);
+		if (!isset($arrOptions['order']))
+		{
+			$arrOptions['order']  = "$t.startTime";
+		}
+
+		return static::findBy($arrColumns, $intPid, $arrOptions);
 	}
 
 
@@ -110,7 +107,12 @@ class CalendarEventsModel extends \Model
 			$arrColumns[] = "($t.start='' OR $t.start<$time) AND ($t.stop='' OR $t.stop>$time) AND $t.published=1";
 		}
 
-		return static::findBy($arrColumns, $intPid, array('order'=>"$t.startTime DESC"), $arrOptions);
+		if (!isset($arrOptions['order']))
+		{
+			$arrOptions['order']  = "$t.startTime DESC";
+		}
+
+		return static::findBy($arrColumns, $intPid, $arrOptions);
 	}
 
 

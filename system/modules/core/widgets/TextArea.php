@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class TextArea
- *
  * Provide methods to handle textareas.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class TextArea extends \Widget
 {
@@ -109,7 +100,7 @@ class TextArea extends \Widget
 	public function generate()
 	{
 		// Register the field name for rich text editor usage
-		if (strlen($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['rte']))
+		if ($this->rte)
 		{
 			list ($file, $type) = explode('|', $this->rte);
 			$key = 'ctrl_' . $this->strId;
@@ -120,6 +111,8 @@ class TextArea extends \Widget
 				'file' => $file,
 				'type' => $type
 			);
+
+			$this->strClass = trim($this->strClass . ' noresize');
 		}
 
 		return sprintf('<textarea name="%s" id="ctrl_%s" class="tl_textarea%s" rows="%s" cols="%s"%s onfocus="Backend.getScrollOffset()">%s</textarea>%s',

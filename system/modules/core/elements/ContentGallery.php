@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ContentGallery
- *
  * Front end content element "gallery".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ContentGallery extends \ContentElement
 {
@@ -120,7 +111,7 @@ class ContentGallery extends \ContentElement
 				// Use the file name as title if none is given
 				if ($arrMeta['title'] == '')
 				{
-					$arrMeta['title'] = specialchars(str_replace('_', ' ', $objFile->filename));
+					$arrMeta['title'] = specialchars($objFile->basename);
 				}
 
 				// Add the image
@@ -168,7 +159,7 @@ class ContentGallery extends \ContentElement
 					// Use the file name as title if none is given
 					if ($arrMeta['title'] == '')
 					{
-						$arrMeta['title'] = specialchars(str_replace('_', ' ', $objFile->filename));
+						$arrMeta['title'] = specialchars($objFile->basename);
 					}
 
 					// Add the image
@@ -316,12 +307,12 @@ class ContentGallery extends \ContentElement
 
 				if ($j == 0)
 				{
-					$class_td = ' col_first';
+					$class_td .= ' col_first';
 				}
 
 				if ($j == ($this->perRow - 1))
 				{
-					$class_td = ' col_last';
+					$class_td .= ' col_last';
 				}
 
 				$objCell = new \stdClass();

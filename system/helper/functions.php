@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -138,6 +136,8 @@ function show_help_message()
  */
 function die_nicely($strTemplate, $strFallback)
 {
+	header('Content-type: text/html; charset=utf-8');
+
 	if (file_exists(TL_ROOT . "/templates/$strTemplate.html5"))
 	{
 		include TL_ROOT . "/templates/$strTemplate.html5";
@@ -216,9 +216,10 @@ function scan($strFolder, $blnUncached=false)
  * entities are never double converted.
  * @param string
  * @param boolean
+ * @param boolean
  * @return string
  */
-function specialchars($strString, $blnStripInsertTags=false)
+function specialchars($strString, $blnStripInsertTags=false, $blnDoubleEncode=false)
 {
 	if ($blnStripInsertTags)
 	{
@@ -226,7 +227,7 @@ function specialchars($strString, $blnStripInsertTags=false)
 	}
 
 	// Use ENT_COMPAT here (see #4889)
-	return htmlspecialchars($strString, ENT_COMPAT, $GLOBALS['TL_CONFIG']['characterSet'], false);
+	return htmlspecialchars($strString, ENT_COMPAT, $GLOBALS['TL_CONFIG']['characterSet'], $blnDoubleEncode);
 }
 
 
@@ -267,7 +268,15 @@ function standardize($strString, $blnPreserveUppercase=false)
  */
 function strip_insert_tags($strString)
 {
-	return preg_replace('/\{\{[^\}]+\}\}/U', '', $strString);
+	$count = 0;
+
+	do
+	{
+		$strString = preg_replace('/\{\{[^\{\}]*\}\}/', '', $strString, -1, $count);
+	}
+	while ($count > 0);
+
+	return $strString;
 }
 
 
@@ -279,18 +288,35 @@ function strip_insert_tags($strString)
  */
 function deserialize($varValue, $blnForceArray=false)
 {
+	// Already an array
 	if (is_array($varValue))
 	{
 		return $varValue;
 	}
 
+	// Null
+	if ($varValue === null)
+	{
+		return $blnForceArray ? array() : null;
+	}
+
+	// Not a string
 	if (!is_string($varValue))
 	{
-		return $blnForceArray ? (($varValue === null) ? array() : array($varValue)) : $varValue;
+		return $blnForceArray ? array($varValue) : $varValue;
 	}
-	elseif (trim($varValue) == '')
+
+	// Empty string
+	if (trim($varValue) == '')
 	{
 		return $blnForceArray ? array() : '';
+	}
+
+	// Potentially including an object (see #6724)
+	if (preg_match('/[OoC]:\+?[0-9]+:"/', $varValue))
+	{
+		trigger_error('The deserialize() function does not allow serialized objects', E_USER_WARNING);
+		return $blnForceArray ? array($varValue) : $varValue;
 	}
 
 	$varUnserialized = @unserialize($varValue);

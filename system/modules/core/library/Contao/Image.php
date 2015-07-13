@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -44,9 +42,7 @@ namespace Contao;
  *     // Resizes the original image
  *     Image::resize('example.jpg', 640, 480);
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Image
 {
@@ -106,7 +102,7 @@ class Image
 		}
 
 		// No resizing required
-		if ($objFile->width == $width && $objFile->height == $height)
+		if (($objFile->width == $width || !$width) && ($objFile->height == $height || !$height))
 		{
 			// Return the target image (thanks to Tristan Lins) (see #4166)
 			if ($target)
@@ -165,6 +161,7 @@ class Image
 				if ($target)
 				{
 					\Files::getInstance()->copy($strCacheName, $target);
+					return \System::urlEncode($target);
 				}
 
 				return \System::urlEncode($strCacheName);
@@ -224,6 +221,9 @@ class Image
 					break;
 			}
 		}
+
+		$strNewImage = null;
+		$strSourceImage = null;
 
 		// Resize width and height and crop the image if necessary
 		if ($intWidth && $intHeight)

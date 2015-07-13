@@ -3,22 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao\Database;
 
 
 /**
- * Adjust the database if the system is updated
+ * Adjust the database if the system is updated.
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Updater extends \Controller
 {
@@ -325,6 +321,8 @@ class Updater extends \Controller
 
 			while ($objStyle->next())
 			{
+				$angle = '';
+
 				if (strpos($objStyle->gradientAngle, 'deg') !== false)
 				{
 					$angle = (abs(450 - intval($objStyle->gradientAngle)) % 360) . 'deg';
@@ -384,7 +382,7 @@ class Updater extends \Controller
 			$this->Database->query("ALTER TABLE `tl_layout` ADD `jquery` text NULL");
 		}
 
-		// Get all page layouts that use the moo_mediabox template
+		// Get all page layouts that use the moo_mediaelement template
 		$objLayout = $this->Database->query("SELECT `id`, `addJQuery`, `jquery`, `mootools` FROM `tl_layout` WHERE `addMooTools`=1 AND `mootools` LIKE '%\"moo_mediaelement\"%'");
 
 		// Activate the "j_mediaelement" template instead
@@ -539,12 +537,12 @@ class Updater extends \Controller
 							   ->execute($objParent->uuid, $objFiles->pid_backup);
 			}
 
-			// Update the fields
-			$this->updateFileTreeFields();
-
 			// Drop the pid_backup column
 			$this->Database->query("ALTER TABLE `tl_files` DROP `pid_backup`");
 		}
+
+		// Update the fields
+		$this->updateFileTreeFields();
 	}
 
 
@@ -766,11 +764,7 @@ class Updater extends \Controller
 		// Get the non-empty rows
 		$objRow = $objDatabase->query("SELECT id, $field FROM $table WHERE $field!=''");
 
-		if ($objRow->numRows < 1)
-		{
-			return;
-		}
-
+		// Check the column type
 		$objDesc = $objDatabase->query("DESC $table $field");
 
 		// Change the column type
@@ -824,11 +818,7 @@ class Updater extends \Controller
 		// Get the non-empty rows
 		$objRow = $objDatabase->query("SELECT id, $field FROM $table WHERE $field!=''");
 
-		if ($objRow->numRows < 1)
-		{
-			return;
-		}
-
+		// Check the column type
 		$objDesc = $objDatabase->query("DESC $table $field");
 
 		// Change the column type
@@ -890,11 +880,6 @@ class Updater extends \Controller
 
 		// Get the non-empty rows
 		$objRow = $objDatabase->query("SELECT id, $field FROM $table WHERE $field LIKE '%,%'");
-
-		if ($objRow->numRows < 1)
-		{
-			return;
-		}
 
 		// Convert the comma separated lists into serialized arrays
 		while ($objRow->next())

@@ -884,7 +884,8 @@ var Mediabox;
 			mediaWidth = preload.width;
 			mediaHeight = preload.height;
 			if (options.imgBackground) {
-				image.setStyles({backgroundImage: "url("+URL+")", display: ""});
+				// PATCH: see #6866
+				image.setStyles({backgroundImage: "url("+preload.src+")", display: ""});
 			} else {	// Thanks to Dusan Medlin for fixing large 16x9 image errors in a 4x3 browser
 				if (mediaHeight >= winHeight-options.imgPadding && (mediaHeight / winHeight) >= (mediaWidth / winWidth)) {
 					mediaHeight = winHeight-options.imgPadding;
@@ -896,7 +897,8 @@ var Mediabox;
 					preload.width = mediaWidth;
 				}
 				if (Browser.ie) preload = document.id(preload);
-				preload.addEvent('mousedown', function(e){ e.stop(); }).addEvent('contextmenu', function(e){ e.stop(); });
+				// PATCH: enable the contextmenu (see #7501)
+				//preload.addEvent('mousedown', function(e){ e.stop(); }).addEvent('contextmenu', function(e){ e.stop(); });
 				image.setStyles({backgroundImage: "none", display: ""});
 				preload.inject(image);
 			}

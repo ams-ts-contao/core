@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class StyleSheets
- *
  * Provide methods to handle style sheets.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class StyleSheets extends \Backend
 {
@@ -467,16 +458,16 @@ class StyleSheets extends \Backend
 			$bgColor = deserialize($row['bgcolor'], true);
 
 			// Try to shorten the definition
-			if ($row['bgimage'] != '' && $row['bgposition'] != '' && $row['bgrepeat'] != '')
+			if ($bgColor[0] != '' && $row['bgimage'] != '' && $row['bgposition'] != '' && $row['bgrepeat'] != '')
 			{
 				if (($strImage = $this->generateBase64Image($row['bgimage'], $parent)) !== false)
 				{
-					$return .= $lb . 'background:' . (($bgColor[0] != '') ? $this->compileColor($bgColor, $blnWriteToFile, $vars) . ' ' : '') . 'url("' . $strImage . '") ' . $row['bgposition'] . ' ' . $row['bgrepeat'] . ';';
+					$return .= $lb . 'background:' . $this->compileColor($bgColor, $blnWriteToFile, $vars) . ' url("' . $strImage . '") ' . $row['bgposition'] . ' ' . $row['bgrepeat'] . ';';
 				}
 				else
 				{
 					$glue = (strncmp($row['bgimage'], 'data:', 5) !== 0 && strncmp($row['bgimage'], 'http://', 7) !== 0 && strncmp($row['bgimage'], 'https://', 8) !== 0 && strncmp($row['bgimage'], '/', 1) !== 0) ? $strGlue : '';
-					$return .= $lb . 'background:' . (($bgColor[0] != '') ? $this->compileColor($bgColor, $blnWriteToFile, $vars) . ' ' : '') . 'url("' . $glue . $row['bgimage'] . '") ' . $row['bgposition'] . ' ' . $row['bgrepeat'] . ';';
+					$return .= $lb . 'background:' . $this->compileColor($bgColor, $blnWriteToFile, $vars) . ' url("' . $glue . $row['bgimage'] . '") ' . $row['bgposition'] . ' ' . $row['bgrepeat'] . ';';
 				}
 			}
 			else
@@ -548,6 +539,8 @@ class StyleSheets extends \Backend
 					{
 						$row['gradientColors'][$k] = '#' . $v;
 					}
+
+					$angle = '';
 
 					// Convert the angle for the legacy commands (see #4569)
 					if (strpos($row['gradientAngle'], 'deg') !== false)
@@ -905,6 +898,9 @@ class StyleSheets extends \Backend
 			}
 		}
 
+		// Optimize floating-point numbers (see #6634)
+		$return = preg_replace('/([^0-9\.\+\-])0\.([0-9]+)/', '$1.$2', $return);
+
 		// CSS3PIE
 		if ($blnNeedsPie && !$parent['disablePie'])
 		{
@@ -917,14 +913,15 @@ class StyleSheets extends \Backend
 			$own = trim(\String::decodeEntities($row['own']));
 			$own = preg_replace('/url\("(?!data:|\/)/', 'url("' . $strGlue, $own);
 			$own = preg_split('/[\n\r]+/', $own);
-			$return .= $lb . implode(($blnWriteToFile ? '' : $lb), $own);
+			$own = implode(($blnWriteToFile ? '' : $lb), $own);
+			$return .= $lb . (!$blnWriteToFile ? specialchars($own) : $own);
 		}
 
 		// Allow custom definitions
 		if (isset($GLOBALS['TL_HOOKS']['compileDefinition']) && is_array($GLOBALS['TL_HOOKS']['compileDefinition']))
 		{
 			foreach ($GLOBALS['TL_HOOKS']['compileDefinition'] as $callback)
-            {
+			{
 				$this->import($callback[0]);
 				$strTemp = $this->$callback[0]->$callback[1]($row, $blnWriteToFile, $vars);
 
@@ -1382,8 +1379,8 @@ class StyleSheets extends \Backend
 				continue;
 			}
 
-			// Handle important definitions
-			if (strpos($strDefinition, 'important') !== false || strpos($strDefinition, 'transparent') !== false || strpos($strDefinition, 'inherit') !== false)
+			// Handle keywords, variables and functions (see #7448)
+			if (strpos($strDefinition, 'important') !== false || strpos($strDefinition, 'transparent') !== false || strpos($strDefinition, 'inherit') !== false || strpos($strDefinition, '$') !== false || strpos($strDefinition, '(') !== false)
 			{
 				$arrSet['own'][] = $strDefinition;
 				continue;
@@ -1403,7 +1400,7 @@ class StyleSheets extends \Backend
 					}
 					else
 					{
-						$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrChunks[1]);
+						$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1]);
 						$varValue = preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]);
 					}
 					$arrSet['size'] = 1;
@@ -1421,7 +1418,7 @@ class StyleSheets extends \Backend
 					}
 					else
 					{
-						$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrChunks[1]);
+						$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1]);
 						$varValue = preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]);
 					}
 					$arrSet['size'] = 1;
@@ -1439,7 +1436,7 @@ class StyleSheets extends \Backend
 					}
 					else
 					{
-						$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrChunks[1]);
+						$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1]);
 						$varValue = preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]);
 					}
 					$arrSet['size'] = 1;
@@ -1463,7 +1460,7 @@ class StyleSheets extends \Backend
 					}
 					else
 					{
-						$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrChunks[1]);
+						$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1]);
 						$varValue = preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]);
 					}
 					$arrSet['positioning'] = 1;
@@ -1502,7 +1499,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[0]);
+								$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[0]);
 								$varValue = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[0]);
 							}
 							$arrSet[$strKey] = array
@@ -1522,7 +1519,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[0]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[0]);
 								$varValue_1 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[0]);
 							}
 							if ($arrTRBL[1] == 'auto')
@@ -1531,7 +1528,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[1]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[1]);
 								$varValue_2 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[1]);
 							}
 							// Move to custom section if there are different units
@@ -1567,7 +1564,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[0]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[0]);
 								$varValue_1 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[0]);
 							}
 							if ($arrTRBL[1] == 'auto')
@@ -1576,7 +1573,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[1]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[1]);
 								$varValue_2 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[1]);
 							}
 							if ($arrTRBL[2] == 'auto')
@@ -1585,7 +1582,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[2]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[2]);
 								$varValue_3 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[2]);
 							}
 							// Move to custom section if there are different units
@@ -1621,7 +1618,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[0]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[0]);
 								$varValue_1 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[0]);
 							}
 							if ($arrTRBL[1] == 'auto')
@@ -1630,7 +1627,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[1]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[1]);
 								$varValue_2 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[1]);
 							}
 							if ($arrTRBL[2] == 'auto')
@@ -1639,7 +1636,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[2]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[2]);
 								$varValue_3 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[2]);
 							}
 							if ($arrTRBL[3] == 'auto')
@@ -1648,7 +1645,7 @@ class StyleSheets extends \Backend
 							}
 							else
 							{
-								$arrUnits[] = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[3]);
+								$arrUnits[] = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[3]);
 								$varValue_4 = preg_replace('/[^0-9\.-]+/', '', $arrTRBL[3]);
 							}
 							// Move to custom section if there are different units
@@ -1692,7 +1689,7 @@ class StyleSheets extends \Backend
 					}
 					else
 					{
-						$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrChunks[1]);
+						$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1]);
 						$varValue = preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]);
 					}
 					$arrSet['margin'][$strName] = $varValue;
@@ -1709,7 +1706,7 @@ class StyleSheets extends \Backend
 					$arrSet['alignment'] = 1;
 					$strName = str_replace('padding-', '', $strKey);
 					$varValue = preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]);
-					$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrChunks[1]);
+					$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1]);
 					$arrSet['padding'][$strName] = $varValue;
 					$arrSet['padding']['unit'] = $strUnit;
 					break;
@@ -1794,7 +1791,7 @@ class StyleSheets extends \Backend
 					}
 					$arrSet['border'] = 1;
 					$varValue = preg_replace('/[^0-9\.-]+/', '', $arrWSC[0]);
-					$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrWSC[0]);
+					$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrWSC[0]);
 					$arrSet['borderwidth'] = array
 					(
 						'top' => $varValue,
@@ -1831,7 +1828,7 @@ class StyleSheets extends \Backend
 					$arrSet['border'] = 1;
 					$strName = str_replace('border-', '', $strKey);
 					$varValue = preg_replace('/[^0-9\.-]+/', '', $arrWSC[0]);
-					$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrWSC[0]);
+					$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrWSC[0]);
 					if ((isset($arrSet['borderwidth']['unit']) && $arrSet['borderwidth']['unit'] != $strUnit) || ($arrWSC[1] != '' && isset($arrSet['borderstyle']) && $arrSet['borderstyle'] != $arrWSC[1]) || ($arrWSC[2] != '' && isset($arrSet['bordercolor']) && $arrSet['bordercolor'] != $arrWSC[2]))
 					{
 						$arrSet['own'][] = $strDefinition;
@@ -1857,7 +1854,7 @@ class StyleSheets extends \Backend
 					{
 						if ($v != 0)
 						{
-							$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[0]);
+							$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[0]);
 						}
 					}
 					switch (count($arrTRBL))
@@ -1918,7 +1915,7 @@ class StyleSheets extends \Backend
 					{
 						if ($v != 0)
 						{
-							$strUnit = preg_replace('/[^ceimnptx%]/', '', $arrTRBL[0]);
+							$strUnit = preg_replace('/[^ceimnprtx%]/', '', $arrTRBL[0]);
 						}
 					}
 					switch (count($arrTRBL))
@@ -1975,7 +1972,7 @@ class StyleSheets extends \Backend
 					$arrSet['borderspacing'] = array
 					(
 						'value' => preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]),
-						'unit' => preg_replace('/[^ceimnptx%]/', '', $arrChunks[1])
+						'unit' => preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1])
 					);
 					break;
 
@@ -1995,7 +1992,7 @@ class StyleSheets extends \Backend
 						$arrSet['fontsize'] = array
 						(
 							'value' => preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]),
-							'unit' => preg_replace('/[^ceimnptx%]/', '', $arrChunks[1])
+							'unit' => preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1])
 						);
 					}
 					break;
@@ -2072,7 +2069,7 @@ class StyleSheets extends \Backend
 					$arrSet['lineheight'] = array
 					(
 						'value' => preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]),
-						'unit' => preg_replace('/[^ceimnptx%]/', '', $arrChunks[1])
+						'unit' => preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1])
 					);
 					break;
 
@@ -2089,7 +2086,7 @@ class StyleSheets extends \Backend
 					$arrSet[$strName] = array
 					(
 						'value' => preg_replace('/[^0-9\.-]+/', '', $arrChunks[1]),
-						'unit' => preg_replace('/[^ceimnptx%]/', '', $arrChunks[1])
+						'unit' => preg_replace('/[^ceimnprtx%]/', '', $arrChunks[1])
 					);
 					break;
 
@@ -2117,7 +2114,7 @@ class StyleSheets extends \Backend
 					if (isset($GLOBALS['TL_HOOKS']['createDefinition']) && is_array($GLOBALS['TL_HOOKS']['createDefinition']))
 					{
 						foreach ($GLOBALS['TL_HOOKS']['createDefinition'] as $callback)
-            			{
+						{
 							$this->import($callback[0]);
 							$arrTemp = $this->$callback[0]->$callback[1]($strKey, $arrChunks[1], $strDefinition, $arrSet);
 

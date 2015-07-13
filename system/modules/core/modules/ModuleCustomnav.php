@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleCustomnav
- *
  * Front end module "custom navigation".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleCustomnav extends \Module
 {
@@ -161,7 +152,7 @@ class ModuleCustomnav extends \Module
 							// Add the domain if it differs from the current one (see #3765)
 							if ($objNext->domain != '' && $objNext->domain != \Environment::get('host'))
 							{
-								$href = (\Environment::get('ssl') ? 'https://' : 'http://') . $objNext->domain . TL_PATH . '/' . $href;
+								$href = ($objNext->rootUseSSL ? 'https://' : 'http://') . $objNext->domain . TL_PATH . '/' . $href;
 							}
 							break;
 						}
@@ -173,7 +164,7 @@ class ModuleCustomnav extends \Module
 						// Add the domain if it differs from the current one (see #3765)
 						if ($arrPage['domain'] != '' && $arrPage['domain'] != \Environment::get('host'))
 						{
-							$href = (\Environment::get('ssl') ? 'https://' : 'http://') . $arrPage['domain'] . TL_PATH . '/' . $href;
+							$href = ($arrPage['rootUseSSL'] ? 'https://' : 'http://') . $arrPage['domain'] . TL_PATH . '/' . $href;
 						}
 						break;
 				}

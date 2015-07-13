@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleArticle
- *
  * Provides methodes to handle articles.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleArticle extends \Module
 {
@@ -48,13 +39,13 @@ class ModuleArticle extends \Module
 	 */
 	public function generate($blnNoMarkup=false)
 	{
-		$this->type = 'article';
-		$this->blnNoMarkup = $blnNoMarkup;
-
-		if (!BE_USER_LOGGED_IN && (!$this->published || ($this->start > 0 && $this->start > time()) || ($this->stop > 0 && $this->stop < time())))
+		if (TL_MODE == 'FE' && !BE_USER_LOGGED_IN && (!$this->published || ($this->start > 0 && $this->start > time()) || ($this->stop > 0 && $this->stop < time())))
 		{
 			return '';
 		}
+
+		$this->type = 'article';
+		$this->blnNoMarkup = $blnNoMarkup;
 
 		return parent::generate();
 	}
@@ -125,10 +116,10 @@ class ModuleArticle extends \Module
 			}
 
 			$article = (!$GLOBALS['TL_CONFIG']['disableAlias'] && $this->alias != '') ? $this->alias : $this->id;
-			$href = 'articles=' . (($this->inColumn != 'main') ? $this->inColumn . ':' : '') . $article;
+			$href = '/articles/' . (($this->inColumn != 'main') ? $this->inColumn . ':' : '') . $article;
 
 			$this->Template->headline = $this->headline;
-			$this->Template->href = $this->addToUrl($href);
+			$this->Template->href = $this->generateFrontendUrl($objPage->row(), $href);
 			$this->Template->teaser = $this->teaser;
 			$this->Template->readMore = specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['readMore'], $this->headline), true);
 			$this->Template->more = $GLOBALS['TL_LANG']['MSC']['more'];
@@ -161,17 +152,8 @@ class ModuleArticle extends \Module
 		// Back link
 		if (!$this->multiMode && $strArticle != '' && ($strArticle == $this->id || $strArticle == $this->alias))
 		{
+			$this->Template->backlink = 'javascript:history.go(-1)'; // see #6955
 			$this->Template->back = specialchars($GLOBALS['TL_LANG']['MSC']['goBack']);
-
-			// Remove the "/articles/…" part from the URL
-			if ($GLOBALS['TL_CONFIG']['disableAlias'])
-			{
-				$this->Template->backlink = preg_replace('@&(amp;)?articles=[^&]+@', '', \Environment::get('request'));
-			}
-			else
-			{
-				$this->Template->backlink = preg_replace('@/articles/[^/]+@', '', \Environment::get('request')) . $GLOBALS['TL_CONFIG']['urlSuffix'];
-			}
 		}
 
 		$arrElements = array();

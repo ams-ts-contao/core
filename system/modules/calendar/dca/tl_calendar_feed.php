@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Calendar
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -211,12 +209,9 @@ $GLOBALS['TL_DCA']['tl_calendar_feed'] = array
 
 
 /**
- * Class tl_calendar_feed
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Calendar
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_calendar_feed extends Backend
 {
@@ -372,7 +367,7 @@ class tl_calendar_feed extends Backend
 
 		foreach ($session as $id)
 		{
-			$this->Calendar->generateFeed($id, true);
+			$this->Calendar->generateFeedsByCalendar($id);
 		}
 
 		$this->import('Automator');

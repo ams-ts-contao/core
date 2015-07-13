@@ -245,6 +245,10 @@
         <source>No database entry found for %s. Please synchronize the file system.</source>
         <target>Kein Datenbank-Eintrag zu %s gefunden. Bitte synchronisieren Sie das Dateisystem.</target>
       </trans-unit>
+      <trans-unit id="ERR.invalidGoogleId">
+        <source>Please enter a numeric Google+ ID or vanity name!</source>
+        <target>Bitte geben Sie eine numerische Google+-ID oder einen Vanity-Namen ein!</target>
+      </trans-unit>
       <trans-unit id="SEC.question1">
         <source>Please add %d and %d.</source>
         <target>Bitte addieren Sie %d und %d.</target>
@@ -1142,20 +1146,20 @@
         <target>Hinzugefügt am: %s</target>
       </trans-unit>
       <trans-unit id="MSC.lastLogin.0">
+        <source>Previous login</source>
+        <target>Vorherige Anmeldung</target>
+      </trans-unit>
+      <trans-unit id="MSC.lastLogin.1">
+        <source>Previous login: %s</source>
+        <target>Vorherige Anmeldung: %s</target>
+      </trans-unit>
+      <trans-unit id="MSC.currentLogin.0">
         <source>Last login</source>
         <target>Letzte Anmeldung</target>
       </trans-unit>
-      <trans-unit id="MSC.lastLogin.1">
+      <trans-unit id="MSC.currentLogin.1">
         <source>Last login: %s</source>
         <target>Letzte Anmeldung: %s</target>
-      </trans-unit>
-      <trans-unit id="MSC.currentLogin.0">
-        <source>Current login</source>
-        <target>Aktuelle Anmeldung</target>
-      </trans-unit>
-      <trans-unit id="MSC.currentLogin.1">
-        <source>Current login: %s</source>
-        <target>Aktuelle Anmeldung: %s</target>
       </trans-unit>
       <trans-unit id="MSC.loginCount">
         <source>Login attempts</source>
@@ -1869,7 +1873,7 @@ Diese E-Mail wurde von Contao generiert. Sie können nicht darauf antworten.
       </trans-unit>
       <trans-unit id="MSC.noVersions">
         <source>Currently there are no versions.</source>
-        <target>Zur Zeit sind keine Versionen vorhanden.</target>
+        <target>Zurzeit sind keine Versionen vorhanden.</target>
       </trans-unit>
       <trans-unit id="MSC.latestChanges">
         <source>Latest changes</source>

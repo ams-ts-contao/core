@@ -3,7 +3,7 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
  * @package   Repository
  * @author    Peter Koch, IBK Software AG
@@ -16,7 +16,7 @@
  * Implements the extension manager
  * @copyright  Peter Koch 2008-2010
  * @author     Peter Koch, IBK Software AG
- * @author     Leo Feyer <https://contao.org>
+ * @author Leo Feyer <https://github.com/leofeyer>
  * @package    Repository
  */
 class RepositoryManager extends RepositoryBackendModule
@@ -471,8 +471,8 @@ class RepositoryManager extends RepositoryBackendModule
 		// return from submit?
 		if ($this->filterPost('repository_action') == $rep->f_action) {
 			if (isset($_POST['repository_cancelbutton'])) $this->redirect($rep->homeLink);
-			$sql = deserialize(Input::post('sql'));
-			if (is_array($sql)) {
+			$sql = Input::post('sql');
+			if (!empty($sql) && is_array($sql)) {
 				foreach ($sql as $key) {
 					if (isset($_SESSION['sql_commands'][$key])) {
 						$this->Database->query(str_replace('DEFAULT CHARSET=utf8;', 'DEFAULT CHARSET=utf8 COLLATE ' . $GLOBALS['TL_CONFIG']['dbCollation'] . ';', $_SESSION['sql_commands'][$key]));

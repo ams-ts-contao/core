@@ -30,8 +30,8 @@
         <target>ID профиля Google+</target>
       </trans-unit>
       <trans-unit id="tl_user.google.1">
-        <source>Here you can enter your Google+ profile ID (e.g. &lt;em&gt;114740384471581504722&lt;/em&gt;).</source>
-        <target>Вы можете ввести ID своего профиля Google+ (напр. &lt;em&gt;114740384471581504722&lt;/em&gt;).</target>
+        <source>Here you can enter your Google+ profile ID or vanity name.</source>
+        <target>Вы можете ввести ID своего профиля Google+ или его короткое имя.</target>
       </trans-unit>
       <trans-unit id="tl_user.language.0">
         <source>Back end language</source>
@@ -99,7 +99,7 @@
       </trans-unit>
       <trans-unit id="tl_user.admin.0">
         <source>Make the user an administrator</source>
-        <target>Назначить Администратором</target>
+        <target>Назначить администратором</target>
       </trans-unit>
       <trans-unit id="tl_user.admin.1">
         <source>Administrators have unlimited access to all modules and elements!</source>

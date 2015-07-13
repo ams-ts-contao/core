@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class DC_File
- *
  * Provide methods to edit the local configuration file.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class DC_File extends \DataContainer implements \editable
 {
@@ -350,7 +341,7 @@ class DC_File extends \DataContainer implements \editable
 					}
 					elseif (is_callable($callback))
 					{
-						$callack($this);
+						$callback($this);
 					}
 				}
 			}
@@ -401,30 +392,43 @@ class DC_File extends \DataContainer implements \editable
 			$varValue = $varValue ? true : false;
 		}
 
-		// Convert date formats into timestamps
-		if ($varValue != '' && in_array($arrData['eval']['rgxp'], array('date', 'time', 'datim')))
+		if ($varValue != '')
 		{
-			$objDate = new \Date($varValue, $GLOBALS['TL_CONFIG'][$arrData['eval']['rgxp'] . 'Format']);
-			$varValue = $objDate->tstamp;
-		}
-
-		// Handle entities
-		if ($arrData['inputType'] == 'text' || $arrData['inputType'] == 'textarea')
-		{
-			$varValue = deserialize($varValue);
-
-			if (!is_array($varValue))
+			// Convert binary UUIDs (see #6893)
+			if ($arrData['inputType'] == 'fileTree')
 			{
-				$varValue = \String::restoreBasicEntities($varValue);
-			}
-			else
-			{
-				foreach ($varValue as $k=>$v)
+				$varValue = deserialize($varValue);
+
+				if (!is_array($varValue))
 				{
-					$varValue[$k] = \String::restoreBasicEntities($v);
+					$varValue = \String::binToUuid($varValue);
 				}
+				else
+				{
+					$varValue = serialize(array_map('String::binToUuid', $varValue));
+				}
+			}
 
-				$varValue = serialize($varValue);
+			// Convert date formats into timestamps
+			if ($varValue != '' && in_array($arrData['eval']['rgxp'], array('date', 'time', 'datim')))
+			{
+				$objDate = new \Date($varValue, \Date::getFormatFromRgxp($arrData['eval']['rgxp']));
+				$varValue = $objDate->tstamp;
+			}
+
+			// Handle entities
+			if ($arrData['inputType'] == 'text' || $arrData['inputType'] == 'textarea')
+			{
+				$varValue = deserialize($varValue);
+
+				if (!is_array($varValue))
+				{
+					$varValue = \String::restoreBasicEntities($varValue);
+				}
+				else
+				{
+					$varValue = serialize(array_map('String::restoreBasicEntities', $varValue));
+				}
 			}
 		}
 
@@ -458,7 +462,7 @@ class DC_File extends \DataContainer implements \editable
 		}
 
 		// Save the value if there was no error
-		if ((strlen($varValue) || !$arrData['eval']['doNotSaveEmpty']) && $strCurrent !== $varValue)
+		if ((strlen($varValue) || !$arrData['eval']['doNotSaveEmpty']) && $strCurrent != $varValue)
 		{
 			$strKey = sprintf("\$GLOBALS['TL_CONFIG']['%s']", $this->strField);
 			$this->Config->update($strKey, $varValue);

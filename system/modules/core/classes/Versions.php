@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class Versions
- *
  * Provide methods to handle versioning.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Versions extends \Backend
 {
@@ -293,29 +284,21 @@ class Versions extends \Backend
 				require_once TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff.php';
 				require_once TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff/Renderer/Html/Contao.php';
 
-				$arrOrder = array();
-				$arrFields = $GLOBALS['TL_DCA'][$this->strTable]['fields'];
-
 				// Get the order fields
-				foreach ($arrFields as $arrField)
-				{
-					if (isset($arrField['eval']['orderField']))
-					{
-						$arrOrder[] = $arrField['eval']['orderField'];
-					}
-				}
+				$objDcaExtractor = new \DcaExtractor($this->strTable);
+				$arrOrder = $objDcaExtractor->getOrderFields();
 
 				// Find the changed fields and highlight the changes
 				foreach ($to as $k=>$v)
 				{
 					if ($from[$k] != $to[$k])
 					{
-						if ($arrFields[$k]['inputType'] == 'password' || $arrFields[$k]['eval']['doNotShow'] || $arrFields[$k]['eval']['hideInput'])
+						if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['inputType'] == 'password' || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['doNotShow'] || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['hideInput'])
 						{
 							continue;
 						}
 
-						$blnIsBinary = ($arrFields[$k]['inputType'] == 'fileTree' || in_array($k, $arrOrder));
+						$blnIsBinary = ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['inputType'] == 'fileTree' || in_array($k, $arrOrder));
 
 						// Convert serialized arrays into strings
 						if (is_array(($tmp = deserialize($to[$k]))) && !is_array($to[$k]))
@@ -329,27 +312,27 @@ class Versions extends \Backend
 						unset($tmp);
 
 						// Convert binary UUIDs to their hex equivalents (see #6365)
-						if ($blnIsBinary && \Validator::isUuid($to[$k]))
+						if ($blnIsBinary && \Validator::isBinaryUuid($to[$k]))
 						{
 							$to[$k] = \String::binToUuid($to[$k]);
 						}
-						if ($blnIsBinary && \Validator::isUuid($from[$k]))
+						if ($blnIsBinary && \Validator::isBinaryUuid($from[$k]))
 						{
 							$to[$k] = \String::binToUuid($from[$k]);
 						}
 
 						// Convert date fields
-						if ($arrFields[$k]['eval']['rgxp'] == 'date')
+						if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['rgxp'] == 'date')
 						{
 							$to[$k] = \Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $to[$k] ?: '');
 							$from[$k] = \Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $from[$k] ?: '');
 						}
-						elseif ($arrFields[$k]['eval']['rgxp'] == 'time')
+						elseif ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['rgxp'] == 'time')
 						{
 							$to[$k] = \Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $to[$k] ?: '');
 							$from[$k] = \Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $from[$k] ?: '');
 						}
-						elseif ($arrFields[$k]['eval']['rgxp'] == 'datim' || $k == 'tstamp')
+						elseif ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['eval']['rgxp'] == 'datim' || $k == 'tstamp')
 						{
 							$to[$k] = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $to[$k] ?: '');
 							$from[$k] = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $from[$k] ?: '');
@@ -366,7 +349,7 @@ class Versions extends \Backend
 						}
 
 						$objDiff = new \Diff($from[$k], $to[$k]);
-						$strBuffer .= $objDiff->Render(new \Diff_Renderer_Html_Contao(array('field'=>($arrFields[$k]['label'][0] ?: (isset($GLOBALS['TL_LANG']['MSC'][$k]) ? (is_array($GLOBALS['TL_LANG']['MSC'][$k]) ? $GLOBALS['TL_LANG']['MSC'][$k][0] : $GLOBALS['TL_LANG']['MSC'][$k]) : $k)))));
+						$strBuffer .= $objDiff->Render(new \Diff_Renderer_Html_Contao(array('field'=>($GLOBALS['TL_DCA'][$this->strTable]['fields'][$k]['label'][0] ?: (isset($GLOBALS['TL_LANG']['MSC'][$k]) ? (is_array($GLOBALS['TL_LANG']['MSC'][$k]) ? $GLOBALS['TL_LANG']['MSC'][$k][0] : $GLOBALS['TL_LANG']['MSC'][$k]) : $k)))));
 					}
 				}
 			}
@@ -461,7 +444,7 @@ class Versions extends \Backend
 		$intLast   = ceil($objTotal->count / 30);
 
 		// Validate the page number
-		if ($intPage < 1 || $intPage > $intLast)
+		if ($intPage < 1 || ($intLast > 0 && $intPage > $intLast))
 		{
 			header('HTTP/1.1 404 Not Found');
 		}

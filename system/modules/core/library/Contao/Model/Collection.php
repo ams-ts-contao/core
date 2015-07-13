@@ -3,25 +3,19 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao\Model;
 
 
 /**
- * Handles a set models
- *
  * The class handles traversing a set of models and lazy loads the database
  * result rows upon their first usage.
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Collection implements \ArrayAccess, \Countable, \IteratorAggregate
 {
@@ -139,13 +133,11 @@ class Collection implements \ArrayAccess, \Countable, \IteratorAggregate
 	static public function createFromDbResult(\Database\Result $objResult, $strTable)
 	{
 		$arrModels = array();
+		$strClass = \Model::getClassFromTable($strTable);
 
 		while ($objResult->next())
 		{
-			$strClass = \Model::getClassFromTable($strTable);
-			$strPk    = $strClass::getPk();
-			$intPk    = $objResult->$strPk;
-			$objModel = \Model\Registry::getInstance()->fetch($strTable, $intPk);
+			$objModel = \Model\Registry::getInstance()->fetch($strTable, $objResult->{$strClass::getPk()});
 
 			if ($objModel !== null)
 			{

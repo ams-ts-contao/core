@@ -3,26 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
  * Reads and writes content elements
  *
- * @package   Models
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ContentModel extends \Model
 {
@@ -50,16 +42,17 @@ class ContentModel extends \Model
 		// Also handle empty ptable fields (backwards compatibility)
 		if ($strParentTable == 'tl_article')
 		{
-			$arrColumns = array("$t.pid=? AND (ptable=? OR ptable='')");
+			$arrColumns = array("$t.pid=? AND ($t.ptable=? OR $t.ptable='')");
 		}
 		else
 		{
-			$arrColumns = array("$t.pid=? AND ptable=?");
+			$arrColumns = array("$t.pid=? AND $t.ptable=?");
 		}
 
 		if (!BE_USER_LOGGED_IN)
 		{
-			$arrColumns[] = "$t.invisible=''";
+			$time = time();
+			$arrColumns[] = "($t.start='' OR $t.start<$time) AND ($t.stop='' OR $t.stop>$time) AND $t.invisible=''";
 		}
 
 		if (!isset($arrOptions['order']))

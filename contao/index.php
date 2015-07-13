@@ -3,12 +3,16 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
+
+
+/**
+ * Set the script name
+ */
+define('TL_SCRIPT', 'contao/index.php');
 
 
 /**
@@ -19,12 +23,9 @@ require_once '../system/initialize.php';
 
 
 /**
- * Class Index
- *
  * Handle back end logins and logouts.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Index extends Backend
 {
@@ -58,7 +59,7 @@ class Index extends Backend
 		}
 
 		// Reload the page if authentication fails
-		elseif (Input::post('username') && Input::post('password'))
+		elseif (!empty($_POST['username']) && !empty($_POST['password']))
 		{
 			$this->reload();
 		}
@@ -101,8 +102,8 @@ class Index extends Backend
 		$this->Template->headline = $strHeadline;
 		$this->Template->curLanguage = Input::post('language') ?: str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
 		$this->Template->curUsername = Input::post('username') ?: '';
-		$this->Template->uClass = ($_POST && !Input::post('username')) ? ' class="login_error"' : '';
-		$this->Template->pClass = ($_POST && !Input::post('password')) ? ' class="login_error"' : '';
+		$this->Template->uClass = ($_POST && empty($_POST['username'])) ? ' class="login_error"' : '';
+		$this->Template->pClass = ($_POST && empty($_POST['password'])) ? ' class="login_error"' : '';
 		$this->Template->loginButton = specialchars($GLOBALS['TL_LANG']['MSC']['loginBT']);
 		$this->Template->username = $GLOBALS['TL_LANG']['tl_user']['username'][0];
 		$this->Template->password = $GLOBALS['TL_LANG']['MSC']['password'][0];

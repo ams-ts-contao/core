@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class RadioButton
- *
  * Provide methods to handle radio buttons.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class RadioButton extends \Widget
 {
@@ -78,7 +69,7 @@ class RadioButton extends \Widget
 	 */
 	public function validate()
 	{
-		$varValue = deserialize($this->getPost($this->strName));
+		$varValue = $this->getPost($this->strName);
 
 		if (!empty($varValue) && !$this->isValidOption($varValue))
 		{

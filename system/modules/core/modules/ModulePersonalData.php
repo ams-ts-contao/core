@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModulePersonalData
- *
  * Front end module "personal data".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModulePersonalData extends \Module
 {
@@ -197,11 +188,11 @@ class ModulePersonalData extends \Module
 				$rgxp = $arrData['eval']['rgxp'];
 
 				// Convert date formats into timestamps (check the eval setting first -> #3063)
-				if (($rgxp == 'date' || $rgxp == 'time' || $rgxp == 'datim') && $varValue != '')
+				if ($varValue != '' && in_array($rgxp, array('date', 'time', 'datim')))
 				{
 					try
 					{
-						$objDate = new \Date($varValue);
+						$objDate = new \Date($varValue, \Date::getFormatFromRgxp($rgxp));
 						$varValue = $objDate->tstamp;
 					}
 					catch (\OutOfBoundsException $e)

@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class Theme
- *
  * Provide methods to handle themes.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Theme extends \Backend
 {
@@ -315,21 +306,7 @@ class Theme extends \Backend
 				// Extract the files
 				try
 				{
-					$strFileName = $objArchive->file_name;
-
-					// Support the old "tl_files" directory
-					if (strncmp($strFileName, 'tl_files/', 9) === 0)
-					{
-						$strFileName = substr($strFileName, 3);
-					}
-
-					// Override the files directory
-					if ($GLOBALS['TL_CONFIG']['uploadPath'] != 'files' && strncmp($strFileName, 'files/', 6) === 0)
-					{
-						$strFileName = preg_replace('@^files/@', $GLOBALS['TL_CONFIG']['uploadPath'] . '/', $strFileName);
-					}
-
-					\File::putContent($strFileName, $objArchive->unzip());
+					\File::putContent($this->customizeUploadPath($objArchive->file_name), $objArchive->unzip());
 				}
 				catch (\Exception $e)
 				{
@@ -373,19 +350,7 @@ class Theme extends \Backend
 			{
 				foreach ($arrNewFolders as $strFolder)
 				{
-					// Support the old "tl_files" folder
-					if (strncmp($strFolder, 'tl_files/', 9) === 0)
-					{
-						$strFolder = substr($strFolder, 3);
-					}
-
-					// Override the files directory
-					if ($GLOBALS['TL_CONFIG']['uploadPath'] != 'files')
-					{
-						$strFolder = preg_replace('@^files/@', $GLOBALS['TL_CONFIG']['uploadPath'] . '/', $strFolder);
-					}
-
-					\Dbafs::addResource($strFolder);
+					\Dbafs::addResource($this->customizeUploadPath($strFolder));
 				}
 			}
 
@@ -399,6 +364,15 @@ class Theme extends \Backend
 				'tl_style'       => 'WRITE',
 				'tl_theme'       => 'WRITE',
 			);
+
+			// Load the DCAs of the locked tables (see #7345)
+			foreach (array_keys($arrLocks) as $table)
+			{
+				if ($table != 'tl_files')
+				{
+					$this->loadDataContainer($table);
+				}
+			}
 
 			$this->Database->lockTables($arrLocks);
 
@@ -416,10 +390,14 @@ class Theme extends \Backend
 				$table = $tables->item($i)->getAttribute('name');
 
 				// Skip invalid tables
-				if ($table != 'tl_theme' && $table != 'tl_style_sheet' && $table != 'tl_style' && $table != 'tl_module' && $table != 'tl_layout')
+				if ($table == 'tl_files' || !in_array($table, array_keys($arrLocks)))
 				{
 					continue;
 				}
+
+				// Get the order fields
+				$objDcaExtractor = new \DcaExtractor($table);
+				$arrOrder = $objDcaExtractor->getOrderFields();
 
 				// Loop through the rows
 				for ($j=0; $j<$rows->length; $j++)
@@ -432,12 +410,6 @@ class Theme extends \Backend
 					{
 						$value = $fields->item($k)->nodeValue;
 						$name = $fields->item($k)->getAttribute('name');
-
-						// Support the old "tl_files" folder
-						if (strncmp($value, 'tl_files/', 9) === 0)
-						{
-							$value = substr($value, 3);
-						}
 
 						// Skip NULL values
 						if ($value == 'NULL')
@@ -521,7 +493,7 @@ class Theme extends \Backend
 						}
 
 						// Adjust the file paths in style sheets
-						elseif ($GLOBALS['TL_CONFIG']['uploadPath'] != 'files' && ($table == 'tl_style_sheet' || $table == 'tl_style') && strpos($value, 'files') !== false)
+						elseif (($table == 'tl_style_sheet' || $table == 'tl_style') && strpos($value, 'files') !== false)
 						{
 							$tmp = deserialize($value);
 
@@ -529,19 +501,19 @@ class Theme extends \Backend
 							{
 								foreach ($tmp as $kk=>$vv)
 								{
-									$tmp[$kk] = preg_replace('@^files/@', $GLOBALS['TL_CONFIG']['uploadPath'] . '/', $vv);
+									$tmp[$kk] = $this->customizeUploadPath($vv);
 								}
 
 								$value = serialize($tmp);
 							}
 							else
 							{
-								$value = preg_replace('@^files/@', $GLOBALS['TL_CONFIG']['uploadPath'] . '/', $value);
+								$value = $this->customizeUploadPath($value);
 							}
 						}
 
 						// Replace the file paths in singleSRC fields with their tl_files ID
-						elseif (($table == 'tl_theme' && $name == 'screenshot') || ($table == 'tl_module' && $name == 'singleSRC') || ($table == 'tl_module' && $name == 'reg_homeDir'))
+						elseif ($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] == 'fileTree' && !$GLOBALS['TL_DCA'][$table]['fields'][$name]['eval']['multiple'])
 						{
 							if (!$value)
 							{
@@ -552,14 +524,14 @@ class Theme extends \Backend
 								// Do not use the FilesModel here – tables are locked!
 								$objFile = $this->Database->prepare("SELECT uuid FROM tl_files WHERE path=?")
 														  ->limit(1)
-														  ->execute($value);
+														  ->execute($this->customizeUploadPath($value));
 
 								$value = $objFile->uuid;
 							}
 						}
 
 						// Replace the file paths in multiSRC fields with their tl_files ID
-						elseif (($table == 'tl_theme' && $name == 'folders') || ($table == 'tl_module' && $name == 'multiSRC') || ($table == 'tl_module' && $name == 'orderSRC') || ($table == 'tl_layout' && $name == 'external') || ($table == 'tl_layout' && $name == 'orderExt'))
+						elseif ($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] == 'fileTree' || in_array($name, $arrOrder))
 						{
 							$tmp = deserialize($value);
 
@@ -567,16 +539,10 @@ class Theme extends \Backend
 							{
 								foreach ($tmp as $kk=>$vv)
 								{
-									// Support the old "tl_files" folder
-									if (strncmp($vv, 'tl_files/', 9) === 0)
-									{
-										$vv = substr($vv, 3);
-									}
-
 									// Do not use the FilesModel here – tables are locked!
 									$objFile = $this->Database->prepare("SELECT uuid FROM tl_files WHERE path=?")
 															  ->limit(1)
-															  ->execute($vv);
+															  ->execute($this->customizeUploadPath($vv));
 
 									$tmp[$kk] = $objFile->uuid;
 								}
@@ -694,20 +660,7 @@ class Theme extends \Backend
 
 		// Open the "save as …" dialogue
 		$objFile = new \File('system/tmp/'. $strTmp, true);
-
-		header('Content-Type: application/octet-stream');
-		header('Content-Transfer-Encoding: binary');
-		header('Content-Disposition: attachment; filename="' . $strName . '.cto"');
-		header('Content-Length: ' . $objFile->filesize);
-		header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-		header('Pragma: public');
-		header('Expires: 0');
-
-		$resFile = fopen(TL_ROOT . '/system/tmp/'. $strTmp, 'rb');
-		fpassthru($resFile);
-		fclose($resFile);
-
-		exit;
+		$objFile->sendToBrowser($strName . '.cto');
 	}
 
 
@@ -724,8 +677,15 @@ class Theme extends \Backend
 		$table->setAttribute('name', 'tl_theme');
 		$table = $tables->appendChild($table);
 
+		// Load the DCA
+		$this->loadDataContainer('tl_theme');
+
+		// Get the order fields
+		$objDcaExtractor = new \DcaExtractor('tl_theme');
+		$arrOrder = $objDcaExtractor->getOrderFields();
+
 		// Add the row
-		$this->addDataRow($xml, $table, $objTheme);
+		$this->addDataRow($xml, $table, $objTheme, $arrOrder);
 	}
 
 
@@ -742,6 +702,13 @@ class Theme extends \Backend
 		$table->setAttribute('name', 'tl_style_sheet');
 		$table = $tables->appendChild($table);
 
+		// Load the DCA
+		$this->loadDataContainer('tl_style_sheet');
+
+		// Get the order fields
+		$objDcaExtractor = new \DcaExtractor('tl_style_sheet');
+		$arrOrder = $objDcaExtractor->getOrderFields();
+
 		// Get all style sheets
 		$objStyleSheet = $this->Database->prepare("SELECT * FROM tl_style_sheet WHERE pid=? ORDER BY name")
 										->execute($objTheme->id);
@@ -749,7 +716,7 @@ class Theme extends \Backend
 		// Add the rows
 		while ($objStyleSheet->next())
 		{
-			$this->addDataRow($xml, $table, $objStyleSheet);
+			$this->addDataRow($xml, $table, $objStyleSheet, $arrOrder);
 		}
 
 		$objStyleSheet->reset();
@@ -758,6 +725,13 @@ class Theme extends \Backend
 		$table = $xml->createElement('table');
 		$table->setAttribute('name', 'tl_style');
 		$table = $tables->appendChild($table);
+
+		// Load the DCA
+		$this->loadDataContainer('tl_style');
+
+		// Get the order fields
+		$objDcaExtractor = new \DcaExtractor('tl_style');
+		$arrOrder = $objDcaExtractor->getOrderFields();
 
 		// Add the child rows
 		while ($objStyleSheet->next())
@@ -769,7 +743,7 @@ class Theme extends \Backend
 			// Add the rows
 			while ($objStyle->next())
 			{
-				$this->addDataRow($xml, $table, $objStyle);
+				$this->addDataRow($xml, $table, $objStyle, $arrOrder);
 			}
 		}
 	}
@@ -788,6 +762,13 @@ class Theme extends \Backend
 		$table->setAttribute('name', 'tl_module');
 		$table = $tables->appendChild($table);
 
+		// Load the DCA
+		$this->loadDataContainer('tl_module');
+
+		// Get the order fields
+		$objDcaExtractor = new \DcaExtractor('tl_module');
+		$arrOrder = $objDcaExtractor->getOrderFields();
+
 		// Get all modules
 		$objModule = $this->Database->prepare("SELECT * FROM tl_module WHERE pid=? ORDER BY name")
 									->execute($objTheme->id);
@@ -795,7 +776,7 @@ class Theme extends \Backend
 		// Add the rows
 		while ($objModule->next())
 		{
-			$this->addDataRow($xml, $table, $objModule);
+			$this->addDataRow($xml, $table, $objModule, $arrOrder);
 		}
 	}
 
@@ -813,6 +794,13 @@ class Theme extends \Backend
 		$table->setAttribute('name', 'tl_layout');
 		$table = $tables->appendChild($table);
 
+		// Load the DCA
+		$this->loadDataContainer('tl_layout');
+
+		// Get the order fields
+		$objDcaExtractor = new \DcaExtractor('tl_layout');
+		$arrOrder = $objDcaExtractor->getOrderFields();
+
 		// Get all layouts
 		$objLayout = $this->Database->prepare("SELECT * FROM tl_layout WHERE pid=? ORDER BY name")
 									->execute($objTheme->id);
@@ -820,7 +808,7 @@ class Theme extends \Backend
 		// Add the rows
 		while ($objLayout->next())
 		{
-			$this->addDataRow($xml, $table, $objLayout);
+			$this->addDataRow($xml, $table, $objLayout, $arrOrder);
 		}
 	}
 
@@ -830,8 +818,9 @@ class Theme extends \Backend
 	 * @param \DOMDocument
 	 * @param \DOMElement
 	 * @param \Database\Result
+	 * @param array
 	 */
-	protected function addDataRow(\DOMDocument $xml, \DOMElement $table, \Database\Result $objData)
+	protected function addDataRow(\DOMDocument $xml, \DOMElement $table, \Database\Result $objData, array $arrOrder=array())
 	{
 		$t = $table->getAttribute('name');
 
@@ -850,26 +839,22 @@ class Theme extends \Backend
 			}
 
 			// Replace the IDs of singleSRC fields with their path (see #4952)
-			elseif (($t == 'tl_theme' && $k == 'screenshot') || ($t == 'tl_module' && $k == 'singleSRC') || ($t == 'tl_module' && $k == 'reg_homeDir'))
+			elseif ($GLOBALS['TL_DCA'][$t]['fields'][$k]['inputType'] == 'fileTree' && !$GLOBALS['TL_DCA'][$t]['fields'][$k]['eval']['multiple'])
 			{
 				$objFile = \FilesModel::findByUuid($v);
 
 				if ($objFile !== null)
 				{
-					// Standardize the upload path if it is not "files"
-					if ($GLOBALS['TL_CONFIG']['uploadPath'] != 'files')
-					{
-						$v = 'files/' . preg_replace('@^'.preg_quote($GLOBALS['TL_CONFIG']['uploadPath'], '@').'/@', '', $objFile->path);
-					}
-					else
-					{
-						$v = $objFile->path;
-					}
+					$v = $this->standardizeUploadPath($objFile->path);
+				}
+				else
+				{
+					$v = 'NULL';
 				}
 			}
 
 			// Replace the IDs of multiSRC fields with their paths (see #4952)
-			elseif (($t == 'tl_theme' && $k == 'folders') || ($t == 'tl_module' && $k == 'multiSRC') || ($t == 'tl_module' && $k == 'orderSRC') || ($t == 'tl_layout' && $k == 'external') || ($t == 'tl_layout' && $k == 'orderExt'))
+			elseif ($GLOBALS['TL_DCA'][$t]['fields'][$k]['inputType'] == 'fileTree' || in_array($k, $arrOrder))
 			{
 				$arrFiles = deserialize($v);
 
@@ -879,24 +864,24 @@ class Theme extends \Backend
 
 					if ($objFiles !== null)
 					{
-						// Standardize the upload path if it is not "files"
-						if ($GLOBALS['TL_CONFIG']['uploadPath'] != 'files')
-						{
-							$arrTmp = array();
+						$arrTmp = array();
 
-							while ($objFiles->next())
-							{
-								$arrTmp[] = 'files/' . preg_replace('@^'.preg_quote($GLOBALS['TL_CONFIG']['uploadPath'], '@').'/@', '', $objFiles->path);
-							}
-
-							$v = serialize($arrTmp);
-						}
-						else
+						while ($objFiles->next())
 						{
-							$v = serialize($objFiles->fetchEach('path'));
+							$arrTmp[] = $this->standardizeUploadPath($objFiles->path);
 						}
+
+						$v = serialize($arrTmp);
+					}
+					else
+					{
+						$v = 'NULL';
 					}
 				}
+			}
+			elseif ($t == 'tl_style' && ($k == 'bgimage' || $k == 'liststyleimage'))
+			{
+				$v = $this->standardizeUploadPath($v);
 			}
 
 			$value = $xml->createTextNode($v);
@@ -912,10 +897,10 @@ class Theme extends \Backend
 	 */
 	protected function addFolderToArchive(\ZipWriter $objArchive, $strFolder)
 	{
-		// Sanitize the folder name
-		$strFolder = str_replace('../', '', $strFolder);
+		// Strip the custom upload folder name
 		$strFolder = preg_replace('@^'.preg_quote($GLOBALS['TL_CONFIG']['uploadPath'], '@').'/@', '', $strFolder);
 
+		// Add the default upload folder name
 		if ($strFolder == '')
 		{
 			$strTarget = 'files';
@@ -925,6 +910,11 @@ class Theme extends \Backend
 		{
 			$strTarget = 'files/' . $strFolder;
 			$strFolder = $GLOBALS['TL_CONFIG']['uploadPath'] .'/'. $strFolder;
+		}
+
+		if (\Validator::isInsecurePath($strFolder))
+		{
+			throw new \RuntimeException('Insecure path ' . $strFolder);
 		}
 
 		// Return if the folder does not exist
@@ -962,10 +952,10 @@ class Theme extends \Backend
 	 */
 	protected function addTemplatesToArchive(\ZipWriter $objArchive, $strFolder)
 	{
-		// Sanitize the folder name
-		$strFolder = str_replace('../', '', $strFolder);
+		// Strip the templates folder name
 		$strFolder = preg_replace('@^templates/@', '', $strFolder);
 
+		// Re-add the templates folder name
 		if ($strFolder == '')
 		{
 			$strFolder = 'templates';
@@ -973,6 +963,11 @@ class Theme extends \Backend
 		else
 		{
 			$strFolder = 'templates/' . $strFolder;
+		}
+
+		if (\Validator::isInsecurePath($strFolder))
+		{
+			throw new \RuntimeException('Insecure path ' . $strFolder);
 		}
 
 		// Return if the folder does not exist
@@ -991,5 +986,37 @@ class Theme extends \Backend
 				$objArchive->addFile($strFolder .'/'. $strFile);
 			}
 		}
+	}
+
+
+	/**
+	 * Replace files/ with the custom upload folder name
+	 * @param string
+	 * @return string
+	 */
+	protected function customizeUploadPath($strPath)
+	{
+		if ($strPath == '')
+		{
+			return '';
+		}
+
+		return preg_replace('@^(tl_)?files/@', $GLOBALS['TL_CONFIG']['uploadPath'] . '/', $strPath);
+	}
+
+
+	/**
+	 * Replace a custom upload folder name with files/
+	 * @param string
+	 * @return string
+	 */
+	protected function standardizeUploadPath($strPath)
+	{
+		if ($strPath == '')
+		{
+			return '';
+		}
+
+		return preg_replace('@^' . preg_quote($GLOBALS['TL_CONFIG']['uploadPath'], '@') . '/@', 'files/', $strPath);
 	}
 }

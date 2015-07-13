@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -63,16 +61,16 @@ function utf8_chr($dec)
 	if ($dec < 128)
 		return chr($dec);
 
-    if ($dec < 2048)
-    	return chr(($dec >> 6) + 192) . chr(($dec & 63) + 128);
+	if ($dec < 2048)
+		return chr(($dec >> 6) + 192) . chr(($dec & 63) + 128);
 
-    if ($dec < 65536)
-    	return chr(($dec >> 12) + 224) . chr((($dec >> 6) & 63) + 128) . chr(($dec & 63) + 128);
+	if ($dec < 65536)
+		return chr(($dec >> 12) + 224) . chr((($dec >> 6) & 63) + 128) . chr(($dec & 63) + 128);
 
-    if ($dec < 2097152)
-    	return chr(($dec >> 18) + 240) . chr((($dec >> 12) & 63) + 128) . chr((($dec >> 6) & 63) + 128) . chr(($dec & 63) + 128);
+	if ($dec < 2097152)
+		return chr(($dec >> 18) + 240) . chr((($dec >> 12) & 63) + 128) . chr((($dec >> 6) & 63) + 128) . chr(($dec & 63) + 128);
 
-    return '';
+	return '';
 }
 
 
@@ -124,7 +122,7 @@ function utf8_ord($str)
  */
 function utf8_convert_encoding($str, $to, $from=null)
 {
-	if (!$str)
+	if ($str == '')
 		return '';
 
 	if (!$from)

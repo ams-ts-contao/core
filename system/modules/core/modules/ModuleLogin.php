@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleLogin
- *
  * Front end module "login".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleLogin extends \Module
 {
@@ -55,7 +46,7 @@ class ModuleLogin extends \Module
 		}
 
 		// Set the last page visited
-		if ($this->redirectBack)
+		if (!$_POST && $this->redirectBack)
 		{
 			$_SESSION['LAST_PAGE_VISITED'] = $this->getReferer();
 		}
@@ -64,7 +55,7 @@ class ModuleLogin extends \Module
 		if (\Input::post('FORM_SUBMIT') == 'tl_login')
 		{
 			// Check whether username and password are set
-			if (!\Input::post('username', true) || !\Input::post('password', true))
+			if (empty($_POST['username']) || empty($_POST['password']))
 			{
 				$_SESSION['LOGIN_ERROR'] = $GLOBALS['TL_LANG']['MSC']['emptyField'];
 				$this->reload();

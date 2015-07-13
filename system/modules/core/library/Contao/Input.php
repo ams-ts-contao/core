@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -28,9 +26,7 @@ namespace Contao;
  *         $password = Input::post('password');
  *     }
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Input
 {
@@ -106,13 +102,15 @@ class Input
 				$varValue = static::encodeSpecialChars($varValue);
 			}
 
-			static::$arrCache[$strCacheKey][$strKey] = $varValue;
+			$varValue = static::encodeInsertTags($varValue);
 
-			// Mark the parameter as used (see #4277)
-			if (!$blnKeepUnused)
-			{
-				unset(static::$arrUnusedGet[$strKey]);
-			}
+			static::$arrCache[$strCacheKey][$strKey] = $varValue;
+		}
+
+		// Mark the parameter as used (see #4277)
+		if (!$blnKeepUnused)
+		{
+			unset(static::$arrUnusedGet[$strKey]);
 		}
 
 		return static::$arrCache[$strCacheKey][$strKey];
@@ -148,6 +146,11 @@ class Input
 			if (!$blnDecodeEntities)
 			{
 				$varValue = static::encodeSpecialChars($varValue);
+			}
+
+			if (TL_MODE != 'BE')
+			{
+				$varValue = static::encodeInsertTags($varValue);
 			}
 
 			static::$arrCache[$strCacheKey][$strKey] = $varValue;
@@ -188,6 +191,11 @@ class Input
 				$varValue = static::encodeSpecialChars($varValue);
 			}
 
+			if (TL_MODE != 'BE')
+			{
+				$varValue = static::encodeInsertTags($varValue);
+			}
+
 			static::$arrCache[$strCacheKey][$strKey] = $varValue;
 		}
 
@@ -218,6 +226,40 @@ class Input
 			$varValue = static::stripSlashes($varValue);
 			$varValue = static::preserveBasicEntities($varValue);
 			$varValue = static::xssClean($varValue);
+
+			if (TL_MODE != 'BE')
+			{
+				$varValue = static::encodeInsertTags($varValue);
+			}
+
+			static::$arrCache[$strCacheKey][$strKey] = $varValue;
+		}
+
+		return static::$arrCache[$strCacheKey][$strKey];
+	}
+
+
+	/**
+	 * Return a raw, unsafe and unfiltered $_POST variable
+	 *
+	 * @param string $strKey The variable name
+	 *
+	 * @return mixed The raw variable value
+	 *
+	 * @internal
+	 */
+	public static function postUnsafeRaw($strKey)
+	{
+		$strCacheKey = 'postUnsafeRaw';
+
+		if (!isset(static::$arrCache[$strCacheKey][$strKey]))
+		{
+			$varValue = static::findPost($strKey);
+
+			if ($varValue === null)
+			{
+				return $varValue;
+			}
 
 			static::$arrCache[$strCacheKey][$strKey] = $varValue;
 		}
@@ -256,6 +298,8 @@ class Input
 			{
 				$varValue = static::encodeSpecialChars($varValue);
 			}
+
+			$varValue = static::encodeInsertTags($varValue);
 
 			static::$arrCache[$strCacheKey][$strKey] = $varValue;
 		}
@@ -309,6 +353,7 @@ class Input
 		unset(static::$arrCache['postHtmlEncoded'][$strKey]);
 		unset(static::$arrCache['postHtmlDecoded'][$strKey]);
 		unset(static::$arrCache['postRaw'][$strKey]);
+		unset(static::$arrCache['postUnsafeRaw'][$strKey]);
 
 		if ($varValue === null)
 		{
@@ -356,7 +401,7 @@ class Input
 
 	/**
 	 * Return whether there are unused GET parameters
-	 * 
+	 *
 	 * @return boolean True if there are unused GET parameters
 	 */
 	public static function hasUnusedGet()
@@ -462,6 +507,12 @@ class Input
 		$varValue = strip_tags($varValue, $strAllowedTags);
 		$varValue = str_replace(array('&lt;!--', '&lt;![', '--&gt;'), array('<!--', '<![', '-->'), $varValue);
 
+		// Recheck for encoded null bytes
+		while (strpos($varValue, '\\0') !== false)
+		{
+			$varValue = str_replace('\\0', '', $varValue);
+		}
+
 		return $varValue;
 	}
 
@@ -492,7 +543,7 @@ class Input
 			return $varValue;
 		}
 
-		// Return if var is not a string
+		// Return if the value is not a string
 		if (is_bool($varValue) || $varValue === null || is_numeric($varValue))
 		{
 			return $varValue;
@@ -503,15 +554,21 @@ class Input
 		$varValue = preg_replace('/(&#x*)([0-9a-f]+);/i', '$1$2;', $varValue);
 
 		// Remove carriage returns
-      	$varValue = preg_replace('/\r+/', '', $varValue);
+		$varValue = preg_replace('/\r+/', '', $varValue);
 
-      	// Replace unicode entities
+		// Replace unicode entities
 		$varValue = utf8_decode_entities($varValue);
 
-		// Remove NULL characters
-		$varValue = preg_replace('/\0+/', '', $varValue);
-		$varValue = preg_replace('/(\\\\0)+/', '', $varValue);
+		// Remove null bytes
+		$varValue = str_replace(chr(0), '', $varValue);
 
+		// Remove encoded null bytes
+		while (strpos($varValue, '\\0') !== false)
+		{
+			$varValue = str_replace('\\0', '', $varValue);
+		}
+
+		// Define a list of keywords
 		$arrKeywords = array
 		(
 			'/\bj\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\b/is', // javascript
@@ -574,7 +631,15 @@ class Input
 			$arrRegexp[] = '/<[^>]*[^a-z]onresize\s*=[^>]*>/is';
 		}
 
-		return preg_replace($arrRegexp, '', $varValue);
+		$varValue = preg_replace($arrRegexp, '', $varValue);
+
+		// Recheck for encoded null bytes
+		while (strpos($varValue, '\\0') !== false)
+		{
+			$varValue = str_replace('\\0', '', $varValue);
+		}
+
+		return $varValue;
 	}
 
 
@@ -676,6 +741,19 @@ class Input
 		$arrReplace = array('&#35;', '&#60;', '&#62;', '&#40;', '&#41;', '&#92;', '&#61;');
 
 		return str_replace($arrSearch, $arrReplace, $varValue);
+	}
+
+
+	/**
+	 * Encode the opening and closing delimiters of insert tags
+	 *
+	 * @param string $varValue The input string
+	 *
+	 * @return string The encoded input string
+	 */
+	public static function encodeInsertTags($varValue)
+	{
+		return str_replace(array('{{', '}}'), array('&#123;&#123;', '&#125;&#125;'), $varValue);
 	}
 
 

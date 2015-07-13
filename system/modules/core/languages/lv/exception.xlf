@@ -11,9 +11,11 @@
       </trans-unit>
       <trans-unit id="XPT.howToFix">
         <source>How can I fix the issue?</source>
+        <target>Kā es varu atrisināt šo problēmu?</target>
       </trans-unit>
       <trans-unit id="XPT.more">
         <source>Tell me more, please</source>
+        <target>Lūdzu, izstāstiet vairāk</target>
       </trans-unit>
       <trans-unit id="XPT.hint">
         <source>To customize this notice, create a custom template file named &lt;em&gt;%s&lt;/em&gt;.</source>
@@ -65,6 +67,7 @@
       </trans-unit>
       <trans-unit id="XPT.notFound">
         <source>Page not found</source>
+        <target>Lapa netika atrasta</target>
       </trans-unit>
       <trans-unit id="XPT.pageNotFound">
         <source>The page you have requested does not exist under this domain.</source>
@@ -92,6 +95,7 @@
       </trans-unit>
       <trans-unit id="XPT.noLayout">
         <source>No layout specified</source>
+        <target>Nav definēts salikums</target>
       </trans-unit>
       <trans-unit id="XPT.noLayoutSpecified">
         <source>The page you have requested has not yet been associated with a page layout.</source>
@@ -104,6 +108,7 @@
       </trans-unit>
       <trans-unit id="XPT.noActive">
         <source>No active pages found</source>
+        <target>Nav atrastas aktīvas lapas</target>
       </trans-unit>
       <trans-unit id="XPT.noActivePages">
         <source>Your request has been mapped to a website which does not yet contain any published pages.</source>
@@ -113,6 +118,7 @@
       </trans-unit>
       <trans-unit id="XPT.forbidden">
         <source>Forbidden</source>
+        <target>Aizliegts</target>
       </trans-unit>
       <trans-unit id="XPT.notAuthenticated">
         <source>You are either not authenticated or you are not allowed to access the requested page.</source>
@@ -122,9 +128,11 @@
       </trans-unit>
       <trans-unit id="XPT.unavailable">
         <source>We'll be right back</source>
+        <target>Mēs drīz atgriezīsimies</target>
       </trans-unit>
       <trans-unit id="XPT.maintenance">
         <source>The website is currently down for maintenance. Please come back later.</source>
+        <target>Mājas lapa šobrīd nedarbojas apkopes dēļ. Lūdzu, atgriezties vēlāk.</target>
       </trans-unit>
     </body>
   </file>

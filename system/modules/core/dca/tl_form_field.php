@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 
@@ -110,7 +108,8 @@ $GLOBALS['TL_DCA']['tl_form_field'] = array
 		'default'                     => '{type_legend},type',
 		'headline'                    => '{type_legend},type;{text_legend},text',
 		'explanation'                 => '{type_legend},type;{text_legend},text',
-		'fieldset'                    => '{type_legend},type;{fconfig_legend},fsType;{expert_legend:hide},class',
+		'fieldsetfsStart'             => '{type_legend},type;{fconfig_legend},fsType,label;{expert_legend:hide},class',
+		'fieldsetfsStop'              => '{type_legend},type;{fconfig_legend},fsType',
 		'html'                        => '{type_legend},type;{text_legend},html',
 		'text'                        => '{type_legend},type,name,label;{fconfig_legend},mandatory,rgxp,placeholder;{expert_legend:hide},class,value,minlength,maxlength,accesskey,tabindex;{submit_legend},addSubmit',
 		'password'                    => '{type_legend},type,name,label;{fconfig_legend},mandatory,rgxp,placeholder;{expert_legend:hide},class,value,minlength,maxlength,accesskey,tabindex;{submit_legend},addSubmit',
@@ -127,7 +126,6 @@ $GLOBALS['TL_DCA']['tl_form_field'] = array
 	// Subpalettes
 	'subpalettes' => array
 	(
-		'fsType_fsStart'              => 'label',
 		'multiple'                    => 'mSize',
 		'storeFile'                   => 'uploadFolder,useHomeDir,doNotOverwrite',
 		'addSubmit'                   => 'slabel',
@@ -416,12 +414,9 @@ $GLOBALS['TL_DCA']['tl_form_field'] = array
 
 
 /**
- * Class tl_form_field
- *
  * Provide miscellaneous methods that are used by the data configuration array.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class tl_form_field extends Backend
 {
@@ -651,7 +646,7 @@ class tl_form_field extends Backend
 	{
 		if (strlen(Input::get('tid')))
 		{
-			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1));
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
 			$this->redirect($this->getReferer());
 		}
 
@@ -670,8 +665,9 @@ class tl_form_field extends Backend
 	 * Toggle the visibility of a form field
 	 * @param integer
 	 * @param boolean
+	 * @param \DataContainer
 	 */
-	public function toggleVisibility($intId, $blnVisible)
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
 		// Check permissions
 		Input::setGet('id', $intId);
@@ -689,11 +685,11 @@ class tl_form_field extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, $this);
+					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
-					$blnVisible = $callback($blnVisible, $this);
+					$blnVisible = $callback($blnVisible, ($dc ?: $this));
 				}
 			}
 		}

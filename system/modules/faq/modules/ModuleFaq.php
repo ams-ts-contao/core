@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Faq
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleFaq
- *
  * Provide methods regarding FAQs.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Faq
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleFaq extends \Frontend
 {
@@ -100,7 +91,7 @@ class ModuleFaq extends \Frontend
 				$strUrl = $arrProcessed[$objFaq->jumpTo];
 
 				// Get the items
-				$objItems = \FaqModel::findByPid($objFaq->id, array('order'=>'sorting'));
+				$objItems = \FaqModel::findPublishedByPid($objFaq->id);
 
 				if ($objItems !== null)
 				{

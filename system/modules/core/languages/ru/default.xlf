@@ -7,7 +7,7 @@
       </trans-unit>
       <trans-unit id="ERR.unique">
         <source>Duplicate entry in field &quot;%s&quot;!</source>
-        <target>Повторяющиеся записи в поле &quot;%s&quot;!</target>
+        <target>Запись в поле &quot;%s&quot; уже использовалась!</target>
       </trans-unit>
       <trans-unit id="ERR.mandatory">
         <source>Field &quot;%s&quot; must not be empty!</source>
@@ -147,11 +147,11 @@
       </trans-unit>
       <trans-unit id="ERR.accountLocked">
         <source>This account has been locked! You can log in again in %d minutes.</source>
-        <target>Учетная запись заблокирована! Вы можете зайти через %d мин.</target>
+        <target>Эта учетная запись заблокирована! Вы сможете зайти через %d мин.</target>
       </trans-unit>
       <trans-unit id="ERR.invalidLogin">
         <source>Login failed (note that usernames and passwords are case-sensitive)!</source>
-        <target>Ошибка авторизации! (Внимание: имена пользователей и пароли чувствительны к регистру)</target>
+        <target>Ошибка авторизации! (Имя пользователя и пароль чувствительны к регистру)</target>
       </trans-unit>
       <trans-unit id="ERR.invalidColor">
         <source>Invalid color format!</source>
@@ -199,15 +199,15 @@
       </trans-unit>
       <trans-unit id="ERR.noFallbackEmpty">
         <source>None of the active website root pages without an explicit DNS setting has the language fallback option set, which means that these websites are only available in the one language you have defined in the page settings! Visitors and search engines who do not speak this language will not be able to browse your website.</source>
-        <target>Ни в одном из имеющихся активных корней веб-сайта не включена в настройках DNS опция 'Язык обратной связи'. Это означает, что эти веб-сайты доступны только на одном языке, указанном в настройках страницы! Посетители и поисковые системы, которые 'не говорят' на этом языке не смогут просматривать этот веб-сайт.</target>
+        <target>В одном из имеющихся активных корней веб-сайта, у которого в настройках DNS не указано 'Имя домена', не включена опция 'Резервный язык'. Это означает, что эти веб-сайты доступны только на одном языке, указанном в настройках страницы! Посетители и поисковые системы, которые 'не говорят' на этом языке не смогут просматривать этот веб-сайт.</target>
       </trans-unit>
       <trans-unit id="ERR.noFallbackDns">
         <source>None of the active website root pages for &lt;strong&gt;%s&lt;/strong&gt; has the language fallback option set, which means that these websites are only available in the one language you have defined in the page settings! Visitors and search engines who do not speak this language will not be able to browse your website.</source>
-        <target>Ни в одном из имеющихся активных корней веб-сайта &lt;strong&gt;%s&lt;/strong&gt; не включена в настройках DNS опция 'Язык обратной связи'. Это означает, что эти веб-сайты доступны только на одном языке, указанном в настройках страницы! Посетители и поисковые системы, которые 'не говорят' на этом языке не смогут просматривать этот веб-сайт.</target>
+        <target>Ни в одном из имеющихся активных корней веб-сайта &lt;strong&gt;%s&lt;/strong&gt; не включена в настройках DNS опция 'Резервный язык'. Это означает, что эти веб-сайты доступны только на одном языке, указанном в настройках страницы! Посетители и поисковые системы, которые 'не говорят' на этом языке не смогут просматривать этот веб-сайт.</target>
       </trans-unit>
       <trans-unit id="ERR.multipleFallback">
         <source>You can only define one website root page per domain as language fallback.</source>
-        <target>Вы можете определить только один корень веб-сайта на домен, в качестве языка обратной связи.</target>
+        <target>Вы можете определить только один корень веб-сайта на домен, в качестве резервного языка.</target>
       </trans-unit>
       <trans-unit id="ERR.topLevelRoot">
         <source>Top-level pages must be website root pages!</source>
@@ -245,17 +245,21 @@
         <source>No database entry found for %s. Please synchronize the file system.</source>
         <target>Не найдена запись базы данных для %s. Синхронизируйте файловую систему.</target>
       </trans-unit>
+      <trans-unit id="ERR.invalidGoogleId">
+        <source>Please enter a numeric Google+ ID or vanity name!</source>
+        <target>Введите ID своего профиля Google+ или его короткое имя!</target>
+      </trans-unit>
       <trans-unit id="SEC.question1">
         <source>Please add %d and %d.</source>
-        <target>Прибавьте %d к %d.</target>
+        <target>Пожалуйста, прибавьте %d к %d.</target>
       </trans-unit>
       <trans-unit id="SEC.question2">
         <source>What is the sum of %d and %d?</source>
-        <target>Просуммируйте %d и %d.</target>
+        <target>Что будет являться суммой %d и %d?</target>
       </trans-unit>
       <trans-unit id="SEC.question3">
         <source>Please calculate %d plus %d.</source>
-        <target>Сложите %d и %d.</target>
+        <target>Пожалуйста, сложите %d и %d.</target>
       </trans-unit>
       <trans-unit id="CTE.texts">
         <source>Text elements</source>
@@ -419,19 +423,19 @@
       </trans-unit>
       <trans-unit id="CTE.download.0">
         <source>Download</source>
-        <target>Загрузка с веб-сайта</target>
+        <target>Загрузка одного файла с веб-сайта</target>
       </trans-unit>
       <trans-unit id="CTE.download.1">
         <source>Generates a link to download a file.</source>
-        <target>Создает гиперссылку на файл для загрузки.</target>
+        <target>Создает гиперссылку на файл для загрузки с веб-сайта.</target>
       </trans-unit>
       <trans-unit id="CTE.downloads.0">
         <source>Downloads</source>
-        <target>Загрузки с веб-сайта</target>
+        <target>Загрузка нескольких файлов с веб-сайта</target>
       </trans-unit>
       <trans-unit id="CTE.downloads.1">
         <source>Generates multiple links to download files.</source>
-        <target>Создает ссылки на несколько файлов для загрузки.</target>
+        <target>Создает гиперссылки на несколько файлов для их загрузки с веб-сайта.</target>
       </trans-unit>
       <trans-unit id="CTE.includes">
         <source>Include elements</source>
@@ -823,7 +827,7 @@
       </trans-unit>
       <trans-unit id="MSC.lw_import.1">
         <source>Import list items from a CSV file</source>
-        <target>Импорт списка из CSV-файла</target>
+        <target>Импорт списка элементов из CSV-файла</target>
       </trans-unit>
       <trans-unit id="MSC.lw_copy">
         <source>Duplicate the element</source>
@@ -847,7 +851,7 @@
       </trans-unit>
       <trans-unit id="MSC.tw_import.1">
         <source>Import table items from a CSV file</source>
-        <target>Импорт табличных значений из CSV-файла</target>
+        <target>Импорт элементов таблицы из CSV-файла</target>
       </trans-unit>
       <trans-unit id="MSC.tw_expand">
         <source>Increase the input field size</source>
@@ -1142,20 +1146,20 @@
         <target>Дата добавления: %s</target>
       </trans-unit>
       <trans-unit id="MSC.lastLogin.0">
+        <source>Previous login</source>
+        <target>Предыдущий вход</target>
+      </trans-unit>
+      <trans-unit id="MSC.lastLogin.1">
+        <source>Previous login: %s</source>
+        <target>Предыдущий вход: %s</target>
+      </trans-unit>
+      <trans-unit id="MSC.currentLogin.0">
         <source>Last login</source>
         <target>Последний вход</target>
       </trans-unit>
-      <trans-unit id="MSC.lastLogin.1">
+      <trans-unit id="MSC.currentLogin.1">
         <source>Last login: %s</source>
         <target>Последний вход: %s</target>
-      </trans-unit>
-      <trans-unit id="MSC.currentLogin.0">
-        <source>Current login</source>
-        <target>Текущий вход.</target>
-      </trans-unit>
-      <trans-unit id="MSC.currentLogin.1">
-        <source>Current login: %s</source>
-        <target>Текущее имя входа: %s</target>
       </trans-unit>
       <trans-unit id="MSC.loginCount">
         <source>Login attempts</source>
@@ -1297,7 +1301,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.loginTo">
         <source>Log into %s</source>
-        <target>Вход в: &lt;em&gt;%s&lt;/em&gt;</target>
+        <target>Панель управления: %s</target>
       </trans-unit>
       <trans-unit id="MSC.loginBT">
         <source>Login</source>
@@ -1465,7 +1469,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.goBack">
         <source>Go back</source>
-        <target>Вернуться</target>
+        <target>Назад</target>
       </trans-unit>
       <trans-unit id="MSC.reload">
         <source>Reload</source>
@@ -1573,7 +1577,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.welcomeTo">
         <source>%s back end</source>
-        <target>%s панель управления</target>
+        <target>Панель управления: %s</target>
       </trans-unit>
       <trans-unit id="MSC.updateVersion">
         <source>Contao version %s available</source>
@@ -1757,7 +1761,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.maintenanceMode">
         <source>Contao is currently running in &lt;strong&gt;maintenance mode&lt;/strong&gt;, in which the website (front end) is not available. Do not disable it if you are currently installing or upgrading third-party extensions! The website might not function properly.</source>
-        <target>В настоящее время Contao работает в &lt;strong&gt;режиме обслуживания&lt;/strong&gt;, в котором внешний интерфейс веб-сайта не доступен. Не отключайте его, во время установки или обновления сторонних расширений! Веб-сайт может не работать должным образом.</target>
+        <target>Сейчас Contao работает в &lt;strong&gt;режиме обслуживания&lt;/strong&gt;, в котором внешний интерфейс веб-сайта не доступен. Не отключайте его во время установки или обновления сторонних расширений! Веб-сайт может не работать как положено.</target>
       </trans-unit>
       <trans-unit id="MSC.maintenanceOff">
         <source>Disable</source>
@@ -1769,7 +1773,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.buildCacheLink">
         <source>Build the cache</source>
-        <target>Создание кэша</target>
+        <target>Создать кэш</target>
       </trans-unit>
       <trans-unit id="MSC.name">
         <source>Name</source>
@@ -1809,7 +1813,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.setNewPassword">
         <source>Set new password</source>
-        <target>Установите новый пароль</target>
+        <target>Установить новый пароль</target>
       </trans-unit>
       <trans-unit id="MSC.newPasswordSet">
         <source>Your password has been updated.</source>
@@ -1817,7 +1821,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.passwordSubject">
         <source>Your password request for %s</source>
-        <target>Ваш пароль требуется для %s</target>
+        <target>Запрос пароля для %s</target>
       </trans-unit>
       <trans-unit id="MSC.accountNotFound">
         <source>No matching account found</source>
@@ -1869,7 +1873,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.noVersions">
         <source>Currently there are no versions.</source>
-        <target>В настоящее время новых версий нет.</target>
+        <target>На данный момент новых версий нет.</target>
       </trans-unit>
       <trans-unit id="MSC.latestChanges">
         <source>Latest changes</source>
@@ -1965,7 +1969,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.totalPages">
         <source>Page %s of %s</source>
-        <target>Страниц %s из %s</target>
+        <target>Страница %s из %s</target>
       </trans-unit>
       <trans-unit id="MSC.fileUploaded">
         <source>File %s uploaded successfully.</source>
@@ -1981,7 +1985,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.searchLabel">
         <source>Search</source>
-        <target>Искать</target>
+        <target>Найти</target>
       </trans-unit>
       <trans-unit id="MSC.keywords">
         <source>Keywords</source>
@@ -2037,7 +2041,7 @@ This e-mail has been generated by Contao. You can not reply to it directly.
       </trans-unit>
       <trans-unit id="MSC.readMore">
         <source>Read the article: %s</source>
-        <target>Прочитать всю статью: %s</target>
+        <target>Прочитать полностью статью: %s</target>
       </trans-unit>
       <trans-unit id="MSC.targetPage">
         <source>Target page</source>

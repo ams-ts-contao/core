@@ -67,7 +67,7 @@
       </trans-unit>
       <trans-unit id="tl_page.jumpTo.0">
         <source>Redirect page</source>
-        <target>Aller à</target>
+        <target>Page de redirection</target>
       </trans-unit>
       <trans-unit id="tl_page.jumpTo.1">
         <source>Please choose the page to which visitors will be redirected. Leave blank to redirect to the first regular subpage.</source>
@@ -79,7 +79,7 @@
       </trans-unit>
       <trans-unit id="tl_page.fallback.1">
         <source>Show this page if there is none that matches the visitor's language.</source>
-        <target>Afficher cette page si aucune page n'est disponible dans la langue du visiteur.</target>
+        <target>Afficher cette page si aucune page ne correspond à la langue du visiteur.</target>
       </trans-unit>
       <trans-unit id="tl_page.dns.0">
         <source>Domain name</source>
@@ -95,7 +95,7 @@
       </trans-unit>
       <trans-unit id="tl_page.adminEmail.1">
         <source>Auto-generated messages like subscription confirmation e-mails will be sent to this address.</source>
-        <target>Les messages générés automatiquement (ex. : les e-mails de confirmation d'inscription) seront envoyés à cette adresse.</target>
+        <target>Les messages générés par eux-mêmes (ex.: les courriels de confirmation d'inscription) seront envoyés à cette adresse.</target>
       </trans-unit>
       <trans-unit id="tl_page.dateFormat.0">
         <source>Date format</source>
@@ -138,12 +138,12 @@
         <target>Saisir un nom pour le fichier (sans extension).</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.0">
-        <source>Use HTTPS in sitemaps</source>
-        <target>Utiliser HTTPS dans les plans du site</target>
+        <source>Use HTTPS</source>
+        <target>Utiliser HTTPS</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.1">
-        <source>Generate the sitemap URLs of this website with &lt;em&gt;https://&lt;/em&gt;.</source>
-        <target>Générer les URLs du plan du site de ce site internet avec &lt;em&gt;https://&lt;/em&gt;.</target>
+        <source>Generate the URLs with &lt;em&gt;https://&lt;/em&gt; (e.g. in sitemaps).</source>
+        <target>Générer des URL avec &lt;em&gt;https://&lt;/em&gt; (par ex. dans les sitemaps).</target>
       </trans-unit>
       <trans-unit id="tl_page.autoforward.0">
         <source>Forward to another page</source>

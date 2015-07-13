@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleQuicknav
- *
  * Front end module "quick navigation".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleQuicknav extends \Module
 {
@@ -68,13 +59,14 @@ class ModuleQuicknav extends \Module
 	 */
 	protected function compile()
 	{
+		global $objPage;
+
 		$lang = null;
 		$host = null;
 
 		// Start from the website root if there is no reference page
 		if (!$this->rootPage)
 		{
-			global $objPage;
 			$this->rootPage = $objPage->rootId;
 		}
 
@@ -159,7 +151,8 @@ class ModuleQuicknav extends \Module
 					// Add the domain if it differs from the current one (see #3765)
 					if ($objSubpages->domain != '' && $objSubpages->domain != \Environment::get('host'))
 					{
-						$href = (\Environment::get('ssl') ? 'https://' : 'http://') . $objSubpages->domain . TL_PATH . '/' . $href;
+						$objSubpages->current()->loadDetails();
+						$href = ($objSubpages->rootUseSSL ? 'https://' : 'http://') . $objSubpages->domain . TL_PATH . '/' . $href;
 					}
 
 					$arrPages[] = array

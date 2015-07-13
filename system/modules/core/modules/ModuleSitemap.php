@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleSitemap
- *
  * Front end module "sitemap".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleSitemap extends \Module
 {
@@ -63,13 +54,14 @@ class ModuleSitemap extends \Module
 	 */
 	protected function compile()
 	{
+		global $objPage;
+
 		$lang = null;
 		$host = null;
 
 		// Start from the website root if there is no reference page
 		if (!$this->rootPage)
 		{
-			global $objPage;
 			$this->rootPage = $objPage->rootId;
 		}
 

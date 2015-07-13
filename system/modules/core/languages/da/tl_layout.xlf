@@ -206,8 +206,7 @@
         <target>Yderligere style sheets</target>
       </trans-unit>
       <trans-unit id="tl_layout.external.1">
-        <source>Here you can add style sheets from the file system (e.g. &lt;em&gt;files/css/style.css|screen|static&lt;/em&gt;).</source>
-        <target>Her kan du tilføje style sheets filarkivet (f.eks. &lt;em&gt;files/css/style.css|screen|static&lt;/em&gt;).</target>
+        <source>Here you can add additional CSS files from the file system.</source>
       </trans-unit>
       <trans-unit id="tl_layout.orderExt.0">
         <source>Sort order</source>
@@ -463,6 +462,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.top">
         <source>Before the wrapper</source>
+        <target>Før indpakningen</target>
       </trans-unit>
       <trans-unit id="tl_layout.before">
         <source>After the page header</source>
@@ -478,6 +478,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.bottom">
         <source>After the wrapper</source>
+        <target>Efter indpakningen</target>
       </trans-unit>
       <trans-unit id="tl_layout.edit_styles">
         <source>Edit the style sheets</source>

@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -26,9 +24,7 @@ namespace Contao;
  *
  *     File::putContent('test.txt', 'This is a test');
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class File extends \System
 {
@@ -149,10 +145,10 @@ class File extends \System
 	 * Supported keys:
 	 *
 	 * * size:        the file size
-	 * * name:        the file name without extension
+	 * * name:        the file name and extension
 	 * * dirname:     the path of the parent folder
 	 * * extension:   the file extension
-	 * * filename:    the file name and extension
+	 * * filename:    the file name without extension
 	 * * mime:        the file's mime type
 	 * * hash:        the file's MD5 checksum
 	 * * ctime:       the file's ctime
@@ -208,7 +204,11 @@ class File extends \System
 				break;
 
 			case 'filename':
-				return basename($this->basename, '.' . $this->extension);
+				if (!isset($this->arrPathinfo[$strKey]))
+				{
+					$this->arrPathinfo = pathinfo(TL_ROOT . '/' . $this->strFile);
+				}
+				return $this->arrPathinfo['filename'];
 				break;
 
 			case 'tmpname':
@@ -264,29 +264,29 @@ class File extends \System
 				return in_array($this->extension, array('gif', 'jpg', 'jpeg', 'png'));
 				break;
 
-            case 'channels':
-                if (empty($this->arrImageSize))
-                {
-                    $this->arrImageSize = @getimagesize(TL_ROOT . '/' . $this->strFile);
-                }
-                return $this->arrImageSize['channels'];
-                break;
+			case 'channels':
+				if (empty($this->arrImageSize))
+				{
+					$this->arrImageSize = @getimagesize(TL_ROOT . '/' . $this->strFile);
+				}
+				return $this->arrImageSize['channels'];
+				break;
 
-            case 'bits':
-                if (empty($this->arrImageSize))
-                {
-                    $this->arrImageSize = @getimagesize(TL_ROOT . '/' . $this->strFile);
-                }
-                return $this->arrImageSize['bits'];
-                break;
+			case 'bits':
+				if (empty($this->arrImageSize))
+				{
+					$this->arrImageSize = @getimagesize(TL_ROOT . '/' . $this->strFile);
+				}
+				return $this->arrImageSize['bits'];
+				break;
 
-            case 'isRgbImage':
-                return ($this->channels == 3);
-                break;
+			case 'isRgbImage':
+				return ($this->channels == 3);
+				break;
 
-            case 'isCmykImage':
-                return ($this->channels == 4);
-                break;
+			case 'isCmykImage':
+				return ($this->channels == 4);
+				break;
 
 			case 'handle':
 				if (!is_resource($this->resFile))
@@ -636,8 +636,10 @@ class File extends \System
 
 	/**
 	 * Send the file to the browser
+	 *
+	 * @param string $filename An optional filename
 	 */
-	public function sendToBrowser()
+	public function sendToBrowser($filename=null)
 	{
 		// Make sure no output buffer is active
 		// @see http://ch2.php.net/manual/en/function.fpassthru.php#74080
@@ -646,10 +648,13 @@ class File extends \System
 		// Prevent session locking (see #2804)
 		session_write_close();
 
+		// Disable zlib.output_compression (see #6717)
+		ini_set('zlib.output_compression', 'Off');
+
 		// Open the "save as …" dialogue
 		header('Content-Type: ' . $this->mime);
 		header('Content-Transfer-Encoding: binary');
-		header('Content-Disposition: attachment; filename="' . $this->basename . '"');
+		header('Content-Disposition: attachment; filename="' . ($filename ?: $this->basename) . '"');
 		header('Content-Length: ' . $this->filesize);
 		header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
 		header('Pragma: public');

@@ -1,6 +1,588 @@
 Contao Open Source CMS changelog
 ================================
 
+Version 3.2.21 (2015-06-05)
+---------------------------
+
+### Fixed
+Back-ported two security related changes from the upstream versions.
+
+
+Version 3.2.20 (2015-03-26)
+---------------------------
+
+### Fixed
+Correctly convert date strings depending on their rgxp format (see #7721).
+
+### Fixed
+Update news and calendar feeds from the content view (see #7679).
+
+### Fixed
+Do not generally encode stand-alone ampersands (see #7684).
+
+### Fixed
+Restore some globals when catching the unused argument exception (see #7659).
+
+### Fixed
+Correctly set the CSS classes in the jQuery accordion and do not try to mess
+with its ARIA handling (see #7622).
+
+### Fixed
+Handle language fragments without trailing slash when redirecting (see #7666).
+
+### Fixed
+Trigger the `load_callback` upon saving in "override all" mode (see #7670). 
+
+### Fixed
+Ensure a unique language file array in the `Automator` class (see #7687).
+
+
+Version 3.2.19 (2015-02-12)
+---------------------------
+
+### Fixed
+Fixed a directory traversal vulnerability discovered by Arnaud Buchoux. See
+CVE-2015-0269 for more information.
+
+
+Version 3.2.18 (2015-01-30)
+---------------------------
+
+### Fixed
+Handle variables and functions when importing style sheets (see #7448).
+
+### Fixed
+Fix an infinite recursion problem in the `FilesModel` class (see #7588).
+
+
+Version 3.2.17 (2015-01-22)
+---------------------------
+
+### Fixed
+Romanize style sheet names (see #7526).
+
+### Fixed
+Add the username to the "account has been locked" log entry (see #7551).
+
+### Fixed
+Consider the suhosin.memory_limit when raising the PHP limits (see #7035).
+
+### Fixed
+Added two missing `exclude` flags in the `tl_page` data container (see #7522).
+
+### Fixed
+Send an UTF-8 charset header in the `die_nicely()` function (see #7519).
+
+### Fixed
+Correctly validate dates in the `Widget` class (see #7498).
+
+### Fixed
+Back port the fixes from #7475 and #7473.
+
+### Fixed
+Send the same cache headers for cached and uncached pages (see #7455).
+
+### Fixed
+Fix the `current() expects parameter 1 to be array` issue (see #6739).
+
+### Fixed
+Correctly replace the `*_teaser` insert tags (see #7488).
+
+### Fixed
+Adjust the last and previous login labels (see #7426).
+
+### Fixed
+Unset the `postUnsafeRaw` cache in `Input::setPost()` (see #7481).
+
+
+Version 3.2.16 (2014-11-24)
+---------------------------
+
+### Fixed
+Fixed a potential directory traversal vulnerability.
+
+### Fixed
+Fixed a severe XSS vulnerability. In this context, the insert tag flags
+`base64_encode` and `base64_decode` have been removed.
+
+### Fixed
+Handle nested insert tags in strip_insert_tags().
+
+### Fixed
+Correctly store the model in Dbafs::addResource() (see #7440).
+
+### Fixed
+Send the request token when toggling the visibility of an element (see #7406).
+
+### Fixed
+Always apply the IE security fix in the Environment class (see #7453).
+
+### Fixed
+Correctly handle archives being part of multiple RSS feeds (see #7398).
+
+### Fixed
+Correctly handle `0` in utf8_convert_encoding() (see #7403).
+
+### Fixed
+Send a 301 redirect to forward to the language root page (see #7420).
+
+
+Version 3.2.15 (2014-10-31)
+---------------------------
+
+### Fixed
+Always pass a DC object in the `toggleVisibility` callback (see #7314).
+
+### Fixed
+Correctly render the "read more" and article navigation links (see #7300).
+
+### Fixed
+Consider the `useSSL` flag of the root page when generating URLs (see #7390).
+
+### Fixed
+Fixed the FAQ sorting in the back end (see #7362).
+
+### Fixed
+Added the `Widget::__isset()` method (see #7290).
+
+### Fixed
+Correctly handle dynamic parent tables in the `DC_Table` driver (see #7335).
+
+### Fixed
+Correctly shortend HTML strings in `String::substrHtml()` (see #7311).
+
+### Updated
+Updated MooTools to version 1.5.1 (see #7267).
+
+### Fixed
+Updated swipe.js to version 2.0.1 (see #7307).
+
+### Fixed
+Use an `.invisible` class which plays nicely with screen readers (see #7372).
+
+### Fixed
+Handle disabled modules in the module loader (see #7380).
+
+### Fixed
+Fixed the "link_target" insert tag.
+
+### Updated
+Updated the ACE editor to version 1.1.6 (see #7278).
+
+### Fixed
+Fix the `Database::list_fields()` method (see #7277).
+
+### Fixed
+Correctly assign "col_first" and "col_last" in the image gallery (see #7250).
+
+
+Version 3.2.14 (2014-08-27)
+---------------------------
+
+### Fixed
+Allow floating point numbers in "number" input fields (see #7257).
+
+### Fixed
+Do not adjust the start time of past events (see #7121).
+
+### Fixed
+Reset the image margins if it exceeds the maximum image size (see #7245).
+
+### Fixed
+Reset `$blnPreventSaving` when a model is cloned (see #7243).
+
+### Fixed
+Do not reload after storing `CURRENT_ID` in the session (see #7240).
+
+### Fixed
+Correctly validate the page number of the versions menu (see #7235).
+
+### Fixed
+Handle underscores in the Google+ vanity name (see #7241).
+
+### Fixed
+Correctly handle the `rem` unit when importing style sheets (see #7220).
+
+### Fixed
+Fix two issues with the extension repository theme.
+
+
+Version 3.2.13 (2014-07-29)
+---------------------------
+
+### Fixed
+Use `DOMDocument::loadXML()` instead of `DOMDocument::load()` (see 7192).
+
+### Fixed
+Specify the font size in `rem` for modern browsers (see #7209).
+
+### Fixed
+Make sure the default language file is loaded in the DCA extractor (see #7202).
+
+### Fixed
+Do not add unpublished FAQs to the XML sitemap (see #7210).
+
+### Fixed
+Preserve new lines when replacing simple tokens (see #7178).
+
+### Fixed
+Always prevent saving if `PageModel::loadDetails()` is executed (see #7199).
+
+### Fixed
+Use `===` to compare password hashes (see #7175).
+
+### Fixed
+Correctly mark GET parameters as used (see #7185).
+
+### Fixed
+Correctly apply the "disabled" attribute to input unit fields (see #7147).
+
+### Fixed
+Correctly check the permission to edit multiple files (see #7157).
+
+### Fixed
+Correctly handle other MySQL character sets (see #7140).
+
+### Fixed
+Correctly recognize Opera Mobile in the `Environment` class (see #5869).
+
+### Fixed
+Fix the grid offset for articles (see #7166).
+
+### Fixed
+Restore the basic entities in the source editor (see #7170).
+
+### Fixed
+Correctly build the breadcrumb trail in the style sheets module (see #7132).
+
+### Fixed
+Do not associate the "use SSL" option with sitemaps only (see #7163).
+
+### Fixed
+URL encode the pipe character in the Google web font URL (see #7120).
+
+### Fixed
+Handle double quotes in the title attribute of the `<link>` element (see #7124).
+
+### Fixed
+Use the `save_callback` when generating multiple aliases (see #7114).
+
+### Update
+Update SwiftMailer to version 5.2.1 (see #7110).
+
+### Fixed
+Correctly handle double quotes in comments (see #7102).
+
+### Fixed
+Ignore hidden files when building the internal cache (see #7098).
+
+### Fixed
+Correctly pass the insert ID of the undo record (see #6234).
+
+
+Version 3.2.12 (2014-06-18)
+---------------------------
+
+### Fixed
+Replace insert tags in external redirect targets (see #6765).
+
+### Fixed
+Also apply the font settings to the ACE element (see #7103).
+
+### Fixed
+Show the placeholder image in the "edit file" dialog if the original image
+exceeds the maximum dimensions supported by the GD library (see #7032).
+
+### Fixed
+Preserve whitespace before `<textarea>` tags when minifying code (see #7087).
+
+### Fixed
+Restore the PHP 5.3 compatibility of the listing module (see #7078).
+
+### Fixed
+Do not offer to drop tables or fields if the safe mode is active (see #7085).
+
+### Fixed
+Correctly detect binary fields during theme export (see #7079).
+
+
+Version 3.2.11 (2014-06-04)
+---------------------------
+
+### Fixed
+Make `$this->locationLabel` available in the event list (see #7030).
+
+### Fixed
+Correctly set the root page title (see #7023).
+
+### Fixed
+Only show the sort hint if there is more than one element (see #6935).
+
+### Fixed
+Try to raise the PHP limits upon file synchronization (see #7035).
+
+
+Version 3.2.10 (2014-05-21)
+---------------------------
+
+### Fixed
+Correctly urlencode folder names in the file manager (see #6925).
+
+### Update
+Update MooTools to version 1.5.0 (see #6924).
+
+### Fixed
+Allow for up to 13 characters in `Validator::isEmail()` (see #6950).
+
+### Fixed
+Only fall back to the default option if there is no POST data (see #6899).
+
+### Fixed
+Do not override the event start time in `Events::addEvent()` (see #6701).
+
+### Fixed
+Correctly detect binary fields during theme import (see #6852).
+
+### Fixed
+Do not urldecode twice in `DC_Folder` (see #6840).
+
+### Fixed
+Standardize the fallback behavior of the downloads/gallery element (see #6662).
+
+### Fixed
+Correctly hide duplicated elements in the module wizard (see #6826).
+
+### Fixed
+Fix the mediabox "imgBackground" option (see #6866).
+
+### Fixed
+Strip double quotes in the options wizard (see #6919).
+
+### Fixed
+Strip the insert tag flags before passing the tag name to the hooks (see #6860).
+
+### Fixed
+Catch Swift exceptions when sending form data via e-mail (see #6941).
+
+### Update
+Update the back end date picker to version 2.2.0.
+
+### Update
+Update ACE to version 1.1.3.
+
+### Fixed
+Check for reserved article aliases before validating the alias name (see #6978).
+
+### Fixed
+Store the UUID of uploaded files in the session (see #6986).
+
+### Fixed
+Only assume a moved file or folder for new resources (see #6907).
+
+### Fixed
+Correctly strip the file extension in the `File` class (see #6968).
+
+### Fixed
+Remove the menu when `Swipe.kill()` is executed (see #6861).
+
+### Fixed
+Consider the protocol when embedding YouTube videos (see #6900).
+
+
+Version 3.2.9 (2014-04-07)
+--------------------------
+
+### Fixed
+Fixed a critical vulnerability of the install tool (see #6855).
+
+### Fixed
+Filter disabled groups in the registration module in the front end (see #6757).
+
+### Fixed
+Work around a bug in SimplePie with the "skip items" option (see #6107).
+
+### Fixed
+Fix the Swipe "continuous" option if there are exactly two slides (see #6812).
+
+### Fixed
+Apply `addslashes()` to strings in the `Config` class (see #6808).
+
+### Fixed
+Do not empty all fallback fields in sorting mode 4 (see #6498).
+
+### Fixed
+Do not allow template names to be longer than the DB fields (see #6819).
+
+### Fixed
+Correctly set the start time of a multi-day event (see #6802).
+
+### Fixed
+Correctly handle OR queries in the listing module (see #6344).
+
+### Fixed
+Use a monospaced font for the plain text newsletter preview (see #6790).
+
+### Fixed
+Adjust the `vScrollTo()` offset if the paste hint is visible (see #6478).
+
+
+Version 3.2.8 (2014-03-12)
+--------------------------
+
+### Fixed
+Add the "href" values for active breadcrumb menus to the template (see #6796).
+
+### Fixed
+The file/page tree widget did not work properly in "edit multiple" mode (#6788).
+
+### Fixed
+Preserve the referer ID when clicking the "switch to edit" button (see #6127).
+
+### Fixed
+Encode e-mail addresses in the "explanation" form field (see #6771).
+
+### Fixed
+Use a placeholder image if no thumbnail can be created (see #6754).
+
+### Fixed
+Pass additional arguments to the "replaceInsertTags" hook (see #6672).
+
+### Fixed
+Correctly initialize the `Session` class (see #6747).
+
+### Fixed
+Do not use `Input::setGet()` in the event modules (see #6733).
+
+### Fixed
+Correctly shorten the CSS `background` property (see #6709).
+
+### Fixed
+Do not use `UNION SELECT` when searching for parent pages (see #6704).
+
+### Fixed
+Disable `zlib.output_compression` when sending files to the browser (see #6717).
+
+### Fixed
+Consider the event time in the event list module (see #6719).
+
+### Fixed
+Make the newsletter recipient address available in the template (see #5782).
+
+### Fixed
+Correctly handle Unicode characters in `Validator::isGooglePlusId` (see #6707).
+
+### Fixed
+Fixed the arguments of two `CalendarEventsModel` methods (see #6781).
+
+### Fixed
+Pass the "tableless" flag to the "form_message" template (see #6772).
+
+### Fixed
+Update the `swipe.js` script so the "continuous" option works (see #6762).
+
+### Fixed
+Improve the `Search::removeEntry()` method (see #6785).
+
+### Fixed
+Correctly set the cookie path in the front mode in debug mode (see #6723).
+
+### Fixed
+Point to `Frontend::addToUrl()` in front end templates (see #6736).
+
+### Fixed
+Do not stop the cron job execution after the first interval.
+
+
+Version 3.2.7 (2014-02-13)
+--------------------------
+
+### Fixed
+Fix another weakness in the `Input` class and further harden the `deserialize()`
+function. Thanks to Martin Auswöger for his input.
+
+
+Version 3.2.6 (2014-02-12)
+--------------------------
+
+### Fixed
+Further harden the `deserialize()` function and the `Input` class (see #6724).
+
+
+Version 3.2.5 (2014-02-03)
+--------------------------
+
+### Fixed
+Correctly load the parent pages in the navigation modules (see #6696).
+
+### Fixed
+Correctly encode URLs with GET parameters in the syndication links (see #6683).
+
+### Fixed
+Do not pass POST data to the `deserialize()` function, so it is not vulnerable
+to PHP object injection. Thanks to Pedro Ribeiro for his input (see #6695).
+
+### Fixed
+Allow any character in passwords, especially the less-than symbol (see #6447).
+
+### Fixed
+Purge the image cache if a file is being renamed (see #6641).
+
+### Fixed
+Preserve tags in custom CSS definitions (see #6667).
+
+### Fixed
+Make the swipe CSS selectors more specific (see #6666).
+
+### Fixed
+Correctly optimize floating-point numbers in style sheets (see #6674).
+
+
+Version 3.2.4 (2014-01-20)
+--------------------------
+
+### Fixed
+Updated the Russian translation of the TinyMCE "typolinks" plugins (see #6224).
+
+### Fixed
+Do not create multiple stylect layers upon Ajax changes.
+
+### Fixed
+Some DCAs were missing the "rem" unit (see #6634).
+
+### Fixed
+Correctly trim the SQL statements in the `Database` class (see #6623).
+
+### Fixed
+Fix some broken back end icons (see #6214).
+
+### Fixed
+Show a hint in the news archive menu if there are no items (see #5888).
+
+### Fixed
+Prevent the back end tool tips from exceeding the screen width (see #6639).
+
+### Fixed
+Support the Google+ vanity name in addition to the numeric ID (see #6454).
+
+### Fixed
+Correctly detect Android tablets in the `Environment` class (see #5869).
+
+### Fixed
+Correctly resolve the module dependencies (see #6606).
+
+### Fixed
+Correctly unset the PHP session cookie depending on its parameters.
+
+### Fixed
+Fixed the XHTML variant of the comments form (see #5675).
+
+### Fixed
+Correctly assign articles to columns (see #6595).
+
+### Fixed
+Correctly merge the CSS classes in the `Hybrid` class (see #6601).
+
+
 Version 3.2.3 (2013-12-20)
 --------------------------
 

@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -22,9 +20,7 @@ namespace Contao;
  *     $html  = String::substrHtml($str, 32);
  *     $xhtml = String::toXhtml($html5);
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class String
 {
@@ -111,7 +107,7 @@ class String
 	 */
 	public static function substrHtml($strString, $intNumberOfChars)
 	{
-		$strReturn = "";
+		$strReturn = '';
 		$intCharCount = 0;
 		$arrOpenTags = array();
 		$arrTagBuffer = array();
@@ -133,12 +129,15 @@ class String
 				continue;
 			}
 
+			$buffer = $arrChunks[$i];
+
 			// Get the substring of the current text
 			if (($arrChunks[$i] = static::substr($arrChunks[$i], ($intNumberOfChars - $intCharCount), false)) == false)
 			{
 				break;
 			}
 
+			$blnModified = ($buffer !== $arrChunks[$i]);
 			$intCharCount += utf8_strlen(static::decodeEntities($arrChunks[$i]));
 
 			if ($intCharCount <= $intNumberOfChars)
@@ -194,6 +193,12 @@ class String
 				if (strlen($arrChunks[$i]) || $i<$c)
 				{
 					$strReturn .= implode('', $arrTagBuffer) . $arrChunks[$i];
+				}
+
+				// Stop after the first shortened chunk (see #7311)
+				if ($blnModified)
+				{
+					break;
 				}
 
 				$arrTagBuffer = array();
@@ -508,6 +513,7 @@ class String
 		// Replace tokens
 		$strReturn = str_replace('?><br />', '?>', $strReturn);
 		$strReturn = preg_replace('/##([A-Za-z0-9_]+)##/i', '<?php echo $arrData[\'$1\']; ?>', $strReturn);
+		$strReturn = str_replace("]; ?>\n", '] . "\n"; ?>' . "\n", $strReturn); // see #7178
 
 		// Eval the code
 		ob_start();

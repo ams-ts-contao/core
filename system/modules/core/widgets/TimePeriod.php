@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class TimePeriod
- *
  * Provide methods to handle text fields with interval drop down menu.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class TimePeriod extends \Widget
 {
@@ -106,6 +97,29 @@ class TimePeriod extends \Widget
 
 
 	/**
+	 * Only check against the unit values (see #7246)
+	 *
+	 * @param array $arrOption The options array
+	 *
+	 * @return string The "selected" attribute or an empty string
+	 */
+	protected function isSelected($arrOption)
+	{
+		if (empty($this->varValue) && empty($_POST) && $arrOption['default'])
+		{
+			return parent::optionSelected(1, 1);
+		}
+
+		if (empty($this->varValue) || !is_array($this->varValue))
+		{
+			return '';
+		}
+
+		return parent::optionSelected($arrOption['value'], $this->varValue['unit']);
+	}
+
+
+	/**
 	 * Generate the widget and return it as string
 	 * @return string
 	 */
@@ -132,13 +146,14 @@ class TimePeriod extends \Widget
 			$this->varValue = array('value'=>$this->varValue);
 		}
 
-		return sprintf('<input type="text" name="%s[value]" id="ctrl_%s" class="tl_text_interval%s" value="%s"%s onfocus="Backend.getScrollOffset()"> <select name="%s[unit]" class="tl_select_interval" onfocus="Backend.getScrollOffset()">%s</select>%s',
+		return sprintf('<input type="text" name="%s[value]" id="ctrl_%s" class="tl_text_interval%s" value="%s"%s onfocus="Backend.getScrollOffset()"> <select name="%s[unit]" class="tl_select_interval" onfocus="Backend.getScrollOffset()"%s>%s</select>%s',
 						$this->strName,
 						$this->strId,
 						(($this->strClass != '') ? ' ' . $this->strClass : ''),
 						specialchars($this->varValue['value']),
 						$this->getAttributes(),
 						$this->strName,
+						$this->getAttribute('disabled'),
 						implode('', $arrUnits),
 						$this->wizard);
 	}

@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class ModuleBreadcrumb
- *
  * Front end module "breadcrumb".
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleBreadcrumb extends \Module
 {
@@ -75,7 +66,7 @@ class ModuleBreadcrumb extends \Module
 
 		if ($objPages !== null)
 		{
-			while ($objPages->next() && $pageId > 0 && $type != 'root')
+			while ($pageId > 0 && $type != 'root' && $objPages->next())
 			{
 				$type = $objPages->type;
 				$pageId = $objPages->pid;
@@ -170,8 +161,13 @@ class ModuleBreadcrumb extends \Module
 				$strArticle = $strSection;
 			}
 
-			// Get the article title
 			$objArticle = \ArticleModel::findByIdOrAlias($strArticle);
+			$strAlias = ($objArticle->alias != '' && !$GLOBALS['TL_CONFIG']['disableAlias']) ? $objArticle->alias : $objArticle->id;
+
+			if ($objArticle->inColumn != 'main')
+			{
+				$strAlias = $objArticle->inColumn . ':' . $strAlias;
+			}
 
 			if ($objArticle !== null)
 			{
@@ -179,6 +175,7 @@ class ModuleBreadcrumb extends \Module
 				(
 					'isRoot'   => false,
 					'isActive' => true,
+					'href'     => $this->generateFrontendUrl($pages[0], '/articles/' . $strAlias),
 					'title'    => specialchars($objArticle->title, true),
 					'link'     => $objArticle->title,
 					'data'     => $objArticle->row(),
@@ -194,6 +191,7 @@ class ModuleBreadcrumb extends \Module
 			(
 				'isRoot'   => false,
 				'isActive' => true,
+				'href'     => $this->generateFrontendUrl($pages[0]),
 				'title'    => specialchars($pages[0]['pageTitle'] ?: $pages[0]['title']),
 				'link'     => $pages[0]['title'],
 				'data'     => $pages[0],

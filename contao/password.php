@@ -3,12 +3,16 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
+
+
+/**
+ * Set the script name
+ */
+define('TL_SCRIPT', 'contao/password.php');
 
 
 /**
@@ -19,12 +23,9 @@ require_once '../system/initialize.php';
 
 
 /**
- * Class ChangePassword
- *
  * Handle back end password changes.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ChangePassword extends Backend
 {
@@ -59,8 +60,8 @@ class ChangePassword extends Backend
 
 		if (Input::post('FORM_SUBMIT') == 'tl_password')
 		{
-			$pw = Input::post('password', true);
-			$cnf = Input::post('confirm', true);
+			$pw = Input::postUnsafeRaw('password');
+			$cnf = Input::postUnsafeRaw('confirm');
 
 			// The passwords do not match
 			if ($pw != $cnf)
@@ -81,7 +82,7 @@ class ChangePassword extends Backend
 			else
 			{
 				// Make sure the password has been changed
-				if (crypt($pw, $this->User->password) == $this->User->password)
+				if (crypt($pw, $this->User->password) === $this->User->password)
 				{
 					Message::addError($GLOBALS['TL_LANG']['MSC']['pw_change']);
 				}

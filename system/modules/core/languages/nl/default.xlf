@@ -245,6 +245,10 @@
         <source>No database entry found for %s. Please synchronize the file system.</source>
         <target>Geen database toegang gevonden voor %s. Gelieve  het bestandssysteem te synchroniseren.</target>
       </trans-unit>
+      <trans-unit id="ERR.invalidGoogleId">
+        <source>Please enter a numeric Google+ ID or vanity name!</source>
+        <target>Voer een numeriek Google+ ID of vanity naam in!</target>
+      </trans-unit>
       <trans-unit id="SEC.question1">
         <source>Please add %d and %d.</source>
         <target>Tel %d en %d bij elkaar op.</target>
@@ -499,7 +503,7 @@
       </trans-unit>
       <trans-unit id="PTY.forward.1">
         <source>This type of page automatically forwards visitors to another page within the site structure.</source>
-        <target>Deze pagina verwijst u automatisch door naar een andere pagina van de website gebruik makende van een pagina ID of een pagina alias.</target>
+        <target>Deze pagina verwijst u automatisch door naar een andere pagina van de website gebruik makend van een pagina ID of een pagina alias.</target>
       </trans-unit>
       <trans-unit id="PTY.root.0">
         <source>Website root</source>
@@ -1095,11 +1099,11 @@
       </trans-unit>
       <trans-unit id="MSC.all.0">
         <source>Edit multiple</source>
-        <target>Bewerk alle items</target>
+        <target>Bewerk meerdere</target>
       </trans-unit>
       <trans-unit id="MSC.all.1">
         <source>Edit multiple records at once</source>
-        <target>Bewerk alle items in één keer</target>
+        <target>Bewerk meerdere items tegelijkertijd</target>
       </trans-unit>
       <trans-unit id="MSC.all_override.0">
         <source>Override multiple</source>
@@ -1142,20 +1146,20 @@
         <target>Datum toegevoegd: %s</target>
       </trans-unit>
       <trans-unit id="MSC.lastLogin.0">
+        <source>Previous login</source>
+        <target>Eerdere inlog</target>
+      </trans-unit>
+      <trans-unit id="MSC.lastLogin.1">
+        <source>Previous login: %s</source>
+        <target>Eerdere inlog: %s</target>
+      </trans-unit>
+      <trans-unit id="MSC.currentLogin.0">
         <source>Last login</source>
         <target>Laatste keer ingelogd</target>
       </trans-unit>
-      <trans-unit id="MSC.lastLogin.1">
+      <trans-unit id="MSC.currentLogin.1">
         <source>Last login: %s</source>
         <target>Laatste keer ingelogd: %s</target>
-      </trans-unit>
-      <trans-unit id="MSC.currentLogin.0">
-        <source>Current login</source>
-        <target>Huidige login</target>
-      </trans-unit>
-      <trans-unit id="MSC.currentLogin.1">
-        <source>Current login: %s</source>
-        <target>Huidige login: %s</target>
       </trans-unit>
       <trans-unit id="MSC.loginCount">
         <source>Login attempts</source>
@@ -1211,7 +1215,7 @@
       </trans-unit>
       <trans-unit id="MSC.toggleAll.0">
         <source>Toggle all</source>
-        <target>Alles inschakelen</target>
+        <target>Alles openen/sluiten</target>
       </trans-unit>
       <trans-unit id="MSC.toggleAll.1">
         <source>Expand or collapse all nodes</source>
@@ -1757,7 +1761,7 @@ Deze e-mail is aangemaakt door Contao. U kunt niet rechtstreeks hierop antwoorde
       </trans-unit>
       <trans-unit id="MSC.maintenanceMode">
         <source>Contao is currently running in &lt;strong&gt;maintenance mode&lt;/strong&gt;, in which the website (front end) is not available. Do not disable it if you are currently installing or upgrading third-party extensions! The website might not function properly.</source>
-        <target>Contao draait momenteel in &lt;strong&gt; onderhouds modus &lt;/ strong&gt;, waarin de website (front-end) niet beschikbaar is. Schakel dit niet uit indien u momenteel extensies van derden aan het installeren of upgraden bent! De website zal mogelijk niet goed functioneren.</target>
+        <target>Contao draait momenteel in &lt;strong&gt;onderhoudsmodus&lt;/ strong&gt;, waarin de website (front-end) niet beschikbaar is. Schakel dit niet uit indien u momenteel extensies van derden aan het installeren of upgraden bent! De website zal mogelijk niet goed functioneren.</target>
       </trans-unit>
       <trans-unit id="MSC.maintenanceOff">
         <source>Disable</source>
@@ -1801,7 +1805,7 @@ Deze e-mail is aangemaakt door Contao. U kunt niet rechtstreeks hierop antwoorde
       </trans-unit>
       <trans-unit id="MSC.adminText">
         <source>A new member (ID %s) has registered at your website.%sIf you did not allow e-mail activation, you have to enable the account manually in the back end.</source>
-        <target>Een nieuw lid (ID %s) registreerde op uw website. In het geval dat u geen gebruik maakt van activatie via e-mail, moet u dit account handmatig activeren in het backend van de site.</target>
+        <target>Een nieuw lid (ID %s) heeft zich geregistreerd op uw website.%s In het geval dat u geen gebruik maakt van activatie via e-mail, moet u dit account handmatig activeren in het backend van de site.</target>
       </trans-unit>
       <trans-unit id="MSC.requestPassword">
         <source>Request password</source>
@@ -2037,7 +2041,7 @@ Deze e-mail is aangemaakt door Contao. U kunt niet rechtstreeks hierop antwoorde
       </trans-unit>
       <trans-unit id="MSC.readMore">
         <source>Read the article: %s</source>
-        <target>Lees het volledig artikel %s</target>
+        <target>Lees het artikel: %s</target>
       </trans-unit>
       <trans-unit id="MSC.targetPage">
         <source>Target page</source>

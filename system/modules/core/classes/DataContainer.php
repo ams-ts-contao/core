@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class DataContainer
- *
  * Provide methods to handle data container arrays.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class DataContainer extends \Backend
 {
@@ -177,7 +168,7 @@ class DataContainer extends \Backend
 		$xlabel = '';
 
 		// Toggle line wrap (textarea)
-		if ($arrData['inputType'] == 'textarea' && $arrData['eval']['rte'] == '')
+		if ($arrData['inputType'] == 'textarea' && isset($arrData['eval']['rte']))
 		{
 			$xlabel .= ' ' . \Image::getHtml('wrap.gif', $GLOBALS['TL_LANG']['MSC']['wordWrap'], 'title="' . specialchars($GLOBALS['TL_LANG']['MSC']['wordWrap']) . '" class="toggleWrap" onclick="Backend.toggleWrap(\'ctrl_'.$this->strInputName.'\')"');
 		}
@@ -461,7 +452,31 @@ class DataContainer extends \Backend
   </fieldset>';
 		}
 
-		return '
+		$strPreview = '';
+
+		// Show a preview image (see #4948)
+		if ($this->strTable == 'tl_files' && $this->strField == 'name' && $this->objActiveRecord !== null && $this->objActiveRecord->type == 'file')
+		{
+			$objFile = new \File($this->objActiveRecord->path);
+
+			if ($objFile->isGdImage)
+			{
+				$image = 'placeholder.png';
+
+				if ($objFile->height <= $GLOBALS['TL_CONFIG']['gdMaxImgHeight'] && $objFile->width <= $GLOBALS['TL_CONFIG']['gdMaxImgWidth'])
+				{
+					$image = \Image::get($objFile->path, 80, 60, 'center_center');
+				}
+
+				$strPreview = '
+
+<div class="tl_edit_preview">
+' . \Image::getHtml($image) . '
+</div>';
+			}
+		}
+
+		return $strPreview . '
 <div' . ($arrData['eval']['tl_class'] ? ' class="' . $arrData['eval']['tl_class'] . '"' : '') . '>' . $objWidget->parse() . $updateMode . (!$objWidget->hasErrors() ? $this->help($strHelpClass) : '') . '
 </div>';
 	}
@@ -532,9 +547,7 @@ class DataContainer extends \Backend
 		}
 
 		$strUrl = \Environment::get('script') . '?' . implode('&', $arrKeys);
-		$glue = !empty($arrKeys) ? '&' : '';
-
-		return $strUrl . $glue . (\Input::get('table') ? 'table='.\Input::get('table').'&amp;' : '').'act=edit&amp;id='.$id;
+		return $strUrl . (!empty($arrKeys) ? '&' : '') . (\Input::get('table') ? 'table='.\Input::get('table').'&amp;' : '').'act=edit&amp;id='.$id;
 	}
 
 
@@ -581,12 +594,12 @@ class DataContainer extends \Backend
 			if (is_array($v['button_callback']))
 			{
 				$this->import($v['button_callback'][0]);
-				$return .= $this->$v['button_callback'][0]->$v['button_callback'][1]($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext);
+				$return .= $this->$v['button_callback'][0]->$v['button_callback'][1]($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
 				continue;
 			}
 			elseif (is_callable($v['button_callback']))
 			{
-				$return .= $v['button_callback']($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext);
+				$return .= $v['button_callback']($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
 				continue;
 			}
 

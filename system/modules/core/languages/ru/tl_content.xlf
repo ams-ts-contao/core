@@ -123,7 +123,7 @@
       </trans-unit>
       <trans-unit id="tl_content.listitems.0">
         <source>List items</source>
-        <target>Пункты списка</target>
+        <target>Элементы списка</target>
       </trans-unit>
       <trans-unit id="tl_content.listitems.1">
         <source>If JavaScript is disabled, make sure to save your changes before modifying the order.</source>
@@ -295,7 +295,7 @@
       </trans-unit>
       <trans-unit id="tl_content.embed.1">
         <source>Use the wildcard &quot;%s&quot; to embed the link in a phrase (e.g. &lt;em&gt;For more information please visit %s&lt;/em&gt;).</source>
-        <target>Используйте подстановочный знак &quot;%s&quot;, чтобы встроить ссылку в фразу (напр. &lt;em&gt;Для получения дополнительной информации посетите %s&lt;/em&gt;).</target>
+        <target>Используйте подстановочный знак &quot;%s&quot; , чтобы встроить ссылку в фразу (напр. &lt;em&gt;Для получения дополнительной информации посетите %s&lt;/em&gt;).</target>
       </trans-unit>
       <trans-unit id="tl_content.rel.0">
         <source>Lightbox</source>
@@ -571,11 +571,11 @@
       </trans-unit>
       <trans-unit id="tl_content.list_legend">
         <source>List items</source>
-        <target>Список пунктов</target>
+        <target>Список элементов</target>
       </trans-unit>
       <trans-unit id="tl_content.table_legend">
         <source>Table items</source>
-        <target>Таблица пунктов</target>
+        <target>Элементы таблицы</target>
       </trans-unit>
       <trans-unit id="tl_content.tconfig_legend">
         <source>Table configuration</source>
@@ -619,7 +619,7 @@
       </trans-unit>
       <trans-unit id="tl_content.template_legend">
         <source>Template settings</source>
-        <target>Настройки шаблонов</target>
+        <target>Настройки шаблона</target>
       </trans-unit>
       <trans-unit id="tl_content.player_legend">
         <source>Player settings</source>
@@ -731,19 +731,19 @@
       </trans-unit>
       <trans-unit id="tl_content.pasteafter.0">
         <source>Paste at the top</source>
-        <target>Вставить в начало</target>
+        <target>Вставить после</target>
       </trans-unit>
       <trans-unit id="tl_content.pasteafter.1">
         <source>Paste after content element ID %s</source>
-        <target>Вставить в начало ID %s</target>
+        <target>Вставить после элемента контента ID %s</target>
       </trans-unit>
       <trans-unit id="tl_content.pastenew.0">
         <source>Add new at the top</source>
-        <target>Создать новый элемент контента в начале</target>
+        <target>Создать новый элемент контента</target>
       </trans-unit>
       <trans-unit id="tl_content.pastenew.1">
         <source>Add new after content element ID %s</source>
-        <target>Создать новый элемент контента в начале ID %s</target>
+        <target>Создать новый элемент контента после ID %s</target>
       </trans-unit>
       <trans-unit id="tl_content.toggle.0">
         <source>Toggle visibility</source>

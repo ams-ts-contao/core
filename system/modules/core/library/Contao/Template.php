@@ -3,11 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Library
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
 namespace Contao;
@@ -26,9 +24,7 @@ namespace Contao;
  *     $template->name = 'Leo Feyer';
  *     $template->output();
  *
- * @package   Library
- * @author    Leo Feyer <https://github.com/leofeyer>
- * @copyright Leo Feyer 2005-2013
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class Template extends \Controller
 {
@@ -318,22 +314,10 @@ abstract class Template extends \Controller
 
 			$intElapsed = (microtime(true) - TL_START);
 
-			// Switch to milliseconds if less than one second
-			if ($intElapsed > 1)
-			{
-				$intTime = $intElapsed;
-				$strUnit = 's';
-			}
-			else
-			{
-				$intTime = $intElapsed * 1000;
-				$strUnit = 'ms';
-			}
-
 			$strDebug = sprintf(
 				'<div id="debug" class="%s">'
 				. '<p>'
-					. '<span class="time">Execution time: %s %s</span>'
+					. '<span class="time">Execution time: %s ms</span>'
 					. '<span class="memory">Memory usage: %s</span>'
 					. '<span class="db">Database queries: %d</span>'
 					. '<span class="rows">Rows: %d returned, %s affected</span>'
@@ -342,8 +326,7 @@ abstract class Template extends \Controller
 				. '</p>'
 				. '<div><pre>',
 				\Input::cookie('CONTAO_CONSOLE'),
-				$this->getFormattedNumber($intTime, 0),
-				$strUnit,
+				$this->getFormattedNumber(($intElapsed * 1000), 0),
 				$this->getReadableSize(memory_get_peak_usage()),
 				count($GLOBALS['TL_DEBUG']['database_queries']),
 				$intReturned,
@@ -376,7 +359,7 @@ abstract class Template extends \Controller
 						. "$(document.body).setStyle('margin-bottom',$('debug').hasClass('closed')?'60px':'320px');"
 						. "$('tog').addEvent('click',function(e) {"
 							. "$('debug').toggleClass('closed');"
-							. "Cookie.write('CONTAO_CONSOLE',$('debug').hasClass('closed')?'closed':'',{path:Contao.path});"
+							. "Cookie.write('CONTAO_CONSOLE',$('debug').hasClass('closed')?'closed':'',{path:'" . (TL_PATH ?: '/') . "'});"
 							. "$(document.body).setStyle('margin-bottom',$('debug').hasClass('closed')?'60px':'320px');"
 						. "});"
 						. "window.addEvent('resize',function() {"
@@ -408,7 +391,7 @@ abstract class Template extends \Controller
 		}
 
 		// Split the markup based on the tags that shall be preserved
-		$arrChunks = preg_split('@(</?pre[^>]*>)|(</?script[^>]*>)|(</?style[^>]*>)|(</?textarea[^>]*>)@i', $strHtml, -1, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
+		$arrChunks = preg_split('@(</?pre[^>]*>)|(</?script[^>]*>)|(</?style[^>]*>)|( ?</?textarea[^>]*>)@i', $strHtml, -1, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
 
 		$strHtml = '';
 		$blnPreserveNext = false;
@@ -417,7 +400,7 @@ abstract class Template extends \Controller
 		// Recombine the markup
 		foreach ($arrChunks as $strChunk)
 		{
-			if (strncasecmp($strChunk, '<pre', 4) === 0 || strncasecmp($strChunk, '<textarea', 9) === 0)
+			if (strncasecmp($strChunk, '<pre', 4) === 0 || strncasecmp(ltrim($strChunk), '<textarea', 9) === 0)
 			{
 				$blnPreserveNext = true;
 			}

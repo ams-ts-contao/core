@@ -119,7 +119,7 @@
       </trans-unit>
       <trans-unit id="tl_comments.publish_legend">
         <source>Publish settings</source>
-        <target>Publiceer instellingen</target>
+        <target>Publicatie-instellingen</target>
       </trans-unit>
       <trans-unit id="tl_comments.approved">
         <source>Approved</source>
@@ -147,7 +147,7 @@
       </trans-unit>
       <trans-unit id="tl_comments.tl_calendar_events">
         <source>Event</source>
-        <target>Event</target>
+        <target>Evenement</target>
       </trans-unit>
       <trans-unit id="tl_comments.show.0">
         <source>Comment details</source>

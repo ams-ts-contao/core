@@ -3,27 +3,18 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
- * @package Core
- * @link    https://contao.org
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
+ * @license LGPL-3.0+
  */
 
-
-/**
- * Run in a custom namespace, so the class can be replaced
- */
 namespace Contao;
 
 
 /**
- * Class DC_Folder
- *
  * Provide methods to modify the file system.
- * @copyright  Leo Feyer 2005-2013
- * @author     Leo Feyer <https://contao.org>
- * @package    Core
+ *
+ * @author Leo Feyer <https://github.com/leofeyer>
  */
 class DC_Folder extends \DataContainer implements \listable, \editable
 {
@@ -121,9 +112,9 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		// Set IDs and redirect
 		if (\Input::post('FORM_SUBMIT') == 'tl_select')
 		{
-			$ids = deserialize(\Input::post('IDS'));
+			$ids = \Input::post('IDS');
 
-			if (!is_array($ids) || empty($ids))
+			if (empty($ids) || !is_array($ids))
 			{
 				$this->reload();
 			}
@@ -462,7 +453,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		$this->Session->set('CLIPBOARD', $arrClipboard);
 
 		$this->Files->mkdir($strFolder . '/__new__');
-		$this->redirect(html_entity_decode($this->switchToEdit($strFolder . '/__new__')));
+		$this->redirect(html_entity_decode($this->switchToEdit($this->urlEncode($strFolder) . '/__new__')));
 	}
 
 
@@ -567,7 +558,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		{
 			foreach ($arrClipboard[$this->strTable]['id'] as $id)
 			{
-				$this->cut(urldecode($id));
+				$this->cut($id); // do not urldecode() here (see #6840)
 			}
 		}
 
@@ -703,7 +694,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		{
 			foreach ($arrClipboard[$this->strTable]['id'] as $id)
 			{
-				$this->copy(urldecode($id));
+				$this->copy($id); // do not urldecode() here (see #6840)
 			}
 		}
 
@@ -803,7 +794,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		{
 			foreach ($ids as $id)
 			{
-				$this->delete(urldecode($id));
+				$this->delete($id); // do not urldecode() here (see #6840)
 			}
 		}
 
@@ -1159,23 +1150,6 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			$version = '';
 		}
 
-		$strPreview = '';
-
-		// Show a preview image (see #4948)
-		if ($this->objActiveRecord !== null && $this->objActiveRecord->type == 'file')
-		{
-			$objFile = new \File($this->objActiveRecord->path);
-
-			if ($objFile->isGdImage)
-			{
-				$strPreview = '
-
-<div class="tl_edit_preview">
-' . \Image::getHtml(\Image::get($objFile->path, 700, 150, 'box')) . '
-</div>';
-			}
-		}
-
 		// Submit buttons
 		$arrButtons = array();
 		$arrButtons['save'] = '<input type="submit" name="save" id="save" class="tl_submit" accesskey="s" value="'.specialchars($GLOBALS['TL_LANG']['MSC']['save']).'">';
@@ -1224,7 +1198,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 </div>
 
 <h2 class="sub_headline">'.$GLOBALS['TL_LANG']['tl_files']['editFF'].'</h2>
-'.\Message::generate().$strPreview.'
+'.\Message::generate().'
 <form action="'.ampersand(\Environment::get('request'), true).'" id="'.$this->strTable.'" class="tl_form" method="post"'.(!empty($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').'>
 <div class="tl_formbody_edit">
 <input type="hidden" name="FORM_SUBMIT" value="'.specialchars($this->strTable).'">
@@ -1273,7 +1247,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					}
 				}
 
-				$this->log('A new version of record "'.$this->strTable.'.id='.$objFile->id.'" has been created', __METHOD__, TL_GENERAL);
+				$this->log('A new version of file "'.$objFile->path.'" has been created', __METHOD__, TL_GENERAL);
 			}
 
 			// Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
@@ -1339,7 +1313,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		// Save field selection in session
 		if (\Input::post('FORM_SUBMIT') == $this->strTable.'_all' && \Input::get('fields'))
 		{
-			$session['CURRENT'][$this->strTable] = deserialize(\Input::post('all_fields'));
+			$session['CURRENT'][$this->strTable] = \Input::post('all_fields');
 			$this->Session->setData($session);
 		}
 
@@ -1399,7 +1373,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					// Load the current value
 					if ($v == 'name')
 					{
-						$pathinfo = pathinfo(urldecode($id));
+						$pathinfo = pathinfo($id); // do not urldecode() here (see #6840)
 
 						$this->strPath = $pathinfo['dirname'];
 						$this->strExtension = ($pathinfo['extension'] != '') ? '.'.$pathinfo['extension'] : '';
@@ -1484,7 +1458,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 							}
 						}
 
-						$this->log('A new version of record "'.$this->strTable.'.id='.$objFile->id.'" has been created', __METHOD__, TL_GENERAL);
+						$this->log('A new version of file "'.$objFile->path.'" has been created', __METHOD__, TL_GENERAL);
 					}
 
 					// Set the current timestamp (-> DO NOT CHANGE ORDER version - timestamp)
@@ -1676,11 +1650,14 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		// Process the request
 		if (\Input::post('FORM_SUBMIT') == 'tl_files')
 		{
+			// Restore the basic entities (see #7170)
+			$strSource = \String::restoreBasicEntities(\Input::postRaw('source'));
+
 			// Save the file
-			if (md5($strContent) != md5(\Input::postRaw('source')))
+			if (md5($strContent) != md5($strSource))
 			{
 				// Write the file
-				$objFile->write(\Input::postRaw('source'));
+				$objFile->write($strSource);
 				$objFile->close();
 
 				// Update the database
@@ -1857,6 +1834,17 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				throw new \Exception(sprintf($GLOBALS['TL_LANG']['ERR']['fileExists'], $varValue));
 			}
 
+			$arrImageTypes = trimsplit(',', strtolower($GLOBALS['TL_CONFIG']['validImageTypes']));
+
+			// Remove potentially existing thumbnails (see #6641)
+			if (in_array(substr($this->strExtension, 1), $arrImageTypes))
+			{
+				foreach (glob(TL_ROOT . '/assets/images/*/' . $this->varValue . '-*' . $this->strExtension) as $strThumbnail)
+				{
+					$this->Files->delete(str_replace(TL_ROOT, '', $strThumbnail));
+				}
+			}
+
 			// Rename the file
 			$this->Files->rename($this->strPath . '/' . $this->varValue . $this->strExtension, $this->strPath . '/' . $varValue . $this->strExtension);
 
@@ -1881,9 +1869,9 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			{
 				$session = $this->Session->getData();
 
-				if (($index = array_search($this->urlEncode($this->strPath.'/'.$this->varValue).$this->strExtension, $session['CURRENT']['IDS'])) !== false)
+				if (($index = array_search($this->strPath.'/'.$this->varValue.$this->strExtension, $session['CURRENT']['IDS'])) !== false)
 				{
-					$session['CURRENT']['IDS'][$index] = $this->urlEncode($this->strPath.'/'.$varValue).$this->strExtension;
+					$session['CURRENT']['IDS'][$index] = $this->strPath.'/'.$varValue.$this->strExtension;
 					$this->Session->setData($session);
 				}
 			}
@@ -1895,7 +1883,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			// Convert date formats into timestamps
 			if ($varValue != '' && in_array($arrData['eval']['rgxp'], array('date', 'time', 'datim')))
 			{
-				$objDate = new \Date($varValue, $GLOBALS['TL_CONFIG'][$arrData['eval']['rgxp'] . 'Format']);
+				$objDate = new \Date($varValue, \Date::getFormatFromRgxp($arrData['eval']['rgxp']));
 				$varValue = $objDate->tstamp;
 			}
 
@@ -2393,12 +2381,12 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		$strFolder = \Input::get('pid', true);
 
 		// Check the path
-		if (strpos($strFile, '../') !== false)
+		if (\Validator::isInsecurePath($strFile))
 		{
 			$this->log('Invalid file name "'.$strFile.'" (hacking attempt)', __METHOD__, TL_ERROR);
 			$this->redirect('contao/main.php?act=error');
 		}
-		elseif (strpos($strFolder, '../') !== false)
+		elseif (\Validator::isInsecurePath($strFolder))
 		{
 			$this->log('Invalid folder name "'.$strFolder.'" (hacking attempt)', __METHOD__, TL_ERROR);
 			$this->redirect('contao/main.php?act=error');
