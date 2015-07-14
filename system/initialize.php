@@ -61,8 +61,8 @@ require TL_ROOT . '/system/helper/exception.php';
 /**
  * Set the error and exception handler
  */
-@set_error_handler('__error');
-@set_exception_handler('__exception');
+set_error_handler('__error');
+set_exception_handler('__exception');
 
 
 /**
@@ -90,6 +90,14 @@ Config::preload(); // see #5872
 
 
 /**
+ * Adjust the error handling
+ */
+@ini_set('display_errors', (Config::get('displayErrors') ? 1 : 0));
+error_reporting((Config::get('displayErrors') || Config::get('logErrors')) ? Config::get('errorReporting') : 0);
+set_error_handler('__error', Config::get('errorReporting'));
+
+
+/**
  * Try to load the modules
  */
 try
@@ -103,15 +111,25 @@ catch (UnresolvableDependenciesException $e)
 
 
 /**
- * Register the SwiftMailer and SimplePie autoloaders
+ * Include the Composer autoloader
  */
-require_once TL_ROOT . '/system/modules/core/vendor/swiftmailer/classes/Swift.php';
+require_once TL_ROOT . '/vendor/autoload.php';
 
-Swift::registerAutoload(function() {
-	require TL_ROOT . '/system/modules/core/vendor/swiftmailer/swift_init.php';
+
+/**
+ * Override some SwiftMailer defaults
+ */
+Swift::init(function()
+{
+	$preferences = Swift_Preferences::getInstance();
+
+	if (!Config::get('useFTP'))
+	{
+		$preferences->setTempDir(TL_ROOT . '/system/tmp')->setCacheType('disk');
+	}
+
+	$preferences->setCharset(Config::get('characterSet'));
 });
-
-require_once TL_ROOT . '/system/modules/core/vendor/simplepie/autoloader.php';
 
 
 /**
@@ -147,7 +165,7 @@ $objConfig = Config::getInstance();
 /**
  * Set the website path (backwards compatibility)
  */
-$GLOBALS['TL_CONFIG']['websitePath'] = TL_PATH;
+Config::set('websitePath', TL_PATH);
 
 
 /**
@@ -191,25 +209,19 @@ if (!$objConfig->isComplete() && TL_SCRIPT != 'contao/install.php')
 
 
 /**
- * Set error_reporting (see #5001)
+ * Always show error messages if logged into the install tool (see #5001)
  */
 if (Input::cookie('TL_INSTALL_AUTH') && !empty($_SESSION['TL_INSTALL_AUTH']) && Input::cookie('TL_INSTALL_AUTH') == $_SESSION['TL_INSTALL_AUTH'] && $_SESSION['TL_INSTALL_EXPIRE'] > time())
 {
-	@ini_set('display_errors', 1);
-	@error_reporting(E_ALL|E_STRICT);
-}
-else
-{
-	@ini_set('display_errors', ($GLOBALS['TL_CONFIG']['displayErrors'] ? 1 : 0));
-	error_reporting(($GLOBALS['TL_CONFIG']['displayErrors'] || $GLOBALS['TL_CONFIG']['logErrors']) ? E_ALL|E_STRICT : 0);
+	Config::set('displayErrors', 1);
 }
 
 
 /**
  * Set the timezone
  */
-@ini_set('date.timezone', $GLOBALS['TL_CONFIG']['timeZone']);
-@date_default_timezone_set($GLOBALS['TL_CONFIG']['timeZone']);
+@ini_set('date.timezone', Config::get('timeZone'));
+@date_default_timezone_set(Config::get('timeZone'));
 
 
 /**
@@ -217,7 +229,7 @@ else
  */
 if (USE_MBSTRING && function_exists('mb_regex_encoding'))
 {
-	mb_regex_encoding($GLOBALS['TL_CONFIG']['characterSet']);
+	mb_regex_encoding(Config::get('characterSet'));
 }
 
 

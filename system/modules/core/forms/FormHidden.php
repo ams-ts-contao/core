@@ -12,7 +12,7 @@ namespace Contao;
 
 
 /**
- * Form field "hidden".
+ * Class FormHidden
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -21,12 +21,14 @@ class FormHidden extends \Widget
 
 	/**
 	 * Submit user input
+	 *
 	 * @var boolean
 	 */
 	protected $blnSubmitInput = true;
 
 	/**
 	 * Template
+	 *
 	 * @var string
 	 */
 	protected $strTemplate = 'form_hidden';
@@ -34,7 +36,8 @@ class FormHidden extends \Widget
 
 	/**
 	 * Generate the widget and return it as string
-	 * @return string
+	 *
+	 * @return string The widget markup
 	 */
 	public function generate()
 	{

@@ -46,7 +46,9 @@ class Ajax extends \Backend
 
 	/**
 	 * Get the current action
-	 * @param string
+	 *
+	 * @param string $strAction
+	 *
 	 * @throws \Exception
 	 */
 	public function __construct($strAction)
@@ -83,6 +85,7 @@ class Ajax extends \Backend
 
 				$this->import('BackendUser', 'User');
 
+				/** @var \BackendTemplate|object $objTemplate */
 				$objTemplate = new \BackendTemplate('be_navigation');
 				$navigation = $this->User->navigation();
 				$objTemplate->modules = $navigation[\Input::post('id')]['modules'];
@@ -137,8 +140,8 @@ class Ajax extends \Backend
 
 			// Check whether the temporary directory is writeable
 			case 'liveUpdate':
-				$GLOBALS['TL_CONFIG']['liveUpdateId'] = \Input::post('id');
-				$this->Config->update("\$GLOBALS['TL_CONFIG']['liveUpdateId']", \Input::post('id'));
+				\Config::set('liveUpdateId', \Input::post('id'));
+				\Config::persist('liveUpdateId', \Input::post('id'));
 
 				// Check whether the temp directory is writeable
 				try
@@ -182,11 +185,12 @@ class Ajax extends \Backend
 
 	/**
 	 * Ajax actions that do require a data container object
-	 * @param \DataContainer
+	 *
+	 * @param \DataContainer $dc
 	 */
 	public function executePostActions(\DataContainer $dc)
 	{
-		header('Content-Type: text/html; charset=' . $GLOBALS['TL_CONFIG']['characterSet']);
+		header('Content-Type: text/html; charset=' . \Config::get('characterSet'));
 
 		// Bypass any core logic for non-core drivers (see #5957)
 		if (!$dc instanceof \DC_File && !$dc instanceof \DC_Folder && !$dc instanceof \DC_Table)
@@ -209,21 +213,26 @@ class Ajax extends \Backend
 
 			// Load nodes of the page tree
 			case 'loadPagetree':
-				$arrData['strTable'] = $dc->table;
-				$arrData['id'] = $this->strAjaxName ?: $dc->id;
-				$arrData['name'] = \Input::post('name');
+				$strField = $dc->field = \Input::post('name');
 
-				$objWidget = new $GLOBALS['BE_FFL']['pageSelector']($arrData, $dc);
+				/** @var \PageSelector $strClass */
+				$strClass = $GLOBALS['BE_FFL']['pageSelector'];
+
+				/** @var \PageSelector $objWidget */
+				$objWidget = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField], $dc->field, null, $strField, $dc->table, $dc));
+
 				echo $objWidget->generateAjax($this->strAjaxId, \Input::post('field'), intval(\Input::post('level')));
 				exit; break;
 
 			// Load nodes of the file tree
 			case 'loadFiletree':
-				$arrData['strTable'] = $dc->table;
-				$arrData['id'] = $this->strAjaxName ?: $dc->id;
-				$arrData['name'] = \Input::post('name');
+				$strField = $dc->field = \Input::post('name');
 
-				$objWidget = new $GLOBALS['BE_FFL']['fileSelector']($arrData, $dc);
+				/** @var \FileSelector $strClass */
+				$strClass = $GLOBALS['BE_FFL']['fileSelector'];
+
+				/** @var \FileSelector $objWidget */
+				$objWidget = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField], $dc->field, null, $strField, $dc->table, $dc));
 
 				// Load a particular node
 				if (\Input::post('folder', true) != '')
@@ -263,7 +272,7 @@ class Ajax extends \Backend
 				// Load the value
 				if ($GLOBALS['TL_DCA'][$dc->table]['config']['dataContainer'] == 'File')
 				{
-					$varValue = $GLOBALS['TL_CONFIG'][$strField];
+					$varValue = \Config::get($strField);
 				}
 				elseif ($intId > 0 && $this->Database->tableExists($dc->table))
 				{
@@ -320,17 +329,12 @@ class Ajax extends \Backend
 					$varValue = serialize($varValue);
 				}
 
-				// Build the attributes based on the "eval" array
-				$arrAttribs = $GLOBALS['TL_DCA'][$dc->table]['fields'][$strField]['eval'];
+				/** @var \FileTree|\PageTree $strClass */
+				$strClass = $GLOBALS['BE_FFL'][$strKey];
 
-				$arrAttribs['id'] = $dc->field;
-				$arrAttribs['name'] = $dc->field;
-				$arrAttribs['value'] = $varValue;
-				$arrAttribs['strTable'] = $dc->table;
-				$arrAttribs['strField'] = $strField;
-				$arrAttribs['activeRecord'] = $dc->activeRecord;
+				/** @var \FileTree|\PageTree $objWidget */
+				$objWidget = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField], $dc->field, $varValue, $strField, $dc->table, $dc));
 
-				$objWidget = new $GLOBALS['BE_FFL'][$strKey]($arrAttribs);
 				echo $objWidget->generate();
 				exit; break;
 
@@ -352,9 +356,9 @@ class Ajax extends \Backend
 				$this->import('BackendUser', 'User');
 
 				// Check whether the field is a selector field and allowed for regular users (thanks to Fabian Mihailowitsch) (see #4427)
-				if (!is_array($GLOBALS['TL_DCA'][$dc->table]['palettes']['__selector__']) || !in_array($this->Input->post('field'), $GLOBALS['TL_DCA'][$dc->table]['palettes']['__selector__']) || ($GLOBALS['TL_DCA'][$dc->table]['fields'][$this->Input->post('field')]['exclude'] && !$this->User->hasAccess($dc->table . '::' . $this->Input->post('field'), 'alexf')))
+				if (!is_array($GLOBALS['TL_DCA'][$dc->table]['palettes']['__selector__']) || !in_array(\Input::post('field'), $GLOBALS['TL_DCA'][$dc->table]['palettes']['__selector__']) || ($GLOBALS['TL_DCA'][$dc->table]['fields'][\Input::post('field')]['exclude'] && !$this->User->hasAccess($dc->table . '::' . \Input::post('field'), 'alexf')))
 				{
-					$this->log('Field "' . $this->Input->post('field') . '" is not an allowed selector field (possible SQL injection attempt)', __METHOD__, TL_ERROR);
+					$this->log('Field "' . \Input::post('field') . '" is not an allowed selector field (possible SQL injection attempt)', __METHOD__, TL_ERROR);
 					header('HTTP/1.1 400 Bad Request');
 					die('Bad Request');
 				}
@@ -384,14 +388,19 @@ class Ajax extends \Backend
 				elseif ($dc instanceof \DC_File)
 				{
 					$val = (intval(\Input::post('state') == 1) ? true : false);
-					$this->Config->update("\$GLOBALS['TL_CONFIG']['".\Input::post('field')."']", $val);
+					\Config::persist(\Input::post('field'), $val);
 
 					if (\Input::post('load'))
 					{
-						$GLOBALS['TL_CONFIG'][\Input::post('field')] = $val;
+						\Config::set(\Input::post('field'), $val);
 						echo $dc->edit(false, \Input::post('id'));
 					}
 				}
+				exit; break;
+
+			// DropZone file upload
+			case 'fileupload':
+				$dc->move();
 				exit; break;
 
 			// HOOK: pass unknown actions to callback functions
@@ -404,7 +413,8 @@ class Ajax extends \Backend
 
 	/**
 	 * Execute the post actions hook
-	 * @param \DataContainer
+	 *
+	 * @param \DataContainer $dc
 	 */
 	protected function executePostActionsHook(\DataContainer $dc)
 	{

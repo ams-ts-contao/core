@@ -10,12 +10,7 @@
 
 namespace Contao;
 
-
-// Import the inda_convert class
-if (!class_exists('idna_convert', false))
-{
-	require_once TL_ROOT . '/system/modules/core/vendor/idna/idna_convert.class.php';
-}
+use True\Punycode;
 
 
 /**
@@ -44,8 +39,9 @@ class Idna
 	 */
 	public static function encode($strDomain)
 	{
-		$objIdn = new \idna_convert();
-		return $objIdn->encode($strDomain);
+		$objPunycode = new Punycode();
+
+		return $objPunycode->encode($strDomain);
 	}
 
 
@@ -58,8 +54,9 @@ class Idna
 	 */
 	public static function decode($strDomain)
 	{
-		$objIdn = new \idna_convert();
-		return $objIdn->decode($strDomain);
+		$objPunycode = new Punycode();
+
+		return $objPunycode->decode($strDomain);
 	}
 
 
@@ -83,6 +80,7 @@ class Idna
 		}
 
 		list($strLocal, $strHost) = explode('@', $strEmail);
+
 		return $strLocal . '@' . static::encode($strHost);
 	}
 

@@ -12,7 +12,10 @@ namespace Contao;
 
 
 /**
- * Form field "radio button".
+ * Class FormRadioButton
+ *
+ * @property boolean $mandatory
+ * @property array   $options
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -21,27 +24,38 @@ class FormRadioButton extends \Widget
 
 	/**
 	 * Submit user input
+	 *
 	 * @var boolean
 	 */
 	protected $blnSubmitInput = true;
 
 	/**
 	 * Template
+	 *
 	 * @var string
 	 */
 	protected $strTemplate = 'form_radio';
 
 	/**
 	 * Error message
+	 *
 	 * @var string
 	 */
 	protected $strError = '';
 
+	/**
+	 * The CSS class prefix
+	 *
+	 * @var string
+	 */
+	protected $strPrefix = 'widget widget-radio';
+
 
 	/**
 	 * Add specific attributes
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey   The attribute key
+	 * @param mixed  $varValue The attribute value
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -78,8 +92,10 @@ class FormRadioButton extends \Widget
 
 	/**
 	 * Return a parameter
-	 * @param string
-	 * @return mixed
+	 *
+	 * @param string $strKey The parameter name
+	 *
+	 * @return mixed The parameter value
 	 */
 	public function __get($strKey)
 	{
@@ -109,20 +125,50 @@ class FormRadioButton extends \Widget
 
 
 	/**
+	 * Generate the options
+	 *
+	 * @return array The options array
+	 */
+	protected function getOptions()
+	{
+		$arrOptions = array();
+
+		foreach ($this->arrOptions as $i=>$arrOption)
+		{
+			$arrOptions[] = array
+			(
+				'name'       => $this->strName,
+				'id'         => $this->strId . '_' . $i,
+				'value'      => $arrOption['value'],
+				'checked'    => $this->isChecked($arrOption),
+				'attributes' => $this->getAttributes(),
+				'label'      => $arrOption['label']
+			);
+		}
+
+		return $arrOptions;
+	}
+
+
+	/**
 	 * Override the parent method and inject the error message inside the fieldset (see #3392)
-	 * @param boolean
-	 * @return string
+	 *
+	 * @param boolean $blnSwitchOrder If true, the error message will be shown below the field
+	 *
+	 * @return string The form field markup
 	 */
 	public function generateWithError($blnSwitchOrder=false)
 	{
 		$this->strError = $this->getErrorAsHTML();
+
 		return $this->generate();
 	}
 
 
 	/**
 	 * Generate the widget and return it as string
-	 * @return string
+	 *
+	 * @return string The widget markup
 	 */
 	public function generate()
 	{

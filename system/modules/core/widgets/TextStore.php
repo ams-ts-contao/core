@@ -15,6 +15,8 @@ namespace Contao;
  * A TextStore field is used to enter data only. It will not show the
  * currently stored value (useful e.g. to store passwords).
  *
+ * @property integer $maxlength
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class TextStore extends \Widget
@@ -35,8 +37,9 @@ class TextStore extends \Widget
 
 	/**
 	 * Add specific attributes
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey
+	 * @param mixed  $varValue
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -58,7 +61,9 @@ class TextStore extends \Widget
 
 	/**
 	 * Ignore the field if nothing has been entered
-	 * @param mixed
+	 *
+	 * @param mixed $varInput
+	 *
 	 * @return mixed
 	 */
 	protected function validator($varInput)
@@ -66,15 +71,17 @@ class TextStore extends \Widget
 		if ($varInput == '*****')
 		{
 			$this->blnSubmitInput = false;
+
 			return true;
 		}
 
-		return parent::validator(trim($varInput));
+		return parent::validator($varInput);
 	}
 
 
 	/**
 	 * Generate the widget and return it as string
+	 *
 	 * @return string
 	 */
 	public function generate()

@@ -21,11 +21,12 @@ class ContentModule extends \ContentElement
 
 	/**
 	 * Parse the template
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
-		if (TL_MODE == 'FE' && !BE_USER_LOGGED_IN && ($this->invisible || ($this->start > 0 && $this->start > time()) || ($this->stop > 0 && $this->stop < time())))
+		if (TL_MODE == 'FE' && !BE_USER_LOGGED_IN && ($this->invisible || ($this->start != '' && $this->start > time()) || ($this->stop != '' && $this->stop < time())))
 		{
 			return '';
 		}
@@ -45,10 +46,14 @@ class ContentModule extends \ContentElement
 		}
 
 		$objModule->typePrefix = 'ce_';
+
+		/** @var \Module $objModule */
 		$objModule = new $strClass($objModule, $this->strColumn);
 
 		// Overwrite spacing and CSS ID
+		$objModule->origSpace = $objModule->space;
 		$objModule->space = $this->space;
+		$objModule->origCssID = $objModule->cssID;
 		$objModule->cssID = $this->cssID;
 
 		return $objModule->generate();

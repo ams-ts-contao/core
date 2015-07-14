@@ -21,6 +21,7 @@ class PurgeData extends \Backend implements \executable
 
 	/**
 	 * Return true if the module is active
+	 *
 	 * @return boolean
 	 */
 	public function isActive()
@@ -31,11 +32,14 @@ class PurgeData extends \Backend implements \executable
 
 	/**
 	 * Generate the module
+	 *
 	 * @return string
 	 */
 	public function run()
 	{
 		$arrJobs = array();
+
+		/** @var \BackendTemplate|object $objTemplate */
 		$objTemplate = new \BackendTemplate('be_purge_data');
 		$objTemplate->isActive = $this->isActive();
 
@@ -119,7 +123,7 @@ class PurgeData extends \Backend implements \executable
 				// Only check existing folders
 				if (is_dir(TL_ROOT . '/' . $folder))
 				{
-					// Recursively scan all subfolders
+					/** @var \SplFileInfo[] $objFiles */
 					$objFiles = new \RecursiveIteratorIterator(
 						new \RecursiveDirectoryIterator(
 							TL_ROOT . '/' . $folder,
@@ -159,7 +163,7 @@ class PurgeData extends \Backend implements \executable
 		$objTemplate->job = $GLOBALS['TL_LANG']['tl_maintenance']['job'];
 		$objTemplate->description = $GLOBALS['TL_LANG']['tl_maintenance']['description'];
 		$objTemplate->submit = specialchars($GLOBALS['TL_LANG']['tl_maintenance']['clearCache']);
-		$objTemplate->help = ($GLOBALS['TL_CONFIG']['showHelp'] && ($GLOBALS['TL_LANG']['tl_maintenance']['cacheTables'][1] != '')) ? $GLOBALS['TL_LANG']['tl_maintenance']['cacheTables'][1] : '';
+		$objTemplate->help = (\Config::get('showHelp') && ($GLOBALS['TL_LANG']['tl_maintenance']['cacheTables'][1] != '')) ? $GLOBALS['TL_LANG']['tl_maintenance']['cacheTables'][1] : '';
 
 		return $objTemplate->parse();
 	}

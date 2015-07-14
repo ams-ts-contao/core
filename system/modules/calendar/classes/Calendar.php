@@ -28,7 +28,8 @@ class Calendar extends \Frontend
 
 	/**
 	 * Update a particular RSS feed
-	 * @param integer
+	 *
+	 * @param integer $intId
 	 */
 	public function generateFeed($intId)
 	{
@@ -81,7 +82,8 @@ class Calendar extends \Frontend
 
 	/**
 	 * Generate all feeds including a certain calendar
-	 * @param integer
+	 *
+	 * @param integer $intId
 	 */
 	public function generateFeedsByCalendar($intId)
 	{
@@ -103,7 +105,8 @@ class Calendar extends \Frontend
 
 	/**
 	 * Generate an XML file and save it to the root directory
-	 * @param array
+	 *
+	 * @param array $arrFeed
 	 */
 	protected function generateFiles($arrFeed)
 	{
@@ -157,7 +160,7 @@ class Calendar extends \Frontend
 					}
 					else
 					{
-						$arrUrls[$jumpTo] = $this->generateFrontendUrl($objParent->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/%s' : '/events/%s'), $objParent->language);
+						$arrUrls[$jumpTo] = $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/events/%s'), $objParent->language);
 					}
 				}
 
@@ -239,7 +242,7 @@ class Calendar extends \Frontend
 						{
 							while ($objElement->next())
 							{
-								$strDescription .= $this->getContentElement($objElement->id);
+								$strDescription .= $this->getContentElement($objElement->current());
 							}
 						}
 					}
@@ -271,9 +274,11 @@ class Calendar extends \Frontend
 
 	/**
 	 * Add events to the indexer
-	 * @param array
-	 * @param integer
-	 * @param boolean
+	 *
+	 * @param array   $arrPages
+	 * @param integer $intRoot
+	 * @param boolean $blnIsSitemap
+	 *
 	 * @return array
 	 */
 	public function getSearchablePages($arrPages, $intRoot=0, $blnIsSitemap=false)
@@ -285,8 +290,8 @@ class Calendar extends \Frontend
 			$arrRoot = $this->Database->getChildRecords($intRoot, 'tl_page');
 		}
 
-		$time = time();
 		$arrProcessed = array();
+		$time = \Date::floorToMinute();
 
 		// Get all calendars
 		$objCalendar = \CalendarModel::findByProtected('');
@@ -320,7 +325,7 @@ class Calendar extends \Frontend
 					}
 
 					// The target page has not been published (see #5520)
-					if (!$objParent->published || ($objParent->start != '' && $objParent->start > $time) || ($objParent->stop != '' && $objParent->stop < $time))
+					if (!$objParent->published || ($objParent->start != '' && $objParent->start > $time) || ($objParent->stop != '' && $objParent->stop <= ($time + 60)))
 					{
 						continue;
 					}
@@ -335,7 +340,7 @@ class Calendar extends \Frontend
 					$domain = ($objParent->rootUseSSL ? 'https://' : 'http://') . ($objParent->domain ?: \Environment::get('host')) . TL_PATH . '/';
 
 					// Generate the URL
-					$arrProcessed[$objCalendar->jumpTo] = $domain . $this->generateFrontendUrl($objParent->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/%s' : '/events/%s'), $objParent->language);
+					$arrProcessed[$objCalendar->jumpTo] = $domain . $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/events/%s'), $objParent->language);
 				}
 
 				$strUrl = $arrProcessed[$objCalendar->jumpTo];
@@ -347,7 +352,7 @@ class Calendar extends \Frontend
 				{
 					while ($objEvents->next())
 					{
-						$arrPages[] = sprintf($strUrl, (($objEvents->alias != '' && !$GLOBALS['TL_CONFIG']['disableAlias']) ? $objEvents->alias : $objEvents->id));
+						$arrPages[] = sprintf($strUrl, (($objEvents->alias != '' && !\Config::get('disableAlias')) ? $objEvents->alias : $objEvents->id));
 					}
 				}
 			}
@@ -359,11 +364,12 @@ class Calendar extends \Frontend
 
 	/**
 	 * Add an event to the array of active events
-	 * @param object
-	 * @param integer
-	 * @param integer
-	 * @param string
-	 * @param string
+	 *
+	 * @param \CalendarEventsModel $objEvent
+	 * @param integer              $intStart
+	 * @param integer              $intEnd
+	 * @param string               $strUrl
+	 * @param string               $strBase
 	 */
 	protected function addEvent($objEvent, $intStart, $intEnd, $strUrl, $strBase)
 	{
@@ -372,15 +378,16 @@ class Calendar extends \Frontend
 			return;
 		}
 
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		// Called in the back end (see #4026)
 		if ($objPage === null)
 		{
 			$objPage = new \stdClass();
-			$objPage->dateFormat = $GLOBALS['TL_CONFIG']['dateFormat'];
-			$objPage->datimFormat = $GLOBALS['TL_CONFIG']['datimFormat'];
-			$objPage->timeFormat = $GLOBALS['TL_CONFIG']['timeFormat'];
+			$objPage->dateFormat = \Config::get('dateFormat');
+			$objPage->datimFormat = \Config::get('datimFormat');
+			$objPage->timeFormat = \Config::get('timeFormat');
 		}
 
 		$intKey = date('Ymd', $intStart);
@@ -417,7 +424,7 @@ class Calendar extends \Frontend
 			case 'article':
 				if (($objArticle = \ArticleModel::findByPk($objEvent->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 				{
-					$link = $strBase . ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
+					$link = $strBase . ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
 				}
 				break;
 		}
@@ -425,7 +432,7 @@ class Calendar extends \Frontend
 		// Link to the default page
 		if ($link == '')
 		{
-			$link = $strBase . sprintf($strUrl, (($objEvent->alias != '' && !$GLOBALS['TL_CONFIG']['disableAlias']) ? $objEvent->alias : $objEvent->id));
+			$link = $strBase . sprintf($strUrl, (($objEvent->alias != '' && !\Config::get('disableAlias')) ? $objEvent->alias : $objEvent->id));
 		}
 
 		// Store the whole row (see #5085)
@@ -484,8 +491,10 @@ class Calendar extends \Frontend
 
 	/**
 	 * Calculate the span between two timestamps in days
-	 * @param integer
-	 * @param integer
+	 *
+	 * @param integer $intStart
+	 * @param integer $intEnd
+	 *
 	 * @return integer
 	 */
 	public static function calculateSpan($intStart, $intEnd)
@@ -496,7 +505,9 @@ class Calendar extends \Frontend
 
 	/**
 	 * Convert a UNIX timestamp to a Julian day
-	 * @param integer
+	 *
+	 * @param integer $tstamp
+	 *
 	 * @return integer
 	 */
 	public static function unixToJd($tstamp)
@@ -528,6 +539,7 @@ class Calendar extends \Frontend
 
 	/**
 	 * Return the names of the existing feeds so they are not removed
+	 *
 	 * @return array
 	 */
 	public function purgeOldFeeds()

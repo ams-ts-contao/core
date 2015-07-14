@@ -14,82 +14,94 @@ namespace Contao;
 /**
  * Provide methods to handle data container arrays.
  *
+ * @property integer $id
+ * @property string  $table
+ * @property mixed   $value
+ * @property string  $field
+ * @property string  $inputName
+ * @property string  $palette
+ * @property object  $activeRecord
+ * @property boolean $blnUploadable
+ * @property array   $root
+ * @property array   $rootIds
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class DataContainer extends \Backend
+abstract class DataContainer extends \Backend
 {
 
 	/**
 	 * Current ID
-	 * @param integer
+	 * @var integer
 	 */
 	protected $intId;
 
 	/**
 	 * Name of the current table
-	 * @param string
+	 * @var string
 	 */
 	protected $strTable;
 
 	/**
 	 * Name of the current field
-	 * @param string
+	 * @var string
 	 */
 	protected $strField;
 
 	/**
 	 * Name attribute of the current input field
-	 * @param string
+	 * @var string
 	 */
 	protected $strInputName;
 
 	/**
 	 * Value of the current field
-	 * @param mixed
+	 * @var mixed
 	 */
 	protected $varValue;
 
 	/**
 	 * Name of the current palette
-	 * @param string
+	 * @var string
 	 */
 	protected $strPalette;
 
 	/**
 	 * WHERE clause of the database query
-	 * @param array
+	 * @var array
 	 */
 	protected $procedure = array();
 
 	/**
 	 * Values for the WHERE clause of the database query
-	 * @param array
+	 * @var array
 	 */
 	protected $values = array();
 
 	/**
 	 * Form attribute "onsubmit"
-	 * @param array
+	 * @var array
 	 */
 	protected $onsubmit = array();
 
 	/**
 	 * Reload the page after the form has been submitted
-	 * @param boolean
+	 * @var boolean
 	 */
 	protected $noReload = false;
 
 	/**
 	 * Active record
-	 * @param object
+	 * @var \Model|\FilesModel
 	 */
 	protected $objActiveRecord;
 
 
 	/**
 	 * Set an object property
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey
+	 * @param mixed  $varValue
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -108,7 +120,9 @@ class DataContainer extends \Backend
 
 	/**
 	 * Return an object property
-	 * @param string
+	 *
+	 * @param string $strKey
+	 *
 	 * @return mixed
 	 */
 	public function __get($strKey)
@@ -150,8 +164,11 @@ class DataContainer extends \Backend
 
 	/**
 	 * Render a row of a box and return it as HTML string
-	 * @param string
+	 *
+	 * @param string $strPalette
+	 *
 	 * @return string
+	 *
 	 * @throws \Exception
 	 */
 	protected function row($strPalette=null)
@@ -168,7 +185,7 @@ class DataContainer extends \Backend
 		$xlabel = '';
 
 		// Toggle line wrap (textarea)
-		if ($arrData['inputType'] == 'textarea' && isset($arrData['eval']['rte']))
+		if ($arrData['inputType'] == 'textarea' && !isset($arrData['eval']['rte']))
 		{
 			$xlabel .= ' ' . \Image::getHtml('wrap.gif', $GLOBALS['TL_LANG']['MSC']['wordWrap'], 'title="' . specialchars($GLOBALS['TL_LANG']['MSC']['wordWrap']) . '" class="toggleWrap" onclick="Backend.toggleWrap(\'ctrl_'.$this->strInputName.'\')"');
 		}
@@ -200,6 +217,7 @@ class DataContainer extends \Backend
 		if (is_array($arrData['input_field_callback']))
 		{
 			$this->import($arrData['input_field_callback'][0]);
+
 			return $this->$arrData['input_field_callback'][0]->$arrData['input_field_callback'][1]($this, $xlabel);
 		}
 		elseif (is_callable($arrData['input_field_callback']))
@@ -207,6 +225,7 @@ class DataContainer extends \Backend
 			return $arrData['input_field_callback']($this, $xlabel);
 		}
 
+		/** @var \Widget $strClass */
 		$strClass = $GLOBALS['BE_FFL'][$arrData['inputType']];
 
 		// Return if the widget class does not exists
@@ -216,17 +235,16 @@ class DataContainer extends \Backend
 		}
 
 		$arrData['eval']['required'] = false;
-		$arrData['activeRecord'] = $this->activeRecord;
 
 		// Use strlen() here (see #3277)
 		if ($arrData['eval']['mandatory'])
 		{
 			if (is_array($this->varValue))
 			{
-				 if (empty($this->varValue))
-				 {
-				 	$arrData['eval']['required'] = true;
-				 }
+				if (empty($this->varValue))
+				{
+					$arrData['eval']['required'] = true;
+				}
 			}
 			else
 			{
@@ -237,6 +255,13 @@ class DataContainer extends \Backend
 			}
 		}
 
+		// Convert insert tags in src attributes (see #5965)
+		if (isset($arrData['eval']['rte']) && strncmp($arrData['eval']['rte'], 'tiny', 4) === 0)
+		{
+			$this->varValue = \String::insertTagToSrc($this->varValue);
+		}
+
+		/** @var \Widget $objWidget */
 		$objWidget = new $strClass($strClass::getAttributesFromDca($arrData, $this->strInputName, $this->varValue, $this->strField, $this->strTable, $this));
 
 		$objWidget->xlabel = $xlabel;
@@ -313,6 +338,12 @@ class DataContainer extends \Backend
 						$varValue = serialize($varValue);
 					}
 
+					// Convert file paths in src attributes (see #5965)
+					if ($varValue && isset($arrData['eval']['rte']) && strncmp($arrData['eval']['rte'], 'tiny', 4) === 0)
+					{
+						$varValue = \String::srcToInsertTag($varValue);
+					}
+
 					// Save the current value
 					try
 					{
@@ -334,7 +365,7 @@ class DataContainer extends \Backend
 		if ($arrData['eval']['datepicker'])
 		{
 			$rgxp = $arrData['eval']['rgxp'];
-			$format = \Date::formatToJs($GLOBALS['TL_CONFIG'][$rgxp.'Format']);
+			$format = \Date::formatToJs(\Config::get($rgxp.'Format'));
 
 			switch ($rgxp)
 			{
@@ -351,15 +382,15 @@ class DataContainer extends \Backend
 					break;
 			}
 
-			$wizard .= ' <img src="assets/mootools/datepicker/' . DATEPICKER . '/icon.gif" width="20" height="20" alt="" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['datepicker']).'" id="toggle_' . $objWidget->id . '" style="vertical-align:-6px;cursor:pointer">
+			$wizard .= ' <img src="assets/mootools/datepicker/' . $GLOBALS['TL_ASSETS']['DATEPICKER'] . '/icon.gif" width="20" height="20" alt="" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['datepicker']).'" id="toggle_' . $objWidget->id . '" style="vertical-align:-6px;cursor:pointer">
   <script>
     window.addEvent("domready", function() {
       new Picker.Date($("ctrl_' . $objWidget->id . '"), {
         draggable: false,
         toggle: $("toggle_' . $objWidget->id . '"),
         format: "' . $format . '",
-        positionOffset: {x:-197,y:-182}' . $time . ',
-        pickerClass: "datepicker_dashboard",
+        positionOffset: {x:-211,y:-209}' . $time . ',
+        pickerClass: "datepicker_bootstrap",
         useFadeInOut: !Browser.ie,
         startDay: ' . $GLOBALS['TL_LANG']['MSC']['weekOffset'] . ',
         titleFormat: "' . $GLOBALS['TL_LANG']['MSC']['titleFormat'] . '"
@@ -380,7 +411,7 @@ class DataContainer extends \Backend
       new MooRainbow("moo_' . $this->strField . '", {
         id: "ctrl_' . $strKey . '",
         startColor: ((cl = $("ctrl_' . $strKey . '").value.hexToRgb(true)) ? cl : [255, 0, 0]),
-        imgPath: "assets/mootools/colorpicker/'.COLORPICKER.'/images/",
+        imgPath: "assets/mootools/colorpicker/' . $GLOBALS['TL_ASSETS']['COLORPICKER'] . '/images/",
         onComplete: function(color) {
           $("ctrl_' . $strKey . '").value = color.hex.replace("#", "");
         }
@@ -433,9 +464,24 @@ class DataContainer extends \Backend
 		$updateMode = '';
 
 		// Replace the textarea with an RTE instance
-		if (isset($arrData['eval']['rte']) && strncmp($arrData['eval']['rte'], 'tiny', 4) === 0)
+		if (!empty($arrData['eval']['rte']))
 		{
-			$updateMode = "\n  <script>tinyMCE.execCommand('mceAddControl', false, 'ctrl_".$this->strInputName."');$('ctrl_".$this->strInputName."').erase('required')</script>";
+			list ($file, $type) = explode('|', $arrData['eval']['rte'], 2);
+
+			if (!file_exists(TL_ROOT . '/system/config/' . $file . '.php'))
+			{
+				throw new \Exception(sprintf('Cannot find editor configuration file "%s.php"', $file));
+			}
+
+			$selector = 'ctrl_' . $this->strInputName;
+			$language = \Backend::getTinyMceLanguage(); // backwards compatibility
+
+			ob_start();
+			include TL_ROOT . '/system/config/' . $file . '.php';
+			$updateMode = ob_get_contents();
+			ob_end_clean();
+
+			unset($file, $type, $language, $selector);
 		}
 
 		// Handle multi-select fields in "override all" mode
@@ -457,22 +503,42 @@ class DataContainer extends \Backend
 		// Show a preview image (see #4948)
 		if ($this->strTable == 'tl_files' && $this->strField == 'name' && $this->objActiveRecord !== null && $this->objActiveRecord->type == 'file')
 		{
-			$objFile = new \File($this->objActiveRecord->path);
+			$objFile = new \File($this->objActiveRecord->path, true);
 
-			if ($objFile->isGdImage)
+			if ($objFile->isImage)
 			{
 				$image = 'placeholder.png';
 
-				if ($objFile->height <= $GLOBALS['TL_CONFIG']['gdMaxImgHeight'] && $objFile->width <= $GLOBALS['TL_CONFIG']['gdMaxImgWidth'])
+				if ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth'))
 				{
-					$image = \Image::get($objFile->path, 80, 60, 'center_center');
+					if ($objFile->width > 699 || $objFile->height > 524)
+					{
+						$image = \Image::get($objFile->path, 699, 524, 'box');
+					}
+					else
+					{
+						$image = $objFile->path;
+					}
 				}
+
+				$ctrl = 'ctrl_preview_' . substr(md5($image), 0, 8);
 
 				$strPreview = '
 
-<div class="tl_edit_preview">
+<div id="' . $ctrl . '" class="tl_edit_preview" data-original-width="' . $objFile->width . '" data-original-height="' . $objFile->height . '">
 ' . \Image::getHtml($image) . '
 </div>';
+
+				// Add the script to mark the important part
+				if ($image !== 'placeholder.png')
+				{
+					$strPreview .= '<script>Backend.editPreviewWizard($(\'' . $ctrl . '\'));</script>';
+
+					if (\Config::get('showHelp'))
+					{
+						$strPreview .= '<p class="tl_help tl_tip">' . $GLOBALS['TL_LANG'][$this->strTable]['edit_preview_help'] . '</p>';
+					}
+				}
 			}
 		}
 
@@ -484,14 +550,16 @@ class DataContainer extends \Backend
 
 	/**
 	 * Return the field explanation as HTML string
-	 * @param string
+	 *
+	 * @param string $strClass
+	 *
 	 * @return string
 	 */
 	public function help($strClass='')
 	{
 		$return = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['label'][1];
 
-		if (!$GLOBALS['TL_CONFIG']['showHelp'] || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'password' || $return == '')
+		if (!\Config::get('showHelp') || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'password' || $return == '')
 		{
 			return '';
 		}
@@ -503,7 +571,9 @@ class DataContainer extends \Backend
 
 	/**
 	 * Generate possible palette names from an array by taking the first value and either adding or not adding the following values
-	 * @param array
+	 *
+	 * @param array $names
+	 *
 	 * @return array
 	 */
 	protected function combiner($names)
@@ -530,7 +600,9 @@ class DataContainer extends \Backend
 
 	/**
 	 * Return a query string that switches into edit mode
-	 * @param integer
+	 *
+	 * @param integer $id
+	 *
 	 * @return string
 	 */
 	protected function switchToEdit($id)
@@ -546,20 +618,23 @@ class DataContainer extends \Backend
 			}
 		}
 
-		$strUrl = \Environment::get('script') . '?' . implode('&', $arrKeys);
+		$strUrl = TL_SCRIPT . '?' . implode('&', $arrKeys);
+
 		return $strUrl . (!empty($arrKeys) ? '&' : '') . (\Input::get('table') ? 'table='.\Input::get('table').'&amp;' : '').'act=edit&amp;id='.$id;
 	}
 
 
 	/**
 	 * Compile buttons from the table configuration array and return them as HTML
-	 * @param array
-	 * @param string
-	 * @param array
-	 * @param boolean
-	 * @param array
-	 * @param integer
-	 * @param integer
+	 *
+	 * @param array   $arrRow
+	 * @param string  $strTable
+	 * @param array   $arrRootIds
+	 * @param boolean $blnCircularReference
+	 * @param array   $arrChildRecordIds
+	 * @param string  $strPrevious
+	 * @param string  $strNext
+	 *
 	 * @return string
 	 */
 	protected function generateButtons($arrRow, $strTable, $arrRootIds=array(), $blnCircularReference=false, $arrChildRecordIds=null, $strPrevious=null, $strNext=null)
@@ -608,7 +683,7 @@ class DataContainer extends \Backend
 			{
 				if ($k == 'show')
 				{
-					$return .= '<a href="'.$this->addToUrl($v['href'].'&amp;id='.$arrRow['id'].'&amp;popup=1').'" title="'.specialchars($title).'" onclick="Backend.openModalIframe({\'width\':765,\'title\':\''.specialchars(str_replace("'", "\\'", sprintf($GLOBALS['TL_LANG'][$strTable]['show'][1], $arrRow['id']))).'\',\'url\':this.href});return false"'.$attributes.'>'.\Image::getHtml($v['icon'], $label).'</a> ';
+					$return .= '<a href="'.$this->addToUrl($v['href'].'&amp;id='.$arrRow['id'].'&amp;popup=1').'" title="'.specialchars($title).'" onclick="Backend.openModalIframe({\'width\':768,\'title\':\''.specialchars(str_replace("'", "\\'", sprintf($GLOBALS['TL_LANG'][$strTable]['show'][1], $arrRow['id']))).'\',\'url\':this.href});return false"'.$attributes.'>'.\Image::getHtml($v['icon'], $label).'</a> ';
 				}
 				else
 				{
@@ -645,6 +720,7 @@ class DataContainer extends \Backend
 
 	/**
 	 * Compile global buttons from the table configuration array and return them as HTML
+	 *
 	 * @return string
 	 */
 	protected function generateGlobalButtons()
@@ -704,4 +780,20 @@ class DataContainer extends \Backend
 
 		return $return;
 	}
+
+	/**
+	 * Return the name of the current palette
+	 *
+	 * @return string
+	 */
+	abstract public function getPalette();
+
+	/**
+	 * Save the current value
+	 *
+	 * @param mixed $varValue
+	 *
+	 * @throws \Exception
+	 */
+	abstract protected function save($varValue);
 }

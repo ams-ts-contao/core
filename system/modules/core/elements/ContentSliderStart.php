@@ -34,15 +34,15 @@ class ContentSliderStart extends \ContentElement
 		if (TL_MODE == 'BE')
 		{
 			$this->strTemplate = 'be_wildcard';
-			$this->Template = new \BackendTemplate($this->strTemplate);
+
+			/** @var \BackendTemplate|object $objTemplate */
+			$objTemplate = new \BackendTemplate($this->strTemplate);
+
+			$this->Template = $objTemplate;
 			$this->Template->title = $this->headline;
 		}
-		else
-		{
-			$this->strTemplate = 'ce_slider_start';
-			$this->Template = new \FrontendTemplate($this->strTemplate);
-			$this->Template->setData($this->arrData);
-			$this->Template->config = $this->sliderDelay . ',' . $this->sliderSpeed . ',' . $this->sliderStartSlide . ',' . $this->sliderContinuous;
-		}
+
+		// Slider configuration
+		$this->Template->config = $this->sliderDelay . ',' . $this->sliderSpeed . ',' . $this->sliderStartSlide . ',' . $this->sliderContinuous;
 	}
 }

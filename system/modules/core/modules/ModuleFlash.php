@@ -14,6 +14,8 @@ namespace Contao;
 /**
  * Front end module "flash".
  *
+ * @property string $version
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class ModuleFlash extends \Module
@@ -28,6 +30,7 @@ class ModuleFlash extends \Module
 
 	/**
 	 * Extend the parent method
+	 *
 	 * @return string
 	 */
 	public function generate()
@@ -57,8 +60,10 @@ class ModuleFlash extends \Module
 			{
 				return '';
 			}
-
-			$this->singleSRC = $objFile->path;
+			else
+			{
+				$this->singleSRC = $objFile->path;
+			}
 		}
 
 		return parent::generate();
@@ -86,7 +91,7 @@ class ModuleFlash extends \Module
 		$this->Template->width = $size[0];
 		$this->Template->height = $size[1];
 
-		$intMaxWidth = (TL_MODE == 'BE') ? 320 : $GLOBALS['TL_CONFIG']['maxImageWidth'];
+		$intMaxWidth = (TL_MODE == 'BE') ? 320 : \Config::get('maxImageWidth');
 
 		// Adjust movie size
 		if ($intMaxWidth > 0 && $size[0] > $intMaxWidth)

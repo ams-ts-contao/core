@@ -12,7 +12,9 @@ namespace Contao;
 
 
 /**
- * Form field "explanation".
+ * Class FormExplanation
+ *
+ * @property string $text
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -21,9 +23,17 @@ class FormExplanation extends \Widget
 
 	/**
 	 * Template
+	 *
 	 * @var string
 	 */
 	protected $strTemplate = 'form_explanation';
+
+	/**
+	 * The CSS class prefix
+	 *
+	 * @var string
+	 */
+	protected $strPrefix = 'widget widget-explanation';
 
 
 	/**
@@ -37,10 +47,12 @@ class FormExplanation extends \Widget
 
 	/**
 	 * Generate the widget and return it as string
-	 * @return string
+	 *
+	 * @return string The widget markup
 	 */
 	public function generate()
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		// Clean RTE output
@@ -56,7 +68,7 @@ class FormExplanation extends \Widget
 		// Add the static files URL to images
 		if (TL_FILES_URL != '')
 		{
-			$path = $GLOBALS['TL_CONFIG']['uploadPath'] . '/';
+			$path = \Config::get('uploadPath') . '/';
 			$this->text = str_replace(' src="' . $path, ' src="' . TL_FILES_URL . $path, $this->text);
 		}
 

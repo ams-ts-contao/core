@@ -121,12 +121,12 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 	'palettes' => array
 	(
 		'__selector__'                => array('inherit', 'admin'),
-		'login'                       => '{name_legend},name,email;{backend_legend},language,uploader,showHelp,thumbnails,useRTE,useCE;{session_legend},session;{google_legend},google;{theme_legend:hide},backendTheme;{password_legend},password',
-		'admin'                       => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{google_legend:hide},google;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{account_legend},disable,start,stop',
-		'default'                     => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{google_legend:hide},google;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{account_legend},disable,start,stop',
-		'group'                       => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{google_legend:hide},google;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{account_legend},disable,start,stop',
-		'extend'                      => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{google_legend:hide},google;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{modules_legend},modules,themes;{pagemounts_legend},pagemounts,alpty;{filemounts_legend},filemounts,fop;{forms_legend},forms,formp;{account_legend},disable,start,stop',
-		'custom'                      => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{google_legend:hide},google;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{modules_legend},modules,themes;{pagemounts_legend},pagemounts,alpty;{filemounts_legend},filemounts,fop;{forms_legend},forms,formp;{account_legend},disable,start,stop'
+		'login'                       => '{name_legend},name,email;{backend_legend},language,uploader,showHelp,thumbnails,useRTE,useCE;{session_legend},session;{theme_legend:hide},backendTheme;{password_legend},password',
+		'admin'                       => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{account_legend},disable,start,stop',
+		'default'                     => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{account_legend},disable,start,stop',
+		'group'                       => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{account_legend},disable,start,stop',
+		'extend'                      => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{modules_legend},modules,themes;{pagemounts_legend},pagemounts,alpty;{filemounts_legend},filemounts,fop;{forms_legend},forms,formp;{account_legend},disable,start,stop',
+		'custom'                      => '{name_legend},username,name,email;{backend_legend:hide},language,uploader,showHelp,thumbnails,useRTE,useCE;{theme_legend:hide},backendTheme;{password_legend:hide},pwChange,password;{admin_legend},admin;{groups_legend},groups,inherit;{modules_legend},modules,themes;{pagemounts_legend},pagemounts,alpty;{filemounts_legend},filemounts,fop;{forms_legend},forms,formp;{account_legend},disable,start,stop'
 	),
 
 	// Fields
@@ -149,7 +149,7 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'flag'                    => 1,
 			'inputType'               => 'text',
 			'eval'                    => array('mandatory'=>true, 'rgxp'=>'extnd', 'nospace'=>true, 'unique'=>true, 'maxlength'=>64),
-			'sql'                     => "varchar(64) COLLATE utf8_bin NOT NULL default ''"
+			'sql'                     => "varchar(64) COLLATE utf8_bin NULL"
 		),
 		'name' => array
 		(
@@ -170,15 +170,6 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'inputType'               => 'text',
 			'eval'                    => array('mandatory'=>true, 'rgxp'=>'email', 'maxlength'=>255, 'unique'=>true, 'decodeEntities'=>true, 'tl_class'=>'w50'),
 			'sql'                     => "varchar(255) NOT NULL default ''"
-		),
-		'google' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_user']['google'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('maxlength'=>64, 'rgxp'=>'google+'),
-			'sql'                     => "varchar(64) NOT NULL default ''"
 		),
 		'language' => array
 		(
@@ -204,7 +195,7 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['tl_user']['uploader'],
 			'exclude'                 => true,
 			'inputType'               => 'select',
-			'options'                 => array('FileUpload'),
+			'options'                 => array('DropZone', 'FileUpload'),
 			'reference'               => &$GLOBALS['TL_LANG']['tl_user'],
 			'eval'                    => array('tl_class'=>'w50'),
 			'sql'                     => "varchar(32) NOT NULL default ''"
@@ -250,7 +241,7 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['password'],
 			'exclude'                 => true,
 			'inputType'               => 'password',
-			'eval'                    => array('mandatory'=>true, 'preserveTags'=>true, 'minlength'=>$GLOBALS['TL_CONFIG']['minPasswordLength']),
+			'eval'                    => array('mandatory'=>true, 'preserveTags'=>true, 'minlength'=>Config::get('minPasswordLength')),
 			'sql'                     => "varchar(128) NOT NULL default ''"
 		),
 		'pwChange' => array
@@ -312,7 +303,7 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['tl_user']['themes'],
 			'exclude'                 => true,
 			'inputType'               => 'checkbox',
-			'options'                 => array('css', 'modules', 'layout'),
+			'options'                 => array('css', 'modules', 'layout', 'image_sizes', 'theme_import', 'theme_export'),
 			'reference'               => &$GLOBALS['TL_LANG']['MOD'],
 			'eval'                    => array('multiple'=>true),
 			'sql'                     => "blob NULL"
@@ -520,10 +511,12 @@ class tl_user extends Backend
 
 	/**
 	 * Add an image to each record
-	 * @param array
-	 * @param string
-	 * @param \DataContainer
-	 * @param array
+	 *
+	 * @param array         $row
+	 * @param string        $label
+	 * @param DataContainer $dc
+	 * @param array         $args
+	 *
 	 * @return string
 	 */
 	public function addIcon($row, $label, DataContainer $dc, $args)
@@ -536,18 +529,21 @@ class tl_user extends Backend
 		}
 
 		$args[0] = sprintf('<div class="list_icon_new" style="background-image:url(\'%ssystem/themes/%s/images/%s.gif\')">&nbsp;</div>', TL_ASSETS_URL, Backend::getTheme(), $image);
+
 		return $args;
 	}
 
 
 	/**
 	 * Return the edit user button
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
 	 * @return string
 	 */
 	public function editUser($row, $href, $label, $title, $icon, $attributes)
@@ -558,13 +554,15 @@ class tl_user extends Backend
 
 	/**
 	 * Return the copy page button
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 * @param string $table
+	 *
 	 * @return string
 	 */
 	public function copyUser($row, $href, $label, $title, $icon, $attributes, $table)
@@ -580,12 +578,14 @@ class tl_user extends Backend
 
 	/**
 	 * Return the delete page button
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
 	 * @return string
 	 */
 	public function deleteUser($row, $href, $label, $title, $icon, $attributes)
@@ -596,12 +596,16 @@ class tl_user extends Backend
 
 	/**
 	 * Generate a "switch account" button and return it as string
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 *
 	 * @return string
+	 *
+	 * @throws Exception
 	 */
 	public function switchUser($row, $href, $label, $title, $icon)
 	{
@@ -612,8 +616,18 @@ class tl_user extends Backend
 
 		if (Input::get('key') == 'su' && Input::get('id'))
 		{
+			$objUser = $this->Database->prepare("SELECT id, username FROM tl_user WHERE id=?")
+									  ->execute(Input::get('id'));
+
+			if (!$objUser->numRows)
+			{
+				throw new Exception('Invalid user ID ' . Input::get('id'));
+			}
+
 			$this->Database->prepare("UPDATE tl_session SET pid=?, su=1 WHERE pid=?")
-						   ->execute(Input::get('id'), $this->User->id);
+						   ->execute($objUser->id, $this->User->id);
+
+			$this->log('User "' . $this->User->username . '" has switched to user "' . $objUser->username . '"', __METHOD__, TL_ACCESS);
 
 			$this->redirect('contao/main.php');
 		}
@@ -624,7 +638,9 @@ class tl_user extends Backend
 
 	/**
 	 * Return a checkbox to delete session data
-	 * @param \DataContainer
+	 *
+	 * @param DataContainer $dc
+	 *
 	 * @return string
 	 */
 	public function sessionField(DataContainer $dc)
@@ -672,6 +688,7 @@ class tl_user extends Backend
 
 	/**
 	 * Return all modules except profile modules
+	 *
 	 * @return array
 	 */
 	public function getModules()
@@ -693,8 +710,10 @@ class tl_user extends Backend
 
 	/**
 	 * Prevent administrators from downgrading their own account
-	 * @param mixed
-	 * @param \DataContainer
+	 *
+	 * @param mixed         $varValue
+	 * @param DataContainer $dc
+	 *
 	 * @return mixed
 	 */
 	public function checkAdminStatus($varValue, DataContainer $dc)
@@ -710,8 +729,10 @@ class tl_user extends Backend
 
 	/**
 	 * Prevent administrators from disabling their own account
-	 * @param mixed
-	 * @param \DataContainer
+	 *
+	 * @param mixed         $varValue
+	 * @param DataContainer $dc
+	 *
 	 * @return mixed
 	 */
 	public function checkAdminDisable($varValue, DataContainer $dc)
@@ -727,7 +748,8 @@ class tl_user extends Backend
 
 	/**
 	 * Store the date when the account has been added
-	 * @param \DataContainer
+	 *
+	 * @param DataContainer $dc
 	 */
 	public function storeDateAdded(DataContainer $dc)
 	{
@@ -754,13 +776,14 @@ class tl_user extends Backend
 
 	/**
 	 * Check whether the user session should be removed
-	 * @param \DataContainer
+	 *
+	 * @param DataContainer $dc
 	 */
 	public function checkRemoveSession(DataContainer $dc)
 	{
 		if ($dc->activeRecord)
 		{
-			if ($dc->activeRecord->disable || ($dc->activeRecord->start != '' && $dc->activeRecord->start > time()) || ($dc->activeRecord->stop != '' && $dc->activeRecord->stop <= time()))
+			if ($dc->activeRecord->disable || ($dc->activeRecord->start != '' && $dc->activeRecord->start > time()) || ($dc->activeRecord->stop != '' && $dc->activeRecord->stop < time()))
 			{
 				$this->removeSession($dc);
 			}
@@ -770,7 +793,8 @@ class tl_user extends Backend
 
 	/**
 	 * Remove the session if a user is deleted (see #5353)
-	 * @param \DataContainer
+	 *
+	 * @param DataContainer $dc
 	 */
 	public function removeSession(DataContainer $dc)
 	{
@@ -789,12 +813,14 @@ class tl_user extends Backend
 
 	/**
 	 * Return the "toggle visibility" button
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
 	 * @return string
 	 */
 	public function toggleIcon($row, $href, $label, $title, $icon, $attributes)
@@ -806,7 +832,7 @@ class tl_user extends Backend
 		}
 
 		// Check permissions AFTER checking the tid, so hacking attempts are logged
-		if (!$this->User->isAdmin && !$this->User->hasAccess('tl_user::disable', 'alexf'))
+		if (!$this->User->hasAccess('tl_user::disable', 'alexf'))
 		{
 			return '';
 		}
@@ -830,9 +856,10 @@ class tl_user extends Backend
 
 	/**
 	 * Disable/enable a user group
-	 * @param integer
-	 * @param boolean
-	 * @param \DataContainer
+	 *
+	 * @param integer       $intId
+	 * @param boolean       $blnVisible
+	 * @param DataContainer $dc
 	 */
 	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
@@ -848,7 +875,7 @@ class tl_user extends Backend
 		}
 
 		// Check permissions
-		if (!$this->User->isAdmin && !$this->User->hasAccess('tl_user::disable', 'alexf'))
+		if (!$this->User->hasAccess('tl_user::disable', 'alexf'))
 		{
 			$this->log('Not enough permissions to activate/deactivate user ID "'.$intId.'"', __METHOD__, TL_ERROR);
 			$this->redirect('contao/main.php?act=error');

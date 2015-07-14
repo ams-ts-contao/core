@@ -133,7 +133,7 @@ class Updater extends \Controller
 
 		// Create a theme from the present resources
 		$this->Database->prepare("INSERT INTO tl_theme SET tstamp=?, name=?")
-					   ->execute(time(), $GLOBALS['TL_CONFIG']['websiteTitle']);
+					   ->execute(time(), \Config::get('websiteTitle'));
 
 		// Adjust the back end user permissions
 		$this->Database->query("ALTER TABLE `tl_user` ADD `themes` blob NULL");
@@ -184,7 +184,7 @@ class Updater extends \Controller
 		if ($this->Database->fieldExists('news_featured', 'tl_module'))
 		{
 			$this->Database->query("ALTER TABLE `tl_module` CHANGE `news_featured` `news_featured` varchar(16) NOT NULL default ''");
-			$this->Database->query("UPDATE tl_module SET news_featured='featured' WHERE news_featured=1");
+			$this->Database->query("UPDATE tl_module SET news_featured='featured' WHERE news_featured='1'");
 		}
 
 		// Other version 2.9 updates
@@ -547,6 +547,48 @@ class Updater extends \Controller
 
 
 	/**
+	 * Version 3.3.0 update
+	 */
+	public function run33Update()
+	{
+		$objLayout = $this->Database->query("SELECT id, framework FROM tl_layout WHERE framework!=''");
+
+		while ($objLayout->next())
+		{
+			$strFramework = '';
+			$tmp = deserialize($objLayout->framework);
+
+			if (!empty($tmp) && is_array($tmp))
+			{
+				if (($key = array_search('layout.css', $tmp)) !== false)
+				{
+					array_insert($tmp, $key + 1, 'responsive.css');
+				}
+
+				$strFramework = serialize(array_values(array_unique($tmp)));
+			}
+
+			$this->Database->prepare("UPDATE tl_layout SET framework=? WHERE id=?")
+						   ->execute($strFramework, $objLayout->id);
+		}
+
+		// Add the "viewport" field (triggers the version 3.3 update)
+		$this->Database->query("ALTER TABLE `tl_layout` ADD `viewport` varchar(64) NOT NULL default ''");
+	}
+
+
+	/**
+	 * Version 3.5.0 update
+	 */
+	public function run35Update()
+	{
+		$this->Database->query("ALTER TABLE `tl_member` CHANGE `username` `username` varchar(64) COLLATE utf8_bin NULL");
+		$this->Database->query("UPDATE `tl_member` SET username=NULL WHERE username=''");
+		$this->Database->query("ALTER TABLE `tl_member` DROP INDEX `username`, ADD UNIQUE KEY `username` (`username`)");
+	}
+
+
+	/**
 	 * Scan the upload folder and create the database entries
 	 *
 	 * @param string  $strPath The target folder
@@ -556,7 +598,7 @@ class Updater extends \Controller
 	{
 		if ($strPath === null)
 		{
-			$strPath = $GLOBALS['TL_CONFIG']['uploadPath'];
+			$strPath = \Config::get('uploadPath');
 		}
 
 		$arrMeta = array();
@@ -906,13 +948,13 @@ class Updater extends \Controller
 		if (!is_array($value))
 		{
 			$return->value = rtrim($value, "\x00");
-			$return->isUuid = (strlen($value) == 16 && !is_numeric($return->value) && strncmp($return->value, $GLOBALS['TL_CONFIG']['uploadPath'] . '/', strlen($GLOBALS['TL_CONFIG']['uploadPath']) + 1) !== 0);
+			$return->isUuid = (strlen($value) == 16 && !is_numeric($return->value) && strncmp($return->value, \Config::get('uploadPath') . '/', strlen(\Config::get('uploadPath')) + 1) !== 0);
 			$return->isNumeric = (is_numeric($return->value) && $return->value > 0);
 		}
 		else
 		{
 			$return->value = array_map(function($var) { return rtrim($var, "\x00"); }, $value);
-			$return->isUuid = (strlen($value[0]) == 16 && !is_numeric($return->value[0]) && strncmp($return->value[0], $GLOBALS['TL_CONFIG']['uploadPath'] . '/', strlen($GLOBALS['TL_CONFIG']['uploadPath']) + 1) !== 0);
+			$return->isUuid = (strlen($value[0]) == 16 && !is_numeric($return->value[0]) && strncmp($return->value[0], \Config::get('uploadPath') . '/', strlen(\Config::get('uploadPath')) + 1) !== 0);
 			$return->isNumeric = (is_numeric($return->value[0]) && $return->value[0] > 0);
 		}
 
@@ -923,9 +965,9 @@ class Updater extends \Controller
 	/**
 	 * Create a content element
 	 *
-	 * @param \Database\Result $objElement A database result object
-	 * @param string           $strPtable  The name of the parent table
-	 * @param string           $strField   The name of the text column
+	 * @param \Database\Result|object $objElement A database result object
+	 * @param string                  $strPtable  The name of the parent table
+	 * @param string                  $strField   The name of the text column
 	 */
 	protected function createContentElement(\Database\Result $objElement, $strPtable, $strField)
 	{

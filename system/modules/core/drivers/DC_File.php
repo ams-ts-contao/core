@@ -21,7 +21,8 @@ class DC_File extends \DataContainer implements \editable
 
 	/**
 	 * Initialize the object
-	 * @param string
+	 *
+	 * @param string $strTable
 	 */
 	public function __construct($strTable)
 	{
@@ -59,6 +60,7 @@ class DC_File extends \DataContainer implements \editable
 
 	/**
 	 * Automatically switch to edit mode
+	 *
 	 * @return string
 	 */
 	public function create()
@@ -69,6 +71,7 @@ class DC_File extends \DataContainer implements \editable
 
 	/**
 	 * Automatically switch to edit mode
+	 *
 	 * @return string
 	 */
 	public function cut()
@@ -79,6 +82,7 @@ class DC_File extends \DataContainer implements \editable
 
 	/**
 	 * Automatically switch to edit mode
+	 *
 	 * @return string
 	 */
 	public function copy()
@@ -89,6 +93,7 @@ class DC_File extends \DataContainer implements \editable
 
 	/**
 	 * Automatically switch to edit mode
+	 *
 	 * @return string
 	 */
 	public function move()
@@ -99,6 +104,7 @@ class DC_File extends \DataContainer implements \editable
 
 	/**
 	 * Auto-generate a form to edit the local configuration file
+	 *
 	 * @return string
 	 */
 	public function edit()
@@ -204,7 +210,7 @@ class DC_File extends \DataContainer implements \editable
 
 					$this->strField = $vv;
 					$this->strInputName = $vv;
-					$this->varValue = $GLOBALS['TL_CONFIG'][$this->strField];
+					$this->varValue = \Config::get($this->strField);
 
 					// Handle entities
 					if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'text' || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'textarea')
@@ -314,8 +320,6 @@ class DC_File extends \DataContainer implements \editable
 <div id="tl_buttons">
 <a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']).'" accesskey="b" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a>
 </div>
-
-<h2 class="sub_headline">'.$GLOBALS['TL_LANG'][$this->strTable]['edit'].'</h2>
 '.\Message::generate().'
 <form action="'.ampersand(\Environment::get('request'), true).'" id="'.$this->strTable.'" class="tl_form" method="post"'.(!empty($this->onsubmit) ? ' onsubmit="'.implode(' ', $this->onsubmit).'"' : '').'>
 
@@ -375,7 +379,8 @@ class DC_File extends \DataContainer implements \editable
 
 	/**
 	 * Save the current value
-	 * @param mixed
+	 *
+	 * @param mixed $varValue
 	 */
 	protected function save($varValue)
 	{
@@ -458,17 +463,16 @@ class DC_File extends \DataContainer implements \editable
 		}
 		elseif (is_string($strCurrent))
 		{
-			$strCurrent = html_entity_decode($this->varValue, ENT_QUOTES, $GLOBALS['TL_CONFIG']['characterSet']);
+			$strCurrent = html_entity_decode($this->varValue, ENT_QUOTES, \Config::get('characterSet'));
 		}
 
 		// Save the value if there was no error
 		if ((strlen($varValue) || !$arrData['eval']['doNotSaveEmpty']) && $strCurrent != $varValue)
 		{
-			$strKey = sprintf("\$GLOBALS['TL_CONFIG']['%s']", $this->strField);
-			$this->Config->update($strKey, $varValue);
+			\Config::persist($this->strField, $varValue);
 
 			$deserialize = deserialize($varValue);
-			$prior = is_bool($GLOBALS['TL_CONFIG'][$this->strField]) ? ($GLOBALS['TL_CONFIG'][$this->strField] ? 'true' : 'false') : $GLOBALS['TL_CONFIG'][$this->strField];
+			$prior = is_bool(\Config::get($this->strField)) ? (\Config::get($this->strField) ? 'true' : 'false') : \Config::get($this->strField);
 
 			// Add a log entry
 			if (!is_array(deserialize($prior)) && !is_array($deserialize))
@@ -485,13 +489,14 @@ class DC_File extends \DataContainer implements \editable
 
 			// Set the new value so the input field can show it
 			$this->varValue = $deserialize;
-			$GLOBALS['TL_CONFIG'][$this->strField] = $deserialize;
+			\Config::set($this->strField, $deserialize);
 		}
 	}
 
 
 	/**
 	 * Return the name of the current palette
+	 *
 	 * @return string
 	 */
 	public function getPalette()
@@ -507,7 +512,7 @@ class DC_File extends \DataContainer implements \editable
 
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['palettes']['__selector__'] as $name)
 			{
-				$trigger = $GLOBALS['TL_CONFIG'][$name];
+				$trigger = \Config::get($name);
 
 				// Overwrite the trigger if the page is not reloaded
 				if (\Input::post('FORM_SUBMIT') == $this->strTable)

@@ -14,6 +14,11 @@ namespace Contao;
 /**
  * Provide methods to handle password fields.
  *
+ * @property integer $maxlength
+ * @property boolean $mandatory
+ * @property string  $placeholder
+ * @property string  $description
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Password extends \Widget
@@ -40,7 +45,8 @@ class Password extends \Widget
 
 	/**
 	 * Always decode entities
-	 * @param array
+	 *
+	 * @param array $arrAttributes
 	 */
 	public function __construct($arrAttributes=null)
 	{
@@ -51,8 +57,9 @@ class Password extends \Widget
 
 	/**
 	 * Add specific attributes
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey
+	 * @param mixed  $varValue
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -90,7 +97,9 @@ class Password extends \Widget
 
 	/**
 	 * Validate input and set value
-	 * @param mixed
+	 *
+	 * @param mixed $varInput
+	 *
 	 * @return string
 	 */
 	protected function validator($varInput)
@@ -102,9 +111,9 @@ class Password extends \Widget
 			return '*****';
 		}
 
-		if (utf8_strlen($varInput) < $GLOBALS['TL_CONFIG']['minPasswordLength'])
+		if (utf8_strlen($varInput) < \Config::get('minPasswordLength'))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['passwordLength'], $GLOBALS['TL_CONFIG']['minPasswordLength']));
+			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['passwordLength'], \Config::get('minPasswordLength')));
 		}
 
 		if ($varInput != $this->getPost($this->strName . '_confirm'))
@@ -123,6 +132,7 @@ class Password extends \Widget
 		{
 			$this->blnSubmitInput = true;
 			\Message::addConfirmation($GLOBALS['TL_LANG']['MSC']['pw_changed']);
+
 			return \Encryption::hash($varInput);
 		}
 
@@ -132,6 +142,7 @@ class Password extends \Widget
 
 	/**
 	 * Generate the widget and return it as string
+	 *
 	 * @return string
 	 */
 	public function generate()
@@ -143,12 +154,13 @@ class Password extends \Widget
 						(($this->varValue != '') ? '*****' : ''),
 						$this->getAttributes(),
 						$this->wizard,
-						((strlen($this->description) && $GLOBALS['TL_CONFIG']['showHelp'] && !$this->hasErrors()) ? "\n  " . '<p class="tl_help tl_tip">'.$this->description.'</p>' : ''));
+						((strlen($this->description) && \Config::get('showHelp') && !$this->hasErrors()) ? "\n  " . '<p class="tl_help tl_tip">'.$this->description.'</p>' : ''));
 	}
 
 
 	/**
 	 * Generate the label of the confirmation field and return it as string
+	 *
 	 * @return string
 	 */
 	public function generateConfirmationLabel()
@@ -164,6 +176,7 @@ class Password extends \Widget
 
 	/**
 	 * Generate the widget and return it as string
+	 *
 	 * @return string
 	 */
 	public function generateConfirmation()
@@ -174,6 +187,6 @@ class Password extends \Widget
 						(strlen($this->strClass) ? ' ' . $this->strClass : ''),
 						(($this->varValue != '') ? '*****' : ''),
 						$this->getAttributes(),
-						((strlen($GLOBALS['TL_LANG']['MSC']['confirm'][1]) && $GLOBALS['TL_CONFIG']['showHelp']) ? "\n  " . '<p class="tl_help tl_tip">'.$GLOBALS['TL_LANG']['MSC']['confirm'][1].'</p>' : ''));
+						((strlen($GLOBALS['TL_LANG']['MSC']['confirm'][1]) && \Config::get('showHelp')) ? "\n  " . '<p class="tl_help tl_tip">'.$GLOBALS['TL_LANG']['MSC']['confirm'][1].'</p>' : ''));
 	}
 }

@@ -19,7 +19,7 @@ $GLOBALS['TL_DCA']['tl_theme'] = array
 	'config' => array
 	(
 		'dataContainer'               => 'Table',
-		'ctable'                      => array('tl_module', 'tl_style_sheet', 'tl_layout'),
+		'ctable'                      => array('tl_module', 'tl_style_sheet', 'tl_layout', 'tl_image_size'),
 		'enableVersioning'            => true,
 		'sql' => array
 		(
@@ -30,6 +30,7 @@ $GLOBALS['TL_DCA']['tl_theme'] = array
 		),
 		'onload_callback' => array
 		(
+			array('tl_theme', 'checkPermission'),
 			array('tl_theme', 'updateStyleSheet')
 		),
 		'oncopy_callback' => array
@@ -65,14 +66,14 @@ $GLOBALS['TL_DCA']['tl_theme'] = array
 				'label'               => &$GLOBALS['TL_LANG']['tl_theme']['importTheme'],
 				'href'                => 'key=importTheme',
 				'class'               => 'header_theme_import',
-				'attributes'          => 'onclick="Backend.getScrollOffset()"'
+				'button_callback'     => array('tl_theme', 'importTheme')
 			),
 			'store' => array
 			(
 				'label'               => &$GLOBALS['TL_LANG']['tl_theme']['store'],
 				'href'                => 'key=themeStore',
 				'class'               => 'header_store',
-				'button_callback'     => array('tl_theme', 'getThemeStoreLink')
+				'button_callback'     => array('tl_theme', 'themeStore')
 			),
 			'all' => array
 			(
@@ -125,11 +126,19 @@ $GLOBALS['TL_DCA']['tl_theme'] = array
 				'icon'                => 'layout.gif',
 				'button_callback'     => array('tl_theme', 'editLayout')
 			),
+			'imageSizes' => array
+			(
+				'label'               => &$GLOBALS['TL_LANG']['tl_theme']['imageSizes'],
+				'href'                => 'table=tl_image_size',
+				'icon'                => 'sizes.gif',
+				'button_callback'     => array('tl_theme', 'editImageSizes')
+			),
 			'exportTheme' => array
 			(
 				'label'               => &$GLOBALS['TL_LANG']['tl_theme']['exportTheme'],
 				'href'                => 'key=exportTheme',
-				'icon'                => 'theme_export.gif'
+				'icon'                => 'theme_export.gif',
+				'button_callback'     => array('tl_theme', 'exportTheme')
 			)
 		)
 	),
@@ -186,7 +195,7 @@ $GLOBALS['TL_DCA']['tl_theme'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['tl_theme']['screenshot'],
 			'exclude'                 => true,
 			'inputType'               => 'fileTree',
-			'eval'                    => array('filesOnly'=>true, 'extensions'=>$GLOBALS['TL_CONFIG']['validImageTypes'], 'fieldType'=>'radio'),
+			'eval'                    => array('filesOnly'=>true, 'extensions'=>Config::get('validImageTypes'), 'fieldType'=>'radio'),
 			'sql'                     => "binary(16) NULL"
 		),
 		'templates' => array
@@ -228,9 +237,43 @@ class tl_theme extends Backend
 
 
 	/**
+	 * Check permissions to edit the table
+	 */
+	public function checkPermission()
+	{
+		if ($this->User->isAdmin)
+		{
+			return;
+		}
+
+		// Check the theme import and export permissions (see #5835)
+		switch (Input::get('key'))
+		{
+			case 'importTheme':
+				if (!$this->User->hasAccess('theme_import', 'themes'))
+				{
+					$this->log('Not enough permissions to import themes', __METHOD__, TL_ERROR);
+					$this->redirect('contao/main.php?act=error');
+				}
+				break;
+
+			case 'exportTheme':
+				if (!$this->User->hasAccess('theme_import', 'themes'))
+				{
+					$this->log('Not enough permissions to export themes', __METHOD__, TL_ERROR);
+					$this->redirect('contao/main.php?act=error');
+				}
+				break;
+		}
+	}
+
+
+	/**
 	 * Add an image to each record
-	 * @param array
-	 * @param string
+	 *
+	 * @param array  $row
+	 * @param string $label
+	 *
 	 * @return string
 	 */
 	public function addPreviewImage($row, $label)
@@ -278,6 +321,7 @@ class tl_theme extends Backend
 
 	/**
 	 * Return all template folders as array
+	 *
 	 * @return array
 	 */
 	public function getTemplateFolders()
@@ -288,8 +332,10 @@ class tl_theme extends Backend
 
 	/**
 	 * Return all template folders as array
-	 * @param string
-	 * @param integer
+	 *
+	 * @param string  $path
+	 * @param integer $level
+	 *
 	 * @return array
 	 */
 	protected function doGetTemplateFolders($path, $level=0)
@@ -310,59 +356,119 @@ class tl_theme extends Backend
 
 
 	/**
-	 * Return the theme store link
-	 * @return array
+	 * Return the "import theme" link
+	 *
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $class
+	 * @param string $attributes
+	 *
+	 * @return string
 	 */
-	public function getThemeStoreLink()
+	public function importTheme($href, $label, $title, $class, $attributes)
+	{
+		return $this->User->hasAccess('theme_import', 'themes') ? '<a href="'.$this->addToUrl($href).'" class="'.$class.'" title="'.specialchars($title).'"'.$attributes.'>'.$label.'</a> ' : '';
+	}
+
+
+	/**
+	 * Return the theme store link
+	 *
+	 * @return string
+	 */
+	public function themeStore()
 	{
 		return '<a href="https://themes.contao.org" target="_blank" title="' . specialchars($GLOBALS['TL_LANG']['tl_theme']['store'][1]) . '" class="header_store">' . $GLOBALS['TL_LANG']['tl_theme']['store'][0] . '</a>';
 	}
 
 
 	/**
-	 * Return the edit CSS button
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 * Return the "edit CSS" button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
 	 * @return string
 	 */
 	public function editCss($row, $href, $label, $title, $icon, $attributes)
 	{
-		return ($this->User->isAdmin || $this->User->hasAccess('css', 'themes')) ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
+		return $this->User->hasAccess('css', 'themes') ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
 	}
 
 
 	/**
-	 * Return the edit modules button
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 * Return the "edit modules" button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
 	 * @return string
 	 */
 	public function editModules($row, $href, $label, $title, $icon, $attributes)
 	{
-		return ($this->User->isAdmin || $this->User->hasAccess('modules', 'themes')) ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
+		return $this->User->hasAccess('modules', 'themes') ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
 	}
 
 
 	/**
-	 * Return the edit page layouts button
-	 * @param array
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
-	 * @param string
+	 * Return the "edit page layouts" button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
 	 * @return string
 	 */
 	public function editLayout($row, $href, $label, $title, $icon, $attributes)
 	{
-		return ($this->User->isAdmin || $this->User->hasAccess('layout', 'themes')) ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
+		return $this->User->hasAccess('layout', 'themes') ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
+	}
+
+
+	/**
+	 * Return the "edit image sizes" button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
+	 * @return string
+	 */
+	public function editImageSizes($row, $href, $label, $title, $icon, $attributes)
+	{
+		return $this->User->hasAccess('image_sizes', 'themes') ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
+	}
+
+
+	/**
+	 * Return the "export theme" button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
+	 * @return string
+	 */
+	public function exportTheme($row, $href, $label, $title, $icon, $attributes)
+	{
+		return $this->User->hasAccess('theme_export', 'themes') ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
 	}
 }

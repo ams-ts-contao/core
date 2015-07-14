@@ -14,10 +14,54 @@ namespace Contao;
 /**
  * Provide methods to manage back end users.
  *
+ * @property boolean $isAdmin
+ * @property string  $groups
+ * @property array   $pagemounts
+ * @property array   $filemounts
+ * @property array   $filemountIds
+ * @property string  $fop
+ * @property string  $alexf
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class BackendUser extends \User
 {
+
+	/**
+	 * Edit page flag
+	 * @var string
+	 */
+	const CAN_EDIT_PAGE = 1;
+
+	/**
+	 * Edit page hierarchy flag
+	 * @var string
+	 */
+	const CAN_EDIT_PAGE_HIERARCHY = 2;
+
+	/**
+	 * Delete page flag
+	 * @var string
+	 */
+	const CAN_DELETE_PAGE = 3;
+
+	/**
+	 * Edit articles flag
+	 * @var string
+	 */
+	const CAN_EDIT_ARTICLES = 4;
+
+	/**
+	 * Edit article hierarchy flag
+	 * @var string
+	 */
+	const CAN_EDIT_ARTICLE_HIERARCHY = 5;
+
+	/**
+	 * Delete articles flag
+	 * @var string
+	 */
+	const CAN_DELETE_ARTICLES = 6;
 
 	/**
 	 * Current object instance (do not remove)
@@ -73,7 +117,7 @@ class BackendUser extends \User
 		{
 			$key = null;
 
-			if (\Environment::get('script') == 'contao/main.php')
+			if (TL_SCRIPT == 'contao/main.php')
 			{
 				$key = \Input::get('popup') ? 'popupReferer' : 'referer';
 			}
@@ -122,7 +166,9 @@ class BackendUser extends \User
 
 	/**
 	 * Extend parent getter class and modify some parameters
-	 * @param string
+	 *
+	 * @param string $strKey
+	 *
 	 * @return mixed
 	 */
 	public function __get($strKey)
@@ -168,27 +214,35 @@ class BackendUser extends \User
 	public function authenticate()
 	{
 		// Do not redirect if authentication is successful
-		if (parent::authenticate() || \Environment::get('script') == 'contao/index.php')
+ 		if (parent::authenticate())
+ 		{
+ 			return true;
+ 		}
+		elseif (TL_SCRIPT == 'contao/index.php')
 		{
-			return;
+			return false;
 		}
 
 		$strRedirect = 'contao/';
 
 		// Redirect to the last page visited upon login
-		if (\Environment::get('script') == 'contao/main.php' || \Environment::get('script') == 'contao/preview.php')
+		if (TL_SCRIPT == 'contao/main.php' || TL_SCRIPT == 'contao/preview.php')
 		{
 			$strRedirect .= '?referer=' . base64_encode(\Environment::get('request'));
 		}
 
 		\Controller::redirect($strRedirect);
+
+		return false;
 	}
 
 
 	/**
 	 * Check whether the current user has a certain access right
-	 * @param string
-	 * @param array
+	 *
+	 * @param string $field
+	 * @param array  $array
+	 *
 	 * @return boolean
 	 */
 	public function hasAccess($field, $array)
@@ -207,10 +261,9 @@ class BackendUser extends \User
 		{
 			return true;
 		}
-
-		// Enable all subfolders (filemounts)
 		elseif ($array == 'filemounts')
 		{
+			// Check the subfolders (filemounts)
 			foreach ($this->filemounts as $folder)
 			{
 				if (preg_match('/^'. preg_quote($folder, '/') .'/i', $field[0]))
@@ -226,12 +279,19 @@ class BackendUser extends \User
 
 	/**
 	 * Return true if the current user is allowed to do the current operation on the current page
-	 * @param integer
-	 * @param array
+	 *
+	 * @param integer $int
+	 * @param array   $row
+	 *
 	 * @return boolean
 	 */
 	public function isAllowed($int, $row)
 	{
+		if ($this->isAdmin)
+		{
+			return true;
+		}
+
 		// Inherit CHMOD settings
 		if (!$row['includeChmod'])
 		{
@@ -261,15 +321,15 @@ class BackendUser extends \User
 			// Set default values
 			if ($row['chmod'] === false)
 			{
-				$row['chmod'] = $GLOBALS['TL_CONFIG']['defaultChmod'];
+				$row['chmod'] = \Config::get('defaultChmod');
 			}
 			if ($row['cuser'] === false)
 			{
-				$row['cuser'] = intval($GLOBALS['TL_CONFIG']['defaultUser']);
+				$row['cuser'] = intval(\Config::get('defaultUser'));
 			}
 			if ($row['cgroup'] === false)
 			{
-				$row['cgroup'] = intval($GLOBALS['TL_CONFIG']['defaultGroup']);
+				$row['cgroup'] = intval(\Config::get('defaultGroup'));
 			}
 		}
 
@@ -289,6 +349,24 @@ class BackendUser extends \User
 		}
 
 		return (count(array_intersect($permission, $chmod)) > 0);
+	}
+
+
+	/**
+	 * Return true if there is at least one allowed excluded field
+	 *
+	 * @param string $table
+	 *
+	 * @return boolean
+	 */
+	public function canEditFieldsOf($table)
+	{
+		if ($this->isAdmin)
+		{
+			return true;
+		}
+
+		return (count(preg_grep('/^' . preg_quote($table, '/') . '::/', $this->alexf)) > 0);
 	}
 
 
@@ -328,11 +406,11 @@ class BackendUser extends \User
 		$GLOBALS['TL_USERNAME'] = $this->username;
 		$GLOBALS['TL_LANGUAGE'] = str_replace('_', '-', $this->language);
 
-		$GLOBALS['TL_CONFIG']['showHelp'] = $this->showHelp;
-		$GLOBALS['TL_CONFIG']['useRTE'] = $this->useRTE;
-		$GLOBALS['TL_CONFIG']['useCE'] = $this->useCE;
-		$GLOBALS['TL_CONFIG']['thumbnails'] = $this->thumbnails;
-		$GLOBALS['TL_CONFIG']['backendTheme'] = $this->backendTheme;
+		\Config::set('showHelp', $this->showHelp);
+		\Config::set('useRTE', $this->useRTE);
+		\Config::set('useCE', $this->useCE);
+		\Config::set('thumbnails', $this->thumbnails);
+		\Config::set('backendTheme', $this->backendTheme);
 
 		// Inherit permissions
 		$always = array('alexf');
@@ -355,11 +433,11 @@ class BackendUser extends \User
 
 		// Merge permissions
 		$inherit = in_array($this->inherit, array('group', 'extend')) ? array_merge($always, $depends) : $always;
-		$time = time();
+		$time = \Date::floorToMinute();
 
 		foreach ((array) $this->groups as $id)
 		{
-			$objGroup = $this->Database->prepare("SELECT * FROM tl_user_group WHERE id=? AND disable!=1 AND (start='' OR start<$time) AND (stop='' OR stop>$time)")
+			$objGroup = $this->Database->prepare("SELECT * FROM tl_user_group WHERE id=? AND disable!='1' AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "')")
 									   ->limit(1)
 									   ->execute($id);
 
@@ -426,7 +504,9 @@ class BackendUser extends \User
 
 	/**
 	 * Generate the navigation menu and return it as array
-	 * @param boolean
+	 *
+	 * @param boolean $blnShowAll
+	 *
 	 * @return array
 	 */
 	public function navigation($blnShowAll=false)
@@ -479,7 +559,7 @@ class BackendUser extends \User
 							$arrModules[$strGroupName]['modules'][$strModuleName]['label'] = (($label = is_array($GLOBALS['TL_LANG']['MOD'][$strModuleName]) ? $GLOBALS['TL_LANG']['MOD'][$strModuleName][0] : $GLOBALS['TL_LANG']['MOD'][$strModuleName]) != false) ? $label : $strModuleName;
 							$arrModules[$strGroupName]['modules'][$strModuleName]['icon'] = !empty($arrModuleConfig['icon']) ? sprintf(' style="background-image:url(\'%s%s\')"', TL_ASSETS_URL, $arrModuleConfig['icon']) : '';
 							$arrModules[$strGroupName]['modules'][$strModuleName]['class'] = 'navigation ' . $strModuleName;
-							$arrModules[$strGroupName]['modules'][$strModuleName]['href']  = \Environment::get('script') . '?do=' . $strModuleName . '&amp;ref=' . TL_REFERER_ID;
+							$arrModules[$strGroupName]['modules'][$strModuleName]['href'] = TL_SCRIPT . '?do=' . $strModuleName . '&amp;ref=' . TL_REFERER_ID;
 
 							// Mark the active module and its group
 							if (\Input::get('do') == $strModuleName)

@@ -28,12 +28,14 @@ class ModuleFaqPage extends \Module
 
 	/**
 	 * Display a wildcard in the back end
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
 		if (TL_MODE == 'BE')
 		{
+			/** @var \BackendTemplate|object $objTemplate */
 			$objTemplate = new \BackendTemplate('be_wildcard');
 
 			$objTemplate->wildcard = '### ' . utf8_strtoupper($GLOBALS['TL_LANG']['FMD']['faqpage'][0]) . ' ###';
@@ -67,15 +69,19 @@ class ModuleFaqPage extends \Module
 		if ($objFaq === null)
 		{
 			$this->Template->faq = array();
+
 			return;
 		}
 
+		/** @var \PageModel $objPage */
 		global $objPage;
+
 		$arrFaqs = array_fill_keys($this->faq_categories, array());
 
 		// Add FAQs
 		while ($objFaq->next())
 		{
+			/** @var \FaqModel $objFaq */
 			$objTemp = (object) $objFaq->row();
 
 			// Clean RTE output
@@ -122,11 +128,17 @@ class ModuleFaqPage extends \Module
 				$this->addEnclosuresToTemplate($objTemp, $objFaq->row());
 			}
 
-			$objTemp->info = sprintf($GLOBALS['TL_LANG']['MSC']['faqCreatedBy'], \Date::parse($objPage->dateFormat, $objFaq->tstamp), $objFaq->getRelated('author')->name);
+			/** @var \UserModel $objAuthor */
+			$objAuthor = $objFaq->getRelated('author');
+			$objTemp->info = sprintf($GLOBALS['TL_LANG']['MSC']['faqCreatedBy'], \Date::parse($objPage->dateFormat, $objFaq->tstamp), $objAuthor->name);
+
+			/** @var \FaqCategoryModel $objPid */
+			$objPid = $objFaq->getRelated('pid');
 
 			// Order by PID
 			$arrFaqs[$objFaq->pid]['items'][] = $objTemp;
-			$arrFaqs[$objFaq->pid]['headline'] = $objFaq->getRelated('pid')->headline;
+			$arrFaqs[$objFaq->pid]['headline'] = $objPid->headline;
+			$arrFaqs[$objFaq->pid]['title'] = $objPid->title;
 		}
 
 		$arrFaqs = array_values(array_filter($arrFaqs));

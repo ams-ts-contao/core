@@ -270,8 +270,8 @@ class Installer extends \Controller
 		$included = array();
 
 		// Ignore the internal cache
-		$blnBypassCache = $GLOBALS['TL_CONFIG']['bypassCache'];
-		$GLOBALS['TL_CONFIG']['bypassCache'] = true;
+		$blnBypassCache = \Config::get('bypassCache');
+		\Config::set('bypassCache', true);
 
 		// Only check the active modules (see #4541)
 		foreach (\ModuleLoader::getActive() as $strModule)
@@ -292,7 +292,7 @@ class Installer extends \Controller
 				}
 
 				$strTable = substr($strFile, 0, -4);
-				$objExtract = new \DcaExtractor($strTable);
+				$objExtract = \DcaExtractor::getInstance($strTable);
 
 				if ($objExtract->isDbTable())
 				{
@@ -304,7 +304,7 @@ class Installer extends \Controller
 		}
 
 		// Restore the cache settings
-		$GLOBALS['TL_CONFIG']['bypassCache'] = $blnBypassCache;
+		\Config::set('bypassCache', $blnBypassCache);
 
 		// HOOK: allow third-party developers to modify the array (see #6425)
 		if (isset($GLOBALS['TL_HOOKS']['sqlGetFromDca']) && is_array($GLOBALS['TL_HOOKS']['sqlGetFromDca']))
@@ -431,6 +431,7 @@ class Installer extends \Controller
 		}
 
 		$return = array();
+		$quote = function ($item) { return '`' . $item . '`'; };
 
 		foreach ($tables as $table)
 		{
@@ -439,11 +440,12 @@ class Installer extends \Controller
 			foreach ($fields as $field)
 			{
 				$name = $field['name'];
-				$field['name'] = '`'.$field['name'].'`';
+				$field['name'] = $quote($field['name']);
 
 				if ($field['type'] != 'index')
 				{
 					unset($field['index']);
+					unset($field['origtype']);
 
 					// Field type
 					if ($field['length'] != '')
@@ -455,7 +457,7 @@ class Installer extends \Controller
 					}
 
 					// Variant collation
-					if ($field['collation'] != '' && $field['collation'] != $GLOBALS['TL_CONFIG']['dbCollation'])
+					if ($field['collation'] != '' && $field['collation'] != \Config::get('dbCollation'))
 					{
 						$field['collation'] = 'COLLATE ' . $field['collation'];
 					}
@@ -486,27 +488,40 @@ class Installer extends \Controller
 				// Indices
 				if (isset($field['index']) && $field['index_fields'])
 				{
-					$index_fields = implode('`, `', $field['index_fields']);
+					// Quote the field names
+					$index_fields = implode(', ', array_map
+					(
+						function ($item) use ($quote) {
+							if (strpos($item, '(') === false) {
+								return $quote($item);
+							}
+
+							list($name, $length) = explode('(', rtrim($item, ')'));
+
+							return $quote($name) . '(' . $length . ')';
+						},
+						$field['index_fields'])
+					);
 
 					switch ($field['index'])
 					{
 						case 'UNIQUE':
 							if ($name == 'PRIMARY')
 							{
-								$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'PRIMARY KEY  (`'.$index_fields.'`)';
+								$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'PRIMARY KEY  ('.$index_fields.')';
 							}
 							else
 							{
-								$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'UNIQUE KEY `'.$name.'` (`'.$index_fields.'`)';
+								$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'UNIQUE KEY `'.$name.'` ('.$index_fields.')';
 							}
 							break;
 
 						case 'FULLTEXT':
-							$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'FULLTEXT KEY `'.$name.'` (`'.$index_fields.'`)';
+							$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'FULLTEXT KEY `'.$name.'` ('.$index_fields.')';
 							break;
 
 						default:
-							$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'KEY `'.$name.'` (`'.$index_fields.'`)';
+							$return[$table]['TABLE_CREATE_DEFINITIONS'][$name] = 'KEY `'.$name.'` ('.$index_fields.')';
 							break;
 					}
 

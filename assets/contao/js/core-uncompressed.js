@@ -117,7 +117,7 @@ var AjaxRequest =
 					}
 				});
 
-				var ul = new Element('ul', {
+				new Element('ul', {
 					'class': 'level_' + level,
 					'html': txt
 				}).inject(li, 'bottom');
@@ -209,7 +209,7 @@ var AjaxRequest =
 					}
 				});
 
-				var ul = new Element('ul', {
+				new Element('ul', {
 					'class': 'level_' + level,
 					'html': txt
 				}).inject(li, 'bottom');
@@ -280,7 +280,7 @@ var AjaxRequest =
 					}
 				});
 
-				var ul = new Element('ul', {
+				new Element('ul', {
 					'class': 'level_' + level,
 					'html': txt
 				}).inject(li, 'bottom');
@@ -351,7 +351,7 @@ var AjaxRequest =
 					}
 				});
 
-				var ul = new Element('ul', {
+				new Element('ul', {
 					'class': 'level_' + level,
 					'html': txt
 				}).inject(li, 'bottom');
@@ -415,7 +415,24 @@ var AjaxRequest =
 				}).inject($(el).getParent('div').getParent('div'), 'after');
 
 				// Execute scripts after the DOM has been updated
-				if (json.javascript) Browser.exec(json.javascript);
+				if (json.javascript) {
+
+					// Use Asset.javascript() instead of document.write() to load a
+					// JavaScript file and re-execude the code after it has been loaded
+					document.write = function(str) {
+						var src = '';
+						str.replace(/<script src="([^"]+)"/i, function(all, match){
+							src = match;
+						});
+						src && Asset.javascript(src, {
+							onLoad: function() {
+								Browser.exec(json.javascript);
+							}
+						});
+					};
+
+					Browser.exec(json.javascript);
+				}
 
 				el.value = 1;
 				el.checked = 'checked';
@@ -834,7 +851,7 @@ var Backend =
 		});
 		M.addButton(Contao.lang.apply, 'btn primary', function() {
 			var frm = window.frames['simple-modal-iframe'],
-				val = [], inp, i;
+				val = [], inp, field, i;
 			if (frm === undefined) {
 				alert('Could not find the SimpleModal frame');
 				return;
@@ -843,22 +860,23 @@ var Backend =
 				alert(Contao.lang.picker);
 				return; // see #5704
 			}
-			inp = frm.document.getElementById('tl_listing').getElementsByTagName('input');
+			inp = frm.document.getElementById('tl_select').getElementsByTagName('input');
 			for (i=0; i<inp.length; i++) {
 				if (!inp[i].checked || inp[i].id.match(/^check_all_/)) continue;
 				if (!inp[i].id.match(/^reset_/)) val.push(inp[i].get('value'));
 			}
 			if (opt.tag) {
 				$(opt.tag).value = val.join(',');
-				if (opt.url.match(/page\.php/)) {
+				if (frm.document.location.href.indexOf('contao/page.php') != -1) {
 					$(opt.tag).value = '{{link_url::' + $(opt.tag).value + '}}';
 				}
 				opt.self.set('href', opt.self.get('href').replace(/&value=[^&]*/, '&value='+val.join(',')));
 			} else {
-				$('ctrl_'+opt.id).value = val.join("\t");
-				var act = (opt.url.indexOf('contao/page.php') != -1) ? 'reloadPagetree' : 'reloadFiletree';
+				field = $('ctrl_' + opt.id);
+				field.value = val.join("\t");
+				var act = (frm.document.location.href.indexOf('contao/page.php') != -1) ? 'reloadPagetree' : 'reloadFiletree';
 				new Request.Contao({
-					field: $('ctrl_'+opt.id),
+					field: field,
 					evalScripts: false,
 					onRequest: AjaxRequest.displayBox(Contao.lang.loading + ' …'),
 					onSuccess: function(txt, json) {
@@ -867,13 +885,69 @@ var Backend =
 						AjaxRequest.hideBox();
 						window.fireEvent('ajax_change');
 					}
-				}).post({'action':act, 'name':opt.id, 'value':$('ctrl_'+opt.id).value, 'REQUEST_TOKEN':Contao.request_token});
+				}).post({'action':act, 'name':opt.id, 'value':field.value, 'REQUEST_TOKEN':Contao.request_token});
 			}
 			this.hide();
 		});
 		M.show({
 			'title': opt.title,
 			'contents': '<iframe src="' + opt.url + '" name="simple-modal-iframe" width="100%" height="' + opt.height + '" frameborder="0"></iframe>',
+			'model': 'modal'
+		});
+	},
+
+	/**
+	 * Open a TinyMCE file browser in a modal window
+	 *
+	 * @param {string} field_name The field name
+	 * @param {object} url        An URI object
+	 * @param {string} type       The picker type
+	 * @param {object} win        The window object
+	 */
+	openModalBrowser: function(field_name, url, type, win) {
+		var file = 'file.php',
+			swtch = (type == 'file' ? '&amp;switch=1' : ''),
+			isLink = (url.indexOf('{{link_url::') != -1);
+		if (type == 'file' && (url == '' || isLink)) {
+			file = 'page.php';
+		}
+		if (isLink) {
+			url = url.replace(/^\{\{link_url::([0-9]+)\}\}$/, '$1');
+		}
+		var M = new SimpleModal({
+			'width': 768,
+			'btn_ok': Contao.lang.close,
+			'draggable': false,
+			'overlayOpacity': .5,
+			'onShow': function() { document.body.setStyle('overflow', 'hidden'); },
+			'onHide': function() { document.body.setStyle('overflow', 'auto'); }
+		});
+		M.addButton(Contao.lang.close, 'btn', function() {
+			this.hide();
+		});
+		M.addButton(Contao.lang.apply, 'btn primary', function() {
+			var frm = window.frames['simple-modal-iframe'],
+				val, inp, i;
+			if (frm === undefined) {
+				alert('Could not find the SimpleModal frame');
+				return;
+			}
+			inp = frm.document.getElementById('tl_select').getElementsByTagName('input');
+			for (i=0; i<inp.length; i++) {
+				if (inp[i].checked && !inp[i].id.match(/^reset_/)) {
+					val = inp[i].get('value');
+					break;
+				}
+			}
+			if (!isNaN(val)) {
+				val = '{{link_url::' + val + '}}';
+			}
+			win.document.getElementById(field_name).value = val;
+			this.hide();
+		});
+		M.show({
+			'title': win.document.getElement('div.mce-title').get('text'),
+			'contents': '<iframe src="contao/' + file + '?table=tl_content&amp;field=singleSRC&amp;value=' + url + swtch + '" name="simple-modal-iframe" width="100%" height="' + (window.getSize().y-180).toInt() + '" frameborder="0"></iframe>',
 			'model': 'modal'
 		});
 	},
@@ -1163,6 +1237,7 @@ var Backend =
 	 * @param {object} ul The DOM element
 	 *
 	 * @author Joe Ray Gregory
+	 * @author Martin Auswöger
 	 */
 	makeParentViewSortable: function(ul) {
 		var ds = new Scroller(document.getElement('body'), {
@@ -1181,38 +1256,30 @@ var Backend =
 				ds.stop();
 			},
 			onSort: function(el) {
-				var div = el.getFirst('div'),
-					prev, next, first;
+				var ul = el.getParent('ul'),
+					wrapLevel = 0;
 
-				if (!div) return;
+				if (!ul) return;
 
-				if (div.hasClass('wrapper_start')) {
-					if ((prev = el.getPrevious('li')) && (first = prev.getFirst('div'))) {
-						first.removeClass('indent');
+				ul.getChildren('li').each(function(el) {
+					var div = el.getFirst('div');
+
+					if (!div) return;
+
+					if (div.hasClass('wrapper_stop') && wrapLevel > 0) {
+						wrapLevel--;
 					}
-					if ((next = el.getNext('li')) && (first = next.getFirst('div'))) {
-						first.addClass('indent');
+
+					div.className = div.className.replace(/(^|\s)indent[^\s]*/g, '');
+
+					if (wrapLevel > 0) {
+						div.addClass('indent').addClass('indent_' + wrapLevel);
 					}
-				} else if (div.hasClass('wrapper_stop')) {
-					if ((prev = el.getPrevious('li')) && (first = prev.getFirst('div'))) {
-						first.addClass('indent');
+
+					if (div.hasClass('wrapper_start')) {
+						wrapLevel++;
 					}
-					if ((next = el.getNext('li')) && (first = next.getFirst('div'))) {
-						first.removeClass('indent');
-					}
-				} else if (div.hasClass('indent')) {
-					if ((prev = el.getPrevious('li')) && (first = prev.getFirst('div')) && first.hasClass('wrapper_stop')) {
-						div.removeClass('indent');
-					} else if ((next = el.getNext('li')) && (first = next.getFirst('div')) && first.hasClass('wrapper_start')) {
-						div.removeClass('indent');
-					}
-				} else {
-					if ((prev = el.getPrevious('li')) && (first = prev.getFirst('div')) && first.hasClass('wrapper_start')) {
-						div.addClass('indent');
-					} else if ((next = el.getNext('li')) && (first = next.getFirst('div')) && first.hasClass('wrapper_stop')) {
-						div.addClass('indent');
-					}
-				}
+				});
 			},
 			handle: '.drag-handle'
 		});
@@ -1930,6 +1997,237 @@ var Backend =
 				}
 			});
 		});
+	},
+
+	/**
+	 * Update the fields of the imageSize widget upon change
+	 */
+	enableImageSizeWidgets: function() {
+		$$('.tl_image_size').each(function(el) {
+			var select = el.getElement('select'),
+				widthInput = el.getChildren('input')[0],
+				heightInput = el.getChildren('input')[1],
+				update = function() {
+					if (select.get('value') === '' || select.get('value').toInt().toString() === select.get('value')) {
+						widthInput.readOnly = true;
+						heightInput.readOnly = true;
+						var dimensions = $(select.getSelected()[0]).get('text');
+						dimensions = dimensions.split('(').length > 1
+							? dimensions.split('(').getLast().split(')')[0].split('x')
+							: ['', ''];
+						widthInput.set('value', '').set('placeholder', dimensions[0] * 1 || '');
+						heightInput.set('value', '').set('placeholder', dimensions[1] * 1 || '');
+					}
+					else {
+						widthInput.set('placeholder', '');
+						heightInput.set('placeholder', '');
+						widthInput.readOnly = false;
+						heightInput.readOnly = false;
+					}
+				}
+			;
+
+			update();
+			select.addEvent('change', update);
+			select.addEvent('keyup', update);
+		});
+	},
+
+	/**
+	 * Allow to toggle checkboxes or radio buttons by clicking a row
+	 *
+	 * @author Kamil Kuzminski
+	 */
+	enableToggleSelect: function() {
+		var container = $('tl_select'),
+			checkboxes = [], start, thisIndex, startIndex, status, from, to,
+			shiftToggle = function(el) {
+				thisIndex = checkboxes.indexOf(el);
+				startIndex = checkboxes.indexOf(start);
+				from = Math.min(thisIndex, startIndex);
+				to = Math.max(thisIndex, startIndex);
+				status = checkboxes[startIndex].checked ? true : false;
+
+				for (from; from<=to; from++) {
+					checkboxes[from].checked = status;
+				}
+			};
+
+		if (container) {
+			checkboxes = container.getElements('input[type="checkbox"]');
+		}
+
+		// Row click
+		$$('.toggle_select').each(function(el) {
+			el.addEvent('click', function(e) {
+				var input = $(el).getElement('input[type="checkbox"],input[type="radio"]');
+
+				if (!input) {
+					return;
+				}
+
+				// Radio buttons
+				if (input.type == 'radio') {
+					if (!input.checked) {
+						input.checked = 'checked';
+					}
+					return;
+				}
+
+				// Checkboxes
+				if (e.shift && start) {
+					shiftToggle(input);
+				} else {
+					input.checked = input.checked ? '' : 'checked';
+
+					if (input.get('onclick') == 'Backend.toggleCheckboxes(this)') {
+						Backend.toggleCheckboxes(input); // see #6399
+					}
+				}
+
+				start = input;
+			});
+		});
+
+		// Checkbox click
+		checkboxes.each(function(el) {
+			el.addEvent('click', function(e) {
+				if (e.shift && start) {
+					shiftToggle(this);
+				}
+
+				start = this;
+			});
+		});
+	},
+
+	/**
+	 * Allow to mark the important part of an image
+	 *
+	 * @param {object} el The DOM element
+	 */
+	editPreviewWizard: function(el) {
+		el = $(el);
+		var imageElement = el.getElement('img'),
+			inputElements = {},
+			isDrawing = false,
+			originalWidth = el.get('data-original-width'),
+			originalHeight = el.get('data-original-height'),
+			partElement, startPos,
+			getScale = function() {
+				return imageElement.getComputedSize().width / originalWidth;
+			},
+			updateImage = function() {
+				var scale = getScale(),
+					imageSize = imageElement.getComputedSize();
+				partElement.setStyles({
+					top: imageSize.computedTop + (inputElements.y.get('value') * scale).round() + 'px',
+					left: imageSize.computedLeft + (inputElements.x.get('value') * scale).round() + 'px',
+					width: (inputElements.width.get('value') * scale).round() + 'px',
+					height: (inputElements.height.get('value') * scale).round() + 'px'
+				});
+				if (!inputElements.width.get('value').toInt() || !inputElements.height.get('value').toInt()) {
+					partElement.setStyle('display', 'none');
+				} else {
+					partElement.setStyle('display', '');
+				}
+			},
+			updateValues = function() {
+				var scale = getScale(),
+					styles = partElement.getStyles('top', 'left', 'width', 'height'),
+					imageSize = imageElement.getComputedSize(),
+					values = {
+						x: Math.max(0, Math.min(originalWidth, (styles.left.toFloat() - imageSize.computedLeft) / scale)).round(),
+						y: Math.max(0, Math.min(originalHeight, (styles.top.toFloat() - imageSize.computedTop) / scale)).round()
+					};
+				values.width = Math.min(originalWidth - values.x, styles.width.toFloat() / scale).round();
+				values.height = Math.min(originalHeight - values.y, styles.height.toFloat() / scale).round();
+				if (!values.width || !values.height) {
+					values.x = values.y = values.width = values.height = '';
+					partElement.setStyle('display', 'none');
+				} else {
+					partElement.setStyle('display', '');
+				}
+				Object.each(values, function(value, key) {
+					inputElements[key].set('value', value);
+				});
+			},
+			start = function(event) {
+				event.preventDefault();
+				if (isDrawing) {
+					return;
+				}
+				isDrawing = true;
+				startPos = {
+					x: event.page.x - el.getPosition().x - imageElement.getComputedSize().computedLeft,
+					y: event.page.y - el.getPosition().y - imageElement.getComputedSize().computedTop
+				};
+				move(event);
+			},
+			move = function(event) {
+				if (!isDrawing) {
+					return;
+				}
+				event.preventDefault();
+				var imageSize = imageElement.getComputedSize();
+				var rect = {
+					x: [
+						Math.max(0, Math.min(imageSize.width, startPos.x)),
+						Math.max(0, Math.min(imageSize.width, event.page.x - el.getPosition().x - imageSize.computedLeft))
+					],
+					y: [
+						Math.max(0, Math.min(imageSize.height, startPos.y)),
+						Math.max(0, Math.min(imageSize.height, event.page.y - el.getPosition().y - imageSize.computedTop))
+					]
+				};
+				partElement.setStyles({
+					top: Math.min(rect.y[0], rect.y[1]) + imageSize.computedTop + 'px',
+					left: Math.min(rect.x[0], rect.x[1]) + imageSize.computedLeft + 'px',
+					width: Math.abs(rect.x[0] - rect.x[1]) + 'px',
+					height: Math.abs(rect.y[0] - rect.y[1]) + 'px'
+				});
+				updateValues();
+			},
+			stop = function(event) {
+				move(event);
+				isDrawing = false;
+			},
+			init = function() {
+				el.getParent().getElements('input[name^="importantPart"]').each(function(input) {
+					['x', 'y', 'width', 'height'].each(function(key) {
+						if (input.get('name').substr(13, key.length) === key.capitalize()) {
+							inputElements[key] = input = $(input);
+						}
+					});
+				});
+				if (Object.getLength(inputElements) !== 4) {
+					return;
+				}
+				Object.each(inputElements, function(input) {
+					input.getParent().setStyle('display', 'none');
+				});
+				el.addClass('tl_edit_preview_enabled');
+				partElement = new Element('div', {
+					'class': 'tl_edit_preview_important_part'
+				}).inject(el);
+				updateImage();
+				imageElement.addEvent('load', updateImage);
+				el.addEvents({
+					mousedown: start,
+					touchstart: start
+				});
+				$(document.documentElement).addEvents({
+					mousemove: move,
+					touchmove: move,
+					mouseup: stop,
+					touchend: stop,
+					touchcancel: stop,
+					resize: updateImage
+				});
+			}
+		;
+
+		window.addEvent('domready', init);
 	}
 };
 
@@ -1951,6 +2249,8 @@ window.addEvent('domready', function() {
 	Backend.addInteractiveHelp();
 	Backend.convertEnableModules();
 	Backend.makeWizardsSortable();
+	Backend.enableImageSizeWidgets();
+	Backend.enableToggleSelect();
 
 	// Chosen
 	if (Elements.chosen != undefined) {
@@ -1972,6 +2272,8 @@ window.addEvent('load', function() {
 window.addEvent('ajax_change', function() {
 	Backend.addInteractiveHelp();
 	Backend.makeWizardsSortable();
+	Backend.enableImageSizeWidgets();
+	Backend.enableToggleSelect();
 
 	// Chosen
 	if (Elements.chosen != undefined) {
@@ -1980,81 +2282,3 @@ window.addEvent('ajax_change', function() {
 		}).chosen();
 	}
 });
-
-
-/**
- * Provide callback functions for TinyMCE.
- *
- * @author Leo Feyer <https://github.com/leofeyer>
- */
-var TinyCallback =
-{
-	/**
-	 * Set the scroll offset upon focus
-	 *
-	 * @param {object} ed The editor object
-	 */
-	getScrollOffset: function(ed) {
-		tinymce.dom.Event.add((tinymce.isGecko ? ed.getDoc() : ed.getWin()), 'focus', function() {
-			Backend.getScrollOffset();
-		});
-	},
-
-	/**
-	 * Add a custom file browser
-	 *
-	 * @param {string} field_name The field name
-	 * @param {object} url        An URI object
-	 * @param {string} type       The picker type
-	 * @param {object} win        The window object
-	 */
-	fileBrowser: function(field_name, url, type, win) {
-		var M = new SimpleModal({
-			'width': 765,
-			'btn_ok': Contao.lang.close,
-			'draggable': false,
-			'overlayOpacity': .5,
-			'onShow': function() { document.body.setStyle('overflow', 'hidden'); },
-			'onHide': function() { document.body.setStyle('overflow', 'auto'); }
-		});
-		M.addButton(Contao.lang.close, 'btn', function() {
-			this.hide();
-		});
-		M.addButton(Contao.lang.apply, 'btn primary', function() {
-			var frm = window.frames['simple-modal-iframe'],
-				val, inp, i;
-			if (frm === undefined) {
-				alert('Could not find the SimpleModal frame');
-				return;
-			}
-			inp = frm.document.getElementById('tl_listing').getElementsByTagName('input');
-			for (i=0; i<inp.length; i++) {
-				if (inp[i].checked && !inp[i].id.match(/^reset_/)) {
-					val = inp[i].get('value');
-					break;
-				}
-			}
-			if (type == 'page') {
-				win.document.forms[0].elements[field_name].value = '{{link_url::' + val + '}}';
-				if (win.document.forms[0].elements['linktitle']) {
-					win.document.forms[0].elements['linktitle'].value = '{{link_title::' + val + '}}';
-				}
-			} else {
-				win.document.forms[0].elements[field_name].value = val;
-				if (win.document.forms[0].elements['linktitle']) {
-					win.document.forms[0].elements['linktitle'].value = '';
-				}
-				if (prev = win.document.getElementById('prev')) {
-					var u = new URI(val);
-					prev.innerHTML = '<img id="previewImg" src="' + u.toAbsolute() + '" onload="ImageDialog.updateImageData(this)" border="0">';
-				}
-			}
-			this.hide();
-		});
-		M.show({
-			'title': win.document.title,
-			'contents': '<iframe src="contao/' + ((type == 'page') ? 'page.php' : 'file.php') + '?table=tl_content&amp;field=singleSRC&amp;value=' + ((type == 'page') ? url.replace('{{link_url::', '').replace('}}', '') : url) + '" name="simple-modal-iframe" width="100%" height="' + (window.getSize().y-180).toInt() + '" frameborder="0"></iframe>',
-			'model': 'modal'
-		});
-	}
-};

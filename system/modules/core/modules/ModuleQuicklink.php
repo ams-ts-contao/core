@@ -28,12 +28,14 @@ class ModuleQuicklink extends \Module
 
 	/**
 	 * Redirect to the selected page
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
 		if (TL_MODE == 'BE')
 		{
+			/** @var \BackendTemplate|object $objTemplate */
 			$objTemplate = new \BackendTemplate('be_wildcard');
 
 			$objTemplate->wildcard = '### ' . utf8_strtoupper($GLOBALS['TL_LANG']['FMD']['quicklink'][0]) . ' ###';
@@ -93,7 +95,10 @@ class ModuleQuicklink extends \Module
 		// Add the items to the pre-sorted array
 		while ($objPages->next())
 		{
-			$arrPages[$objPages->id] = $objPages->current()->loadDetails()->row(); // see #3765
+			/** @var \PageModel $objModel */
+			$objModel = $objPages->current();
+
+			$arrPages[$objPages->id] = $objModel->loadDetails()->row(); // see #3765
 		}
 
 		$items = array();
@@ -117,30 +122,18 @@ class ModuleQuicklink extends \Module
 						$objNext->loadDetails();
 
 						// Check the target page language (see #4706)
-						if ($GLOBALS['TL_CONFIG']['addLanguageToUrl'])
+						if (\Config::get('addLanguageToUrl'))
 						{
 							$strForceLang = $objNext->language;
 						}
 
-						$href = $this->generateFrontendUrl($objNext->row(), null, $strForceLang);
-
-						// Add the domain if it differs from the current one (see #3765)
-						if ($objNext->domain != '' && $objNext->domain != \Environment::get('host'))
-						{
-							$href = ($objNext->rootUseSSL ? 'https://' : 'http://') . $objNext->domain . TL_PATH . '/' . $href;
-						}
+						$href = $this->generateFrontendUrl($objNext->row(), null, $strForceLang, true);
 						break;
 					}
 					// DO NOT ADD A break; STATEMENT
 
 				default:
-					$href = $this->generateFrontendUrl($arrPage, null, $arrPage['rootLanguage']);
-
-					// Add the domain if it differs from the current one (see #3765)
-					if ($arrPage['domain'] != '' && $arrPage['domain'] != \Environment::get('host'))
-					{
-						$href = ($arrPage['rootUseSSL'] ? 'https://' : 'http://') . $arrPage['domain'] . TL_PATH . '/' . $href;
-					}
+					$href = $this->generateFrontendUrl($arrPage, null, $arrPage['rootLanguage'], true);
 					break;
 			}
 

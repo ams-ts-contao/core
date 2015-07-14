@@ -21,7 +21,7 @@ class ContentGallery extends \ContentElement
 
 	/**
 	 * Files object
-	 * @var \FilesModel
+	 * @var \Model\Collection|\FilesModel
 	 */
 	protected $objFiles;
 
@@ -34,6 +34,7 @@ class ContentGallery extends \ContentElement
 
 	/**
 	 * Return if there are no files
+	 *
 	 * @return string
 	 */
 	public function generate()
@@ -81,6 +82,7 @@ class ContentGallery extends \ContentElement
 	 */
 	protected function compile()
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		$images = array();
@@ -101,12 +103,24 @@ class ContentGallery extends \ContentElement
 			{
 				$objFile = new \File($objFiles->path, true);
 
-				if (!$objFile->isGdImage)
+				if (!$objFile->isImage)
 				{
 					continue;
 				}
 
 				$arrMeta = $this->getMetaData($objFiles->meta, $objPage->language);
+
+				if (empty($arrMeta))
+				{
+					if ($this->metaIgnore)
+					{
+						continue;
+					}
+					elseif ($objPage->rootFallbackLanguage !== null)
+					{
+						$arrMeta = $this->getMetaData($objFiles->meta, $objPage->rootFallbackLanguage);
+					}
+				}
 
 				// Use the file name as title if none is given
 				if ($arrMeta['title'] == '')
@@ -149,12 +163,24 @@ class ContentGallery extends \ContentElement
 
 					$objFile = new \File($objSubfiles->path, true);
 
-					if (!$objFile->isGdImage)
+					if (!$objFile->isImage)
 					{
 						continue;
 					}
 
 					$arrMeta = $this->getMetaData($objSubfiles->meta, $objPage->language);
+
+					if (empty($arrMeta))
+					{
+						if ($this->metaIgnore)
+						{
+							continue;
+						}
+						elseif ($objPage->rootFallbackLanguage !== null)
+						{
+							$arrMeta = $this->getMetaData($objSubfiles->meta, $objPage->rootFallbackLanguage);
+						}
+					}
 
 					// Use the file name as title if none is given
 					if ($arrMeta['title'] == '')
@@ -255,31 +281,27 @@ class ContentGallery extends \ContentElement
 		{
 			// Get the current page
 			$id = 'page_g' . $this->id;
-			$page = \Input::get($id) ?: 1;
+			$page = (\Input::get($id) !== null) ? \Input::get($id) : 1;
 
 			// Do not index or cache the page if the page number is outside the range
 			if ($page < 1 || $page > max(ceil($total/$this->perPage), 1))
 			{
-				global $objPage;
-				$objPage->noSearch = 1;
-				$objPage->cache = 0;
-
-				// Send a 404 header
-				header('HTTP/1.1 404 Not Found');
-				return;
+				/** @var \PageError404 $objHandler */
+				$objHandler = new $GLOBALS['TL_PTY']['error_404']();
+				$objHandler->generate($objPage->id);
 			}
 
 			// Set limit and offset
 			$offset = ($page - 1) * $this->perPage;
 			$limit = min($this->perPage + $offset, $total);
 
-			$objPagination = new \Pagination($total, $this->perPage, $GLOBALS['TL_CONFIG']['maxPaginationLinks'], $id);
+			$objPagination = new \Pagination($total, $this->perPage, \Config::get('maxPaginationLinks'), $id);
 			$this->Template->pagination = $objPagination->generate("\n  ");
 		}
 
 		$rowcount = 0;
 		$colwidth = floor(100/$this->perRow);
-		$intMaxWidth = (TL_MODE == 'BE') ? floor((640 / $this->perRow)) : floor(($GLOBALS['TL_CONFIG']['maxImageWidth'] / $this->perRow));
+		$intMaxWidth = (TL_MODE == 'BE') ? floor((640 / $this->perRow)) : floor((\Config::get('maxImageWidth') / $this->perRow));
 		$strLightboxId = 'lightbox[lb' . $this->id . ']';
 		$body = array();
 
@@ -352,6 +374,7 @@ class ContentGallery extends \ContentElement
 			$strTemplate = $this->galleryTpl;
 		}
 
+		/** @var \FrontendTemplate|object $objTemplate */
 		$objTemplate = new \FrontendTemplate($strTemplate);
 		$objTemplate->setData($this->arrData);
 

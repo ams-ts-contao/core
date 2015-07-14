@@ -46,7 +46,7 @@ abstract class Controller extends \System
 	 */
 	public static function getTemplate($strTemplate, $strFormat='html5')
 	{
-		$arrAllowed = trimsplit(',', $GLOBALS['TL_CONFIG']['templateFiles']);
+		$arrAllowed = trimsplit(',', \Config::get('templateFiles'));
 		array_push($arrAllowed, 'html5'); // see #3398
 
 		if (!in_array($strFormat, $arrAllowed))
@@ -59,6 +59,7 @@ abstract class Controller extends \System
 		// Check for a theme folder
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->templateGroup != '')
@@ -90,7 +91,7 @@ abstract class Controller extends \System
 		// Get the default templates
 		foreach (\TemplateLoader::getPrefixedFiles($strPrefix) as $strTemplate)
 		{
-			$arrTemplates[$strTemplate] = $strTemplate;
+			$arrTemplates[$strTemplate][] = 'root';
 		}
 
 		$arrCustomized = glob(TL_ROOT . '/templates/' . $strPrefix . '*');
@@ -101,58 +102,72 @@ abstract class Controller extends \System
 			foreach ($arrCustomized as $strFile)
 			{
 				$strTemplate = basename($strFile, strrchr($strFile, '.'));
-
-				if (!isset($arrTemplates[$strTemplate]))
-				{
-					$arrTemplates[$strTemplate] = $strTemplate;
-				}
+				$arrTemplates[$strTemplate][] = $GLOBALS['TL_LANG']['MSC']['global'];
 			}
 		}
 
 		// Do not look for back end templates in theme folders (see #5379)
-		if ($strPrefix == 'be_' || $strPrefix == 'mail_')
+		if ($strPrefix != 'be_' && $strPrefix != 'mail_')
 		{
-			return $arrTemplates;
-		}
-
-		// Try to select the themes (see #5210)
-		try
-		{
-			$objTheme = \ThemeModel::findAll(array('order'=>'name'));
-		}
-		catch (\Exception $e)
-		{
-			$objTheme = null;
-		}
-
-		// Add the theme templates
-		if ($objTheme !== null)
-		{
-			while ($objTheme->next())
+			// Try to select the themes (see #5210)
+			try
 			{
-				if ($objTheme->templates != '')
+				$objTheme = \ThemeModel::findAll(array('order'=>'name'));
+			}
+			catch (\Exception $e)
+			{
+				$objTheme = null;
+			}
+
+			// Add the theme templates
+			if ($objTheme !== null)
+			{
+				while ($objTheme->next())
 				{
-					$arrThemeTemplates = glob(TL_ROOT . '/' . $objTheme->templates . '/' . $strPrefix . '*');
-
-					if (is_array($arrThemeTemplates))
+					if ($objTheme->templates != '')
 					{
-						foreach ($arrThemeTemplates as $strFile)
-						{
-							$strTemplate = basename($strFile, strrchr($strFile, '.'));
+						$arrThemeTemplates = glob(TL_ROOT . '/' . $objTheme->templates . '/' . $strPrefix . '*');
 
-							if (!isset($arrTemplates[$strTemplate]))
+						if (is_array($arrThemeTemplates))
+						{
+							foreach ($arrThemeTemplates as $strFile)
 							{
-								$arrTemplates[$strTemplate] = $strTemplate . ' (' . sprintf($GLOBALS['TL_LANG']['MSC']['templatesTheme'], $objTheme->name) . ')';
-							}
-							else
-							{
-								$arrTemplates[$strTemplate] .= ' (' . sprintf($GLOBALS['TL_LANG']['MSC']['templatesTheme'], $objTheme->name) . ')';
+								$strTemplate = basename($strFile, strrchr($strFile, '.'));
+
+								if (!isset($arrTemplates[$strTemplate]))
+								{
+									$arrTemplates[$strTemplate][] = $objTheme->name;
+								}
+								else
+								{
+									$arrTemplates[$strTemplate][] = $objTheme->name;
+								}
 							}
 						}
 					}
 				}
 			}
 		}
+
+		// Show the template sources (see #6875)
+		foreach ($arrTemplates as $k=>$v)
+		{
+			$v = array_filter($v, function($a) {
+				return $a != 'root';
+			});
+
+			if (empty($v))
+			{
+				$arrTemplates[$k] = $k;
+			}
+			else
+			{
+				$arrTemplates[$k] = $k . ' (' . implode(', ', $v) . ')';
+			}
+		}
+
+		// Sort the template names
+		ksort($arrTemplates);
 
 		return $arrTemplates;
 	}
@@ -166,17 +181,18 @@ abstract class Controller extends \System
 	 *
 	 * @return string The module HTML markup
 	 */
-	protected function getFrontendModule($intId, $strColumn='main')
+	public static function getFrontendModule($intId, $strColumn='main')
 	{
 		if (!is_object($intId) && !strlen($intId))
 		{
 			return '';
 		}
 
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		// Articles
-		if ($intId == 0)
+		if (!is_object($intId) && $intId == 0)
 		{
 			// Show a particular article only
 			if ($objPage->type == 'regular' && \Input::get('articles'))
@@ -194,20 +210,17 @@ abstract class Controller extends \System
 					$objArticle = \ArticleModel::findByIdOrAliasAndPid($strArticle, $objPage->id);
 
 					// Send a 404 header if the article does not exist
-					if ($objArticle === null)
+					if (null === $objArticle)
 					{
-						// Do not index the page
-						$objPage->noSearch = 1;
-						$objPage->cache = 0;
-
-						header('HTTP/1.1 404 Not Found');
-						return '<p class="error">' . sprintf($GLOBALS['TL_LANG']['MSC']['invalidPage'], $strArticle) . '</p>';
+						/** @var \PageError404 $objHandler */
+						$objHandler = new $GLOBALS['TL_PTY']['error_404']();
+						$objHandler->generate($objPage->id);
 					}
 
 					// Add the "first" and "last" classes (see #2583)
 					$objArticle->classes = array('first', 'last');
 
-					return $this->getArticle($objArticle);
+					return static::getArticle($objArticle);
 				}
 			}
 
@@ -232,6 +245,7 @@ abstract class Controller extends \System
 
 			while ($objArticles->next())
 			{
+				/** @var \ArticleModel $objRow */
 				$objRow = $objArticles->current();
 
 				// Add the "first" and "last" classes (see #2583)
@@ -252,7 +266,7 @@ abstract class Controller extends \System
 					$objRow->classes = $arrCss;
 				}
 
-				$return .= $this->getArticle($objRow, $blnMultiMode, false, $strColumn);
+				$return .= static::getArticle($objRow, $blnMultiMode, false, $strColumn);
 				++$intCount;
 			}
 
@@ -287,11 +301,14 @@ abstract class Controller extends \System
 			// Return if the class does not exist
 			if (!class_exists($strClass))
 			{
-				$this->log('Module class "'.$strClass.'" (module "'.$objRow->type.'") does not exist', __METHOD__, TL_ERROR);
+				static::log('Module class "'.$strClass.'" (module "'.$objRow->type.'") does not exist', __METHOD__, TL_ERROR);
+
 				return '';
 			}
 
 			$objRow->typePrefix = 'mod_';
+
+			/** @var \Module $objModule */
 			$objModule = new $strClass($objRow, $strColumn);
 			$strBuffer = $objModule->generate();
 
@@ -300,8 +317,7 @@ abstract class Controller extends \System
 			{
 				foreach ($GLOBALS['TL_HOOKS']['getFrontendModule'] as $callback)
 				{
-					$this->import($callback[0]);
-					$strBuffer = $this->$callback[0]->$callback[1]($objRow, $strBuffer, $objModule);
+					$strBuffer = static::importStatic($callback[0])->$callback[1]($objRow, $strBuffer, $objModule);
 				}
 			}
 
@@ -326,8 +342,9 @@ abstract class Controller extends \System
 	 *
 	 * @return string|boolean The article HTML markup or false
 	 */
-	protected function getArticle($varId, $blnMultiMode=false, $blnIsInsertTag=false, $strColumn='main')
+	public static function getArticle($varId, $blnMultiMode=false, $blnIsInsertTag=false, $strColumn='main')
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		if (is_object($varId))
@@ -384,8 +401,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getArticle'] as $callback)
 			{
-				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objRow);
+				static::importStatic($callback[0])->$callback[1]($objRow);
 			}
 		}
 
@@ -410,7 +426,7 @@ abstract class Controller extends \System
 	 *
 	 * @return string The content element HTML markup
 	 */
-	protected function getContentElement($intId, $strColumn='main')
+	public static function getContentElement($intId, $strColumn='main')
 	{
 		if (is_object($intId))
 		{
@@ -448,11 +464,14 @@ abstract class Controller extends \System
 		// Return if the class does not exist
 		if (!class_exists($strClass))
 		{
-			$this->log('Content element class "'.$strClass.'" (content element "'.$objRow->type.'") does not exist', __METHOD__, TL_ERROR);
+			static::log('Content element class "'.$strClass.'" (content element "'.$objRow->type.'") does not exist', __METHOD__, TL_ERROR);
+
 			return '';
 		}
 
 		$objRow->typePrefix = 'ce_';
+
+		/** @var \ContentElement $objElement */
 		$objElement = new $strClass($objRow, $strColumn);
 		$strBuffer = $objElement->generate();
 
@@ -461,8 +480,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getContentElement'] as $callback)
 			{
-				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]($objRow, $strBuffer, $objElement);
+				$strBuffer = static::importStatic($callback[0])->$callback[1]($objRow, $strBuffer, $objElement);
 			}
 		}
 
@@ -484,7 +502,7 @@ abstract class Controller extends \System
 	 *
 	 * @return string The form HTML markup
 	 */
-	protected function getForm($varId, $strColumn='main')
+	public static function getForm($varId, $strColumn='main')
 	{
 		if (is_object($varId))
 		{
@@ -515,8 +533,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getForm'] as $callback)
 			{
-				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]($objRow, $strBuffer, $objElement);
+				$strBuffer = static::importStatic($callback[0])->$callback[1]($objRow, $strBuffer, $objElement);
 			}
 		}
 
@@ -564,7 +581,7 @@ abstract class Controller extends \System
 		$image = $objPage->type.'.gif';
 
 		// Page not published or not active
-		if (!$objPage->published || $objPage->start && $objPage->start > time() || $objPage->stop && $objPage->stop < time())
+		if (!$objPage->published || ($objPage->start != '' && $objPage->start > time()) || ($objPage->stop != '' && $objPage->stop < time()))
 		{
 			$sub += 1;
 		}
@@ -587,6 +604,15 @@ abstract class Controller extends \System
 			$image = $objPage->type.'_'.$sub.'.gif';
 		}
 
+		// HOOK: add custom logic
+		if (isset($GLOBALS['TL_HOOKS']['getPageStatusIcon']) && is_array($GLOBALS['TL_HOOKS']['getPageStatusIcon']))
+		{
+			foreach ($GLOBALS['TL_HOOKS']['getPageStatusIcon'] as $callback)
+			{
+				$image = static::importStatic($callback[0])->$callback[1]($objPage, $image);
+			}
+		}
+
 		return $image;
 	}
 
@@ -594,7 +620,7 @@ abstract class Controller extends \System
 	/**
 	 * Check whether an element is visible in the front end
 	 *
-	 * @param \Model $objElement The element model
+	 * @param \Model|\ContentModel|\ModuleModel $objElement The element model
 	 *
 	 * @return boolean True if the element is visible
 	 */
@@ -653,1152 +679,11 @@ abstract class Controller extends \System
 	 *
 	 * @return string The text with the replaced tags
 	 */
-	protected function replaceInsertTags($strBuffer, $blnCache=true)
+	public static function replaceInsertTags($strBuffer, $blnCache=true)
 	{
-		global $objPage;
+		$objIt = new InsertTags();
 
-		// Preserve insert tags
-		if ($GLOBALS['TL_CONFIG']['disableInsertTags'])
-		{
-			return \String::restoreBasicEntities($strBuffer);
-		}
-
-		$tags = preg_split('/\{\{(([^\{\}]*|(?R))*)\}\}/', $strBuffer, -1, PREG_SPLIT_DELIM_CAPTURE);
-
-		$strBuffer = '';
-		static $arrCache = array();
-
-		for ($_rit=0, $_cnt=count($tags); $_rit<$_cnt; $_rit+=3)
-		{
-			$strBuffer .= $tags[$_rit];
-			$strTag = $tags[$_rit+1];
-
-			// Skip empty tags
-			if ($strTag == '')
-			{
-				continue;
-			}
-
-			// Run the replacement again if there are more tags (see #4402)
-			if (strpos($strTag, '{{') !== false)
-			{
-				$strTag = $this->replaceInsertTags($strTag, $blnCache);
-			}
-
-			$flags = explode('|', $strTag);
-			$tag = array_shift($flags);
-			$elements = explode('::', $tag);
-
-			// Load the value from cache
-			if (isset($arrCache[$strTag]) && !in_array('refresh', $flags))
-			{
-				$strBuffer .= $arrCache[$strTag];
-				continue;
-			}
-
-			// Skip certain elements if the output will be cached
-			if ($blnCache)
-			{
-				if ($elements[0] == 'date' || $elements[0] == 'ua' || $elements[0] == 'post' || $elements[0] == 'file' || $elements[1] == 'back' || $elements[1] == 'referer' || $elements[0] == 'request_token' || $elements[0] == 'toggle_view' || strncmp($elements[0], 'cache_', 6) === 0 || in_array('uncached', $flags))
-				{
-					$strBuffer .= '{{' . $strTag . '}}';
-					continue;
-				}
-			}
-
-			$arrCache[$strTag] = '';
-
-			// Replace the tag
-			switch (strtolower($elements[0]))
-			{
-				// Date
-				case 'date':
-					$arrCache[$strTag] = \Date::parse($elements[1] ?: $GLOBALS['TL_CONFIG']['dateFormat']);
-					break;
-
-				// Accessibility tags
-				case 'lang':
-					if ($elements[1] == '')
-					{
-						$arrCache[$strTag] = '</span>';
-					}
-					elseif ($objPage->outputFormat == 'xhtml')
-					{
-						$arrCache[$strTag] = '<span lang="' . $elements[1] . '" xml:lang="' . $elements[1] . '">';
-					}
-					else
-					{
-						$arrCache[$strTag] = $arrCache[$strTag] = '<span lang="' . $elements[1] . '">';
-					}
-					break;
-
-				// Line break
-				case 'br':
-					$arrCache[$strTag] = '<br' . ($objPage->outputFormat == 'xhtml' ? ' />' : '>');
-					break;
-
-				// E-mail addresses
-				case 'email':
-				case 'email_open':
-				case 'email_url':
-					if ($elements[1] == '')
-					{
-						$arrCache[$strTag] = '';
-						break;
-					}
-
-					$strEmail = \String::encodeEmail($elements[1]);
-
-					// Replace the tag
-					switch (strtolower($elements[0]))
-					{
-						case 'email':
-							$arrCache[$strTag] = '<a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;' . $strEmail . '" class="email">' . preg_replace('/\?.*$/', '', $strEmail) . '</a>';
-							break;
-
-						case 'email_open':
-							$arrCache[$strTag] = '<a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;' . $strEmail . '" class="email">';
-							break;
-
-						case 'email_url':
-							$arrCache[$strTag] = $strEmail;
-							break;
-					}
-					break;
-
-				// Label tags
-				case 'label':
-					$keys = explode(':', $elements[1]);
-
-					if (count($keys) < 2)
-					{
-						$arrCache[$strTag] = '';
-						break;
-					}
-
-					$file = $keys[0];
-
-					// Map the key (see #7217)
-					switch ($file)
-					{
-						case 'CNT':
-							$file = 'countries';
-							break;
-
-						case 'LNG':
-							$file = 'languages';
-							break;
-
-						case 'MOD':
-						case 'FMD':
-							$file = 'modules';
-							break;
-
-						case 'FFL':
-							$file = 'tl_form_field';
-							break;
-
-						case 'CACHE':
-							$file = 'tl_page';
-							break;
-
-						case 'XPL':
-							$file = 'explain';
-							break;
-
-						case 'XPT':
-							$file = 'exception';
-							break;
-					}
-
-					\System::loadLanguageFile($file);
-
-					if (count($keys) == 2)
-					{
-						$arrCache[$strTag] = $GLOBALS['TL_LANG'][$keys[0]][$keys[1]];
-					}
-					else
-					{
-						$arrCache[$strTag] = $GLOBALS['TL_LANG'][$keys[0]][$keys[1]][$keys[2]];
-					}
-					break;
-
-				// Front end user
-				case 'user':
-					if (FE_USER_LOGGED_IN)
-					{
-						$this->import('FrontendUser', 'User');
-						$value = $this->User->$elements[1];
-
-						if ($value == '')
-						{
-							$arrCache[$strTag] = $value;
-							break;
-						}
-
-						$this->loadDataContainer('tl_member');
-
-						if ($GLOBALS['TL_DCA']['tl_member']['fields'][$elements[1]]['inputType'] == 'password')
-						{
-							$arrCache[$strTag] = '';
-							break;
-						}
-
-						$value = deserialize($value);
-						$rgxp = $GLOBALS['TL_DCA']['tl_member']['fields'][$elements[1]]['eval']['rgxp'];
-						$opts = $GLOBALS['TL_DCA']['tl_member']['fields'][$elements[1]]['options'];
-						$rfrc = $GLOBALS['TL_DCA']['tl_member']['fields'][$elements[1]]['reference'];
-
-						if ($rgxp == 'date')
-						{
-							$arrCache[$strTag] = \Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $value);
-						}
-						elseif ($rgxp == 'time')
-						{
-							$arrCache[$strTag] = \Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $value);
-						}
-						elseif ($rgxp == 'datim')
-						{
-							$arrCache[$strTag] = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $value);
-						}
-						elseif (is_array($value))
-						{
-							$arrCache[$strTag] = implode(', ', $value);
-						}
-						elseif (is_array($opts) && array_is_assoc($opts))
-						{
-							$arrCache[$strTag] = isset($opts[$value]) ? $opts[$value] : $value;
-						}
-						elseif (is_array($rfrc))
-						{
-							$arrCache[$strTag] = isset($rfrc[$value]) ? ((is_array($rfrc[$value])) ? $rfrc[$value][0] : $rfrc[$value]) : $value;
-						}
-						else
-						{
-							$arrCache[$strTag] = $value;
-						}
-
-						// Convert special characters (see #1890)
-						$arrCache[$strTag] = specialchars($arrCache[$strTag]);
-					}
-					break;
-
-				// Link
-				case 'link':
-				case 'link_open':
-				case 'link_url':
-				case 'link_title':
-				case 'link_target':
-					$strTarget = null;
-
-					// Back link
-					if ($elements[1] == 'back')
-					{
-						$strUrl = 'javascript:history.go(-1)';
-						$strTitle = $GLOBALS['TL_LANG']['MSC']['goBack'];
-
-						// No language files if the page is cached
-						if (!strlen($strTitle))
-						{
-							$strTitle = 'Go back';
-						}
-
-						$strName = $strTitle;
-					}
-
-					// External links
-					elseif (strncmp($elements[1], 'http://', 7) === 0 || strncmp($elements[1], 'https://', 8) === 0)
-					{
-						$strUrl = $elements[1];
-						$strTitle = $elements[1];
-						$strName = str_replace(array('http://', 'https://'), '', $elements[1]);
-					}
-
-					// Regular link
-					else
-					{
-						// User login page
-						if ($elements[1] == 'login')
-						{
-							if (!FE_USER_LOGGED_IN)
-							{
-								break;
-							}
-
-							$this->import('FrontendUser', 'User');
-							$elements[1] = $this->User->loginPage;
-						}
-
-						$objNextPage = \PageModel::findByIdOrAlias($elements[1]);
-
-						if ($objNextPage === null)
-						{
-							break;
-						}
-
-						// Page type specific settings (thanks to Andreas Schempp)
-						switch ($objNextPage->type)
-						{
-							case 'redirect':
-								$strUrl = $this->replaceInsertTags($objNextPage->url); // see #6765
-
-								if (strncasecmp($strUrl, 'mailto:', 7) === 0)
-								{
-									$strUrl = \String::encodeEmail($strUrl);
-								}
-								break;
-
-							case 'forward':
-								if ($objNextPage->jumpTo)
-								{
-									$objNext = $objNextPage->getRelated('jumpTo');
-								}
-								else
-								{
-									$objNext = \PageModel::findFirstPublishedRegularByPid($objNextPage->id);
-								}
-
-								if ($objNext !== null)
-								{
-									$strForceLang = null;
-									$objNext->loadDetails();
-
-									// Check the target page language (see #4706)
-									if ($GLOBALS['TL_CONFIG']['addLanguageToUrl'])
-									{
-										$strForceLang = $objNext->language;
-									}
-
-									$strUrl = $this->generateFrontendUrl($objNext->row(), null, $strForceLang);
-
-									// Add the domain if it differs from the current one (see #3765)
-									if ($objNext->domain != '' && $objNext->domain != \Environment::get('host'))
-									{
-										$strUrl = ($objNext->rootUseSSL ? 'https://' : 'http://') . $objNext->domain . TL_PATH . '/' . $strUrl;
-									}
-									break;
-								}
-								// DO NOT ADD A break; STATEMENT
-
-							default:
-								$strForceLang = null;
-								$objNextPage->loadDetails();
-
-								// Check the target page language (see #4706, #5465)
-								if ($GLOBALS['TL_CONFIG']['addLanguageToUrl'])
-								{
-									$strForceLang = $objNextPage->language;
-								}
-
-								$strUrl = $this->generateFrontendUrl($objNextPage->row(), null, $strForceLang);
-
-								// Add the domain if it differs from the current one (see #3765)
-								if ($objNextPage->domain != '' && $objNextPage->domain != \Environment::get('host'))
-								{
-									$strUrl = ($objNext->rootUseSSL ? 'https://' : 'http://') . $objNextPage->domain . TL_PATH . '/' . $strUrl;
-								}
-								break;
-						}
-
-						$strName = $objNextPage->title;
-						$strTarget = $objNextPage->target ? (($objPage->outputFormat == 'xhtml') ? LINK_NEW_WINDOW : ' target="_blank"') : '';
-						$strTitle = $objNextPage->pageTitle ?: $objNextPage->title;
-					}
-
-					// Replace the tag
-					switch (strtolower($elements[0]))
-					{
-						case 'link':
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s"%s>%s</a>', $strUrl, specialchars($strTitle), $strTarget, specialchars($strName));
-							break;
-
-						case 'link_open':
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s"%s>', $strUrl, specialchars($strTitle), $strTarget);
-							break;
-
-						case 'link_url':
-							$arrCache[$strTag] = $strUrl;
-							break;
-
-						case 'link_title':
-							$arrCache[$strTag] = specialchars($strTitle);
-							break;
-
-						case 'link_target':
-							$arrCache[$strTag] = $strTarget;
-							break;
-					}
-					break;
-
-				// Closing link tag
-				case 'link_close':
-					$arrCache[$strTag] = '</a>';
-					break;
-
-				// Insert article
-				case 'insert_article':
-					if (($strOutput = $this->getArticle($elements[1], false, true)) !== false)
-					{
-						$arrCache[$strTag] = $this->replaceInsertTags(ltrim($strOutput), $blnCache);
-					}
-					else
-					{
-						$arrCache[$strTag] = '<p class="error">' . sprintf($GLOBALS['TL_LANG']['MSC']['invalidPage'], $elements[1]) . '</p>';
-					}
-					break;
-
-				// Insert content element
-				case 'insert_content':
-					$arrCache[$strTag] = $this->replaceInsertTags($this->getContentElement($elements[1]), $blnCache);
-					break;
-
-				// Insert module
-				case 'insert_module':
-					$arrCache[$strTag] = $this->replaceInsertTags($this->getFrontendModule($elements[1]), $blnCache);
-					break;
-
-				// Insert form
-				case 'insert_form':
-					$arrCache[$strTag] = $this->replaceInsertTags($this->getForm($elements[1]), $blnCache);
-					break;
-
-				// Article
-				case 'article':
-				case 'article_open':
-				case 'article_url':
-				case 'article_title':
-					if (($objArticle = \ArticleModel::findByIdOrAlias($elements[1])) === null || ($objPid = $objArticle->getRelated('pid')) === null)
-					{
-						break;
-					}
-
-					$strUrl = $this->generateFrontendUrl($objPid->row(), '/articles/' . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && strlen($objArticle->alias)) ? $objArticle->alias : $objArticle->id));
-
-					// Replace the tag
-					switch (strtolower($elements[0]))
-					{
-						case 'article':
-							$strLink = specialchars($objArticle->title);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
-							break;
-
-						case 'article_open':
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">', $strUrl, specialchars($objArticle->title));
-							break;
-
-						case 'article_url':
-							$arrCache[$strTag] = $strUrl;
-							break;
-
-						case 'article_title':
-							$arrCache[$strTag] = specialchars($objArticle->title);
-							break;
-					}
-					break;
-
-				// FAQ
-				case 'faq':
-				case 'faq_open':
-				case 'faq_url':
-				case 'faq_title':
-					if (($objFaq = \FaqModel::findByIdOrAlias($elements[1])) === null || ($objPid = $objFaq->getRelated('pid')) === null || ($objJumpTo = $objPid->getRelated('jumpTo')) === null)
-					{
-						break;
-					}
-
-					$strUrl = $this->generateFrontendUrl($objJumpTo->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/' : '/items/') . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objFaq->alias != '') ? $objFaq->alias : $objFaq->id));
-
-					// Replace the tag
-					switch (strtolower($elements[0]))
-					{
-						case 'faq':
-							$strLink = specialchars($objFaq->question);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
-							break;
-
-						case 'faq_open':
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">', $strUrl, specialchars($objFaq->question));
-							break;
-
-						case 'faq_url':
-							$arrCache[$strTag] = $strUrl;
-							break;
-
-						case 'faq_title':
-							$arrCache[$strTag] = specialchars($objFaq->question);
-							break;
-					}
-					break;
-
-				// News
-				case 'news':
-				case 'news_open':
-				case 'news_url':
-				case 'news_title':
-					if (($objNews = \NewsModel::findByIdOrAlias($elements[1])) === null)
-					{
-						break;
-					}
-
-					$strUrl = '';
-
-					if ($objNews->source == 'external')
-					{
-						$strUrl = $objNews->url;
-					}
-					elseif ($objNews->source == 'internal')
-					{
-						if (($objJumpTo = $objNews->getRelated('jumpTo')) !== null)
-						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row());
-						}
-					}
-					elseif ($objNews->source == 'article')
-					{
-						if (($objArticle = \ArticleModel::findByPk($objNews->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
-						{
-							$strUrl = $this->generateFrontendUrl($objPid->row(), '/articles/' . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id));
-						}
-					}
-					else
-					{
-						if (($objArchive = $objNews->getRelated('pid')) !== null && ($objJumpTo = $objArchive->getRelated('jumpTo')) !== null)
-						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/' : '/items/') . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objNews->alias != '') ? $objNews->alias : $objNews->id));
-						}
-					}
-
-					// Replace the tag
-					switch (strtolower($elements[0]))
-					{
-						case 'news':
-							$strLink = specialchars($objNews->headline);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
-							break;
-
-						case 'news_open':
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">', $strUrl, specialchars($objNews->headline));
-							break;
-
-						case 'news_url':
-							$arrCache[$strTag] = $strUrl;
-							break;
-
-						case 'news_title':
-							$arrCache[$strTag] = specialchars($objNews->headline);
-							break;
-					}
-					break;
-
-				// Events
-				case 'event':
-				case 'event_open':
-				case 'event_url':
-				case 'event_title':
-					if (($objEvent = \CalendarEventsModel::findByIdOrAlias($elements[1])) === null)
-					{
-						break;
-					}
-
-					$strUrl = '';
-
-					if ($objEvent->source == 'external')
-					{
-						$strUrl = $objEvent->url;
-					}
-					elseif ($objEvent->source == 'internal')
-					{
-						if (($objJumpTo = $objEvent->getRelated('jumpTo')) !== null)
-						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row());
-						}
-					}
-					elseif ($objEvent->source == 'article')
-					{
-						if (($objArticle = \ArticleModel::findByPk($objEvent->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
-						{
-							$strUrl = $this->generateFrontendUrl($objPid->row(), '/articles/' . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id));
-						}
-					}
-					else
-					{
-						if (($objCalendar = $objEvent->getRelated('pid')) !== null && ($objJumpTo = $objCalendar->getRelated('jumpTo')) !== null)
-						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/' : '/events/') . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objEvent->alias != '') ? $objEvent->alias : $objEvent->id));
-						}
-					}
-
-					// Replace the tag
-					switch (strtolower($elements[0]))
-					{
-						case 'event':
-							$strLink = specialchars($objEvent->title);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
-							break;
-
-						case 'event_open':
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">', $strUrl, specialchars($objEvent->title));
-							break;
-
-						case 'event_url':
-							$arrCache[$strTag] = $strUrl;
-							break;
-
-						case 'event_title':
-							$arrCache[$strTag] = specialchars($objEvent->title);
-							break;
-					}
-					break;
-
-				// Article teaser
-				case 'article_teaser':
-					$objTeaser = \ArticleModel::findByIdOrAlias($elements[1]);
-
-					if ($objTeaser !== null)
-					{
-						if ($objPage->outputFormat == 'xhtml')
-						{
-							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
-						}
-						else
-						{
-							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
-						}
-					}
-					break;
-
-				// News teaser
-				case 'news_teaser':
-					$objTeaser = \NewsModel::findByIdOrAlias($elements[1]);
-
-					if ($objTeaser !== null)
-					{
-						if ($objPage->outputFormat == 'xhtml')
-						{
-							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
-						}
-						else
-						{
-							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
-						}
-					}
-					break;
-
-				// Event teaser
-				case 'event_teaser':
-					$objTeaser = \CalendarEventsModel::findByIdOrAlias($elements[1]);
-
-					if ($objTeaser !== null)
-					{
-						if ($objPage->outputFormat == 'xhtml')
-						{
-							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
-						}
-						else
-						{
-							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
-						}
-					}
-					break;
-
-				// News feed URL
-				case 'news_feed':
-					$objFeed = \NewsFeedModel::findByPk($elements[1]);
-
-					if ($objFeed !== null)
-					{
-						$arrCache[$strTag] = $objFeed->feedBase . 'share/' . $objFeed->alias . '.xml';
-					}
-					break;
-
-				// Calendar feed URL
-				case 'calendar_feed':
-					$objFeed = \CalendarFeedModel::findByPk($elements[1]);
-
-					if ($objFeed !== null)
-					{
-						$arrCache[$strTag] = $objFeed->feedBase . 'share/' . $objFeed->alias . '.xml';
-					}
-					break;
-
-				// Last update
-				case 'last_update':
-					$strQuery = "SELECT MAX(tstamp) AS tc";
-
-					if (in_array('news', \ModuleLoader::getActive()))
-					{
-						$strQuery .= ", (SELECT MAX(tstamp) FROM tl_news) AS tn";
-					}
-
-					if (in_array('calendar', \ModuleLoader::getActive()))
-					{
-						$strQuery .= ", (SELECT MAX(tstamp) FROM tl_calendar_events) AS te";
-					}
-
-					$strQuery .= " FROM tl_content";
-					$objUpdate = \Database::getInstance()->query($strQuery);
-
-					if ($objUpdate->numRows)
-					{
-						$arrCache[$strTag] = \Date::parse($elements[1] ?: $GLOBALS['TL_CONFIG']['datimFormat'], max($objUpdate->tc, $objUpdate->tn, $objUpdate->te));
-					}
-					break;
-
-				// Version
-				case 'version':
-					$arrCache[$strTag] = VERSION . '.' . BUILD;
-					break;
-
-				// Request token
-				case 'request_token':
-					$arrCache[$strTag] = REQUEST_TOKEN;
-					break;
-
-				// POST data
-				case 'post':
-					$arrCache[$strTag] = \Input::post($elements[1]);
-					break;
-
-				// Mobile/desktop toggle (see #6469)
-				case 'toggle_view':
-					$strUrl = ampersand(\Environment::get('request'));
-					$strGlue = (strpos($strUrl, '?') === false) ? '?' : '&amp;';
-
-					if (\Input::cookie('TL_VIEW') == 'mobile' || (\Environment::get('agent')->mobile && \Input::cookie('TL_VIEW') != 'desktop'))
-					{
-						$arrCache[$strTag] = '<a href="' . $strUrl . $strGlue . 'toggle_view=desktop" class="toggle_desktop" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['toggleDesktop'][1]) . '">' . $GLOBALS['TL_LANG']['MSC']['toggleDesktop'][0] . '</a>';
-					}
-					else
-					{
-						$arrCache[$strTag] = '<a href="' . $strUrl . $strGlue . 'toggle_view=mobile" class="toggle_mobile" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['toggleMobile'][1]) . '">' . $GLOBALS['TL_LANG']['MSC']['toggleMobile'][0] . '</a>';
-					}
-					break;
-
-				// Conditional tags (if)
-				case 'iflng':
-					if ($elements[1] != '' && $elements[1] != $objPage->language)
-					{
-						for (; $_rit<$_cnt; $_rit+=3)
-						{
-							if ($tags[$_rit+1] == 'iflng' || $tags[$_rit+1] == 'iflng::' . $objPage->language)
-							{
-								break;
-							}
-						}
-					}
-					unset($arrCache[$strTag]);
-					break;
-
-				// Conditional tags (if not)
-				case 'ifnlng':
-					if ($elements[1] != '')
-					{
-						$langs = trimsplit(',', $elements[1]);
-
-						if (in_array($objPage->language, $langs))
-						{
-							for (; $_rit<$_cnt; $_rit+=3)
-							{
-								if ($tags[$_rit+1] == 'ifnlng')
-								{
-									break;
-								}
-							}
-						}
-					}
-					unset($arrCache[$strTag]);
-					break;
-
-				// Environment
-				case 'env':
-					switch ($elements[1])
-					{
-						case 'host':
-							$arrCache[$strTag] = \Idna::decode(\Environment::get('host'));
-							break;
-
-						case 'http_host':
-							$arrCache[$strTag] = \Idna::decode(\Environment::get('httpHost'));
-							break;
-
-						case 'url':
-							$arrCache[$strTag] = \Idna::decode(\Environment::get('url'));
-							break;
-
-						case 'path':
-							$arrCache[$strTag] = \Idna::decode(\Environment::get('base'));
-							break;
-
-						case 'request':
-							$arrCache[$strTag] = \Environment::get('indexFreeRequest');
-							break;
-
-						case 'ip':
-							$arrCache[$strTag] = \Environment::get('ip');
-							break;
-
-						case 'referer':
-							$arrCache[$strTag] = $this->getReferer(true);
-							break;
-
-						case 'files_url':
-							$arrCache[$strTag] = TL_FILES_URL;
-							break;
-
-						case 'assets_url':
-						case 'plugins_url':
-						case 'script_url':
-							$arrCache[$strTag] = TL_ASSETS_URL;
-							break;
-					}
-					break;
-
-				// Page
-				case 'page':
-					if ($elements[1] == 'pageTitle' && $objPage->pageTitle == '')
-					{
-						$elements[1] = 'title';
-					}
-					elseif ($elements[1] == 'parentPageTitle' && $objPage->parentPageTitle == '')
-					{
-						$elements[1] = 'parentTitle';
-					}
-					elseif ($elements[1] == 'mainPageTitle' && $objPage->mainPageTitle == '')
-					{
-						$elements[1] = 'mainTitle';
-					}
-
-					// Do not use specialchars() here (see #4687)
-					$arrCache[$strTag] = $objPage->{$elements[1]};
-					break;
-
-				// User agent
-				case 'ua':
-					$ua = \Environment::get('agent');
-
-					if ($elements[1] != '')
-					{
-						$arrCache[$strTag] = $ua->{$elements[1]};
-					}
-					else
-					{
-						$arrCache[$strTag] = '';
-					}
-					break;
-
-				// Acronyms
-				case 'acronym':
-					if ($objPage->outputFormat == 'xhtml')
-					{
-						if ($elements[1] != '')
-						{
-							$arrCache[$strTag] = '<acronym title="'. $elements[1] .'">';
-						}
-						else
-						{
-							$arrCache[$strTag] = '</acronym>';
-						}
-						break;
-					}
-					// NO break;
-
-				// Abbreviations
-				case 'abbr':
-					if ($elements[1] != '')
-					{
-						$arrCache[$strTag] = '<abbr title="'. $elements[1] .'">';
-					}
-					else
-					{
-						$arrCache[$strTag] = '</abbr>';
-					}
-					break;
-
-				// Images
-				case 'image':
-					$width = null;
-					$height = null;
-					$alt = '';
-					$class = '';
-					$rel = '';
-					$strFile = $elements[1];
-					$mode = '';
-
-					// Take arguments
-					if (strpos($elements[1], '?') !== false)
-					{
-						$arrChunks = explode('?', urldecode($elements[1]), 2);
-						$strSource = \String::decodeEntities($arrChunks[1]);
-						$strSource = str_replace('[&]', '&', $strSource);
-						$arrParams = explode('&', $strSource);
-
-						foreach ($arrParams as $strParam)
-						{
-							list($key, $value) = explode('=', $strParam);
-
-							switch ($key)
-							{
-								case 'width':
-									$width = $value;
-									break;
-
-								case 'height':
-									$height = $value;
-									break;
-
-								case 'alt':
-									$alt = specialchars($value);
-									break;
-
-								case 'class':
-									$class = $value;
-									break;
-
-								case 'rel':
-									$rel = $value;
-									break;
-
-								case 'mode':
-									$mode = $value;
-									break;
-							}
-						}
-
-						$strFile = $arrChunks[0];
-					}
-
-					if (\Validator::isUuid($strFile))
-					{
-						// Handle UUIDs
-						$objFile = \FilesModel::findByUuid($strFile);
-
-						if ($objFile === null)
-						{
-							$arrCache[$strTag] = '';
-							break;
-						}
-
-						$strFile = $objFile->path;
-					}
-					elseif (is_numeric($strFile))
-					{
-						// Handle numeric IDs (see #4805)
-						$objFile = \FilesModel::findByPk($strFile);
-
-						if ($objFile === null)
-						{
-							$arrCache[$strTag] = '';
-							break;
-						}
-
-						$strFile = $objFile->path;
-					}
-					else
-					{
-						// Check the path
-						if (\Validator::isInsecurePath($strFile))
-						{
-							throw new \RuntimeException('Invalid path ' . $strFile);
-						}
-					}
-
-					// Check the maximum image width
-					if ($GLOBALS['TL_CONFIG']['maxImageWidth'] > 0 && $width > $GLOBALS['TL_CONFIG']['maxImageWidth'])
-					{
-						$width = $GLOBALS['TL_CONFIG']['maxImageWidth'];
-						$height = null;
-					}
-
-					// Generate the thumbnail image
-					try
-					{
-						$src = \Image::get($strFile, $width, $height, $mode);
-						$dimensions = '';
-
-						// Add the image dimensions
-						if (($imgSize = @getimagesize(TL_ROOT .'/'. rawurldecode($src))) !== false)
-						{
-							$dimensions = $imgSize[3];
-						}
-
-						// Generate the HTML markup
-						if ($rel != '')
-						{
-							if (strncmp($rel, 'lightbox', 8) !== 0 || $objPage->outputFormat == 'xhtml')
-							{
-								$attribute = ' rel="' . $rel . '"';
-							}
-							else
-							{
-								$attribute = ' data-lightbox="' . substr($rel, 8) . '"';
-							}
-
-							$arrCache[$strTag] = '<a href="' . TL_FILES_URL . $strFile . '"' . (($alt != '') ? ' title="' . $alt . '"' : '') . $attribute . '><img src="' . TL_FILES_URL . $src . '" ' . $dimensions . ' alt="' . $alt . '"' . (($class != '') ? ' class="' . $class . '"' : '') . (($objPage->outputFormat == 'xhtml') ? ' />' : '>') . '</a>';
-						}
-						else
-						{
-							$arrCache[$strTag] = '<img src="' . TL_FILES_URL . $src . '" ' . $dimensions . ' alt="' . $alt . '"' . (($class != '') ? ' class="' . $class . '"' : '') . (($objPage->outputFormat == 'xhtml') ? ' />' : '>');
-						}
-					}
-					catch (\Exception $e)
-					{
-						$arrCache[$strTag] = '';
-					}
-					break;
-
-				// Files (UUID or template path)
-				case 'file':
-					if (\Validator::isUuid($elements[1]))
-					{
-						$objFile = \FilesModel::findByUuid($elements[1]);
-
-						if ($objFile !== null)
-						{
-							$arrCache[$strTag] = $objFile->path;
-							break;
-						}
-					}
-
-					$arrGet = $_GET;
-					\Input::resetCache();
-					$strFile = $elements[1];
-
-					// Take arguments and add them to the $_GET array
-					if (strpos($elements[1], '?') !== false)
-					{
-						$arrChunks = explode('?', urldecode($elements[1]));
-						$strSource = \String::decodeEntities($arrChunks[1]);
-						$strSource = str_replace('[&]', '&', $strSource);
-						$arrParams = explode('&', $strSource);
-
-						foreach ($arrParams as $strParam)
-						{
-							$arrParam = explode('=', $strParam);
-							$_GET[$arrParam[0]] = $arrParam[1];
-						}
-
-						$strFile = $arrChunks[0];
-					}
-
-					// Check the path
-					if (\Validator::isInsecurePath($strFile))
-					{
-						throw new \RuntimeException('Invalid path ' . $strFile);
-					}
-
-					// Include .php, .tpl, .xhtml and .html5 files
-					if (preg_match('/\.(php|tpl|xhtml|html5)$/', $strFile) && file_exists(TL_ROOT . '/templates/' . $strFile))
-					{
-						ob_start();
-						include TL_ROOT . '/templates/' . $strFile;
-						$arrCache[$strTag] = ob_get_contents();
-						ob_end_clean();
-					}
-
-					$_GET = $arrGet;
-					\Input::resetCache();
-					break;
-
-				// HOOK: pass unknown tags to callback functions
-				default:
-					if (isset($GLOBALS['TL_HOOKS']['replaceInsertTags']) && is_array($GLOBALS['TL_HOOKS']['replaceInsertTags']))
-					{
-						foreach ($GLOBALS['TL_HOOKS']['replaceInsertTags'] as $callback)
-						{
-							$this->import($callback[0]);
-							$varValue = $this->$callback[0]->$callback[1]($tag, $blnCache, $arrCache[$strTag], $flags, $tags, $arrCache, $_rit, $_cnt); // see #6672
-
-							// Replace the tag and stop the loop
-							if ($varValue !== false)
-							{
-								$arrCache[$strTag] = $varValue;
-								break;
-							}
-						}
-					}
-					if ($GLOBALS['TL_CONFIG']['debugMode'])
-					{
-						$GLOBALS['TL_DEBUG']['unknown_insert_tags'][] = $strTag;
-					}
-					break;
-			}
-
-			// Handle the flags
-			if (!empty($flags))
-			{
-				foreach ($flags as $flag)
-				{
-					switch ($flag)
-					{
-						case 'addslashes':
-						case 'stripslashes':
-						case 'standardize':
-						case 'ampersand':
-						case 'specialchars':
-						case 'nl2br':
-						case 'nl2br_pre':
-						case 'strtolower':
-						case 'utf8_strtolower':
-						case 'strtoupper':
-						case 'utf8_strtoupper':
-						case 'ucfirst':
-						case 'lcfirst':
-						case 'ucwords':
-						case 'trim':
-						case 'rtrim':
-						case 'ltrim':
-						case 'utf8_romanize':
-						case 'strrev':
-							$arrCache[$strTag] = $flag($arrCache[$strTag]);
-							break;
-
-						case 'encodeEmail':
-						case 'decodeEntities':
-							$arrCache[$strTag] = \String::$flag($arrCache[$strTag]);
-							break;
-
-						case 'number_format':
-							$arrCache[$strTag] = \System::getFormattedNumber($arrCache[$strTag], 0);
-							break;
-
-						case 'currency_format':
-							$arrCache[$strTag] = \System::getFormattedNumber($arrCache[$strTag], 2);
-							break;
-
-						case 'readable_size':
-							$arrCache[$strTag] = \System::getReadableSize($arrCache[$strTag]);
-							break;
-
-						// HOOK: pass unknown flags to callback functions
-						default:
-							if (isset($GLOBALS['TL_HOOKS']['insertTagFlags']) && is_array($GLOBALS['TL_HOOKS']['insertTagFlags']))
-							{
-								foreach ($GLOBALS['TL_HOOKS']['insertTagFlags'] as $callback)
-								{
-									$this->import($callback[0]);
-									$varValue = $this->$callback[0]->$callback[1]($flag, $tag, $arrCache[$strTag], $flags, $blnCache, $tags, $arrCache, $_rit, $_cnt); // see #5806
-
-									// Replace the tag and stop the loop
-									if ($varValue !== false)
-									{
-										$arrCache[$strTag] = $varValue;
-										break;
-									}
-								}
-							}
-							if ($GLOBALS['TL_CONFIG']['debugMode'])
-							{
-								$GLOBALS['TL_DEBUG']['unknown_insert_tag_flags'][] = $flag;
-							}
-							break;
-					}
-				}
-			}
-
-			$strBuffer .= $arrCache[$strTag];
-		}
-
-		return \String::restoreBasicEntities($strBuffer);
+		return $objIt->replace($strBuffer, $blnCache);
 	}
 
 
@@ -1820,11 +705,11 @@ abstract class Controller extends \System
 			}
 		}
 
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		$arrReplace = array();
 		$blnXhtml = ($objPage->outputFormat == 'xhtml');
-		$strTagEnding = $blnXhtml ? ' />' : '>';
 		$strScripts = '';
 
 		// Add the internal jQuery scripts
@@ -1870,16 +755,14 @@ abstract class Controller extends \System
 				$objCombiner->add($script);
 			}
 
-			$strScripts .= "\n" . '<script' . ($blnXhtml ? ' type="text/javascript"' : '') . ' src="' . $objCombiner->getCombinedFile() . '"></script>';
+			$strScripts .= "\n" . \Template::generateScriptTag($objCombiner->getCombinedFile(), $blnXhtml);
+			$strScripts .= "\n" . \Template::generateInlineScript('SyntaxHighlighter.defaults.toolbar=false;SyntaxHighlighter.all()', $blnXhtml) . "\n";
+		}
 
-			if ($blnXhtml)
-			{
-				$strScripts .= "\n" . '<script type="text/javascript">' . "\n/* <![CDATA[ */\n" . 'SyntaxHighlighter.defaults.toolbar=false;SyntaxHighlighter.all()' . "\n/* ]]> */\n" . '</script>' . "\n";
-			}
-			else
-			{
-				$strScripts .= "\n" . '<script>SyntaxHighlighter.defaults.toolbar=false;SyntaxHighlighter.all()</script>' . "\n";
-			}
+		// Command scheduler
+		if (!\Config::get('disableCron'))
+		{
+			$strScripts .= "\n" . \Template::generateInlineScript('setTimeout(function(){var e=function(e,t){try{var n=new XMLHttpRequest}catch(r){return}n.open("GET",e,!0),n.onreadystatechange=function(){this.readyState==4&&this.status==200&&typeof t=="function"&&t(this.responseText)},n.send()},t="system/cron/cron.";e(t+"txt",function(n){parseInt(n||0)<Math.round(+(new Date)/1e3)-' . \Frontend::getCronTimeout() . '&&e(t+"php")})},5e3);', $blnXhtml) . "\n";
 		}
 
 		$arrReplace['[[TL_BODY]]'] = $strScripts;
@@ -1901,15 +784,15 @@ abstract class Controller extends \System
 		{
 			foreach (array_unique($GLOBALS['TL_CSS']) as $stylesheet)
 			{
-				list($stylesheet, $media, $mode) = explode('|', $stylesheet);
+				$options = \String::resolveFlaggedUrl($stylesheet);
 
-				if ($mode == 'static')
+				if ($options->static)
 				{
-					$objCombiner->add($stylesheet, filemtime(TL_ROOT . '/' . $stylesheet), $media);
+					$objCombiner->add($stylesheet, filemtime(TL_ROOT . '/' . $stylesheet), $options->media);
 				}
 				else
 				{
-					$strScripts .= '<link' . ($blnXhtml ? ' type="text/css"' : '') . ' rel="stylesheet" href="' . static::addStaticUrlTo($stylesheet) . '"' . (($media != '' && $media != 'all') ? ' media="' . $media . '"' : '') . $strTagEnding . "\n";
+					$strScripts .= \Template::generateStyleTag(static::addStaticUrlTo($stylesheet), $options->media, $blnXhtml) . "\n";
 				}
 			}
 		}
@@ -1919,20 +802,20 @@ abstract class Controller extends \System
 		{
 			foreach (array_unique($GLOBALS['TL_USER_CSS']) as $stylesheet)
 			{
-				list($stylesheet, $media, $mode, $version) = explode('|', $stylesheet);
+				$options = \String::resolveFlaggedUrl($stylesheet);
 
-				if (!$version)
+				if ($options->static)
 				{
-					$version = filemtime(TL_ROOT . '/' . $stylesheet);
-				}
+					if ($options->mtime === null)
+					{
+						$options->mtime = filemtime(TL_ROOT . '/' . $stylesheet);
+					}
 
-				if ($mode == 'static')
-				{
-					$objCombiner->add($stylesheet, $version, $media);
+					$objCombiner->add($stylesheet, $options->mtime, $options->media);
 				}
 				else
 				{
-					$strScripts .= '<link' . ($blnXhtml ? ' type="text/css"' : '') . ' rel="stylesheet" href="' . static::addStaticUrlTo($stylesheet) . '"' . (($media != '' && $media != 'all') ? ' media="' . $media . '"' : '') . $strTagEnding . "\n";
+					$strScripts .= \Template::generateStyleTag(static::addStaticUrlTo($stylesheet), $options->media, $blnXhtml) . "\n";
 				}
 			}
 		}
@@ -1940,7 +823,7 @@ abstract class Controller extends \System
 		// Create the aggregated style sheet
 		if ($objCombiner->hasEntries())
 		{
-			$strScripts .= '<link' . ($blnXhtml ? ' type="text/css"' : '') . ' rel="stylesheet" href="' . $objCombiner->getCombinedFile() . '"' . $strTagEnding . "\n";
+			$strScripts .= \Template::generateStyleTag($objCombiner->getCombinedFile(), 'all', $blnXhtml) . "\n";
 		}
 
 		$arrReplace['[[TL_CSS]]'] = $strScripts;
@@ -1950,25 +833,38 @@ abstract class Controller extends \System
 		if (!empty($GLOBALS['TL_JAVASCRIPT']) && is_array($GLOBALS['TL_JAVASCRIPT']))
 		{
 			$objCombiner = new \Combiner();
+			$objCombinerAsync = new \Combiner();
 
 			foreach (array_unique($GLOBALS['TL_JAVASCRIPT']) as $javascript)
 			{
-				list($javascript, $mode) = explode('|', $javascript);
+				$options = \String::resolveFlaggedUrl($javascript);
 
-				if ($mode == 'static')
+				if ($options->static)
 				{
-					$objCombiner->add($javascript, filemtime(TL_ROOT . '/' . $javascript));
+					if ($options->async)
+					{
+						$objCombinerAsync->add($javascript, filemtime(TL_ROOT . '/' . $javascript));
+					}
+					else
+					{
+						$objCombiner->add($javascript, filemtime(TL_ROOT . '/' . $javascript));
+					}
 				}
 				else
 				{
-					$strScripts .= '<script' . ($blnXhtml ? ' type="text/javascript"' : '') . ' src="' . static::addStaticUrlTo($javascript) . '"></script>' . "\n";
+					$strScripts .= \Template::generateScriptTag(static::addStaticUrlTo($javascript), $blnXhtml, $options->async) . "\n";
 				}
 			}
 
 			// Create the aggregated script and add it before the non-static scripts (see #4890)
 			if ($objCombiner->hasEntries())
 			{
-				$strScripts = '<script' . ($blnXhtml ? ' type="text/javascript"' : '') . ' src="' . $objCombiner->getCombinedFile() . '"></script>' . "\n" . $strScripts;
+				$strScripts = \Template::generateScriptTag($objCombiner->getCombinedFile(), $blnXhtml) . "\n" . $strScripts;
+			}
+
+			if ($objCombinerAsync->hasEntries())
+			{
+				$strScripts = \Template::generateScriptTag($objCombinerAsync->getCombinedFile(), $blnXhtml, true) . "\n" . $strScripts;
 			}
 		}
 
@@ -1982,6 +878,7 @@ abstract class Controller extends \System
 		}
 
 		$arrReplace['[[TL_HEAD]]'] = $strScripts;
+
 		return str_replace(array_keys($arrReplace), array_values($arrReplace), $strBuffer);
 	}
 
@@ -2048,10 +945,11 @@ abstract class Controller extends \System
 	 *
 	 * @param string  $strRequest The string to be added
 	 * @param boolean $blnAddRef  Add the referer ID
+	 * @param array   $arrUnset   An optional array of keys to unset
 	 *
 	 * @return string The new URL
 	 */
-	public static function addToUrl($strRequest, $blnAddRef=true)
+	public static function addToUrl($strRequest, $blnAddRef=true, $arrUnset=array())
 	{
 		$strRequest = preg_replace('/^&(amp;)?/i', '', $strRequest);
 
@@ -2065,14 +963,9 @@ abstract class Controller extends \System
 		// Overwrite existing parameters
 		foreach ($queries as $k=>$v)
 		{
-			if ($v == 'nb=1')
-			{
-				unset($queries[$k]);
-			}
+			list($key) = explode('=', $v);
 
-			$explode = explode('=', $v);
-
-			if (preg_match('/(^|&(amp;)?)' . preg_quote($explode[0], '/') . '=/i', $strRequest))
+			if (in_array($key, $arrUnset) || preg_match('/(^|&(amp;)?)' . preg_quote($key, '/') . '=/i', $strRequest))
 			{
 				unset($queries[$k]);
 			}
@@ -2085,7 +978,7 @@ abstract class Controller extends \System
 			$href .= implode('&amp;', $queries) . '&amp;';
 		}
 
-		return \Environment::get('script') . $href . str_replace(' ', '%20', $strRequest);
+		return TL_SCRIPT . $href . str_replace(' ', '%20', $strRequest);
 	}
 
 
@@ -2176,19 +1069,20 @@ abstract class Controller extends \System
 	/**
 	 * Generate an URL depending on the current rewriteURL setting
 	 *
-	 * @param array  $arrRow       An array of page parameters
-	 * @param string $strParams    An optional string of URL parameters
-	 * @param string $strForceLang Force a certain language
+	 * @param array   $arrRow       An array of page parameters
+	 * @param string  $strParams    An optional string of URL parameters
+	 * @param string  $strForceLang Force a certain language
+	 * @param boolean $blnFixDomain Check the domain of the target page and append it if necessary
 	 *
 	 * @return string An URL that can be used in the front end
 	 */
-	public static function generateFrontendUrl(array $arrRow, $strParams=null, $strForceLang=null)
+	public static function generateFrontendUrl(array $arrRow, $strParams=null, $strForceLang=null, $blnFixDomain=false)
 	{
-		if (!$GLOBALS['TL_CONFIG']['disableAlias'])
+		if (!\Config::get('disableAlias'))
 		{
 			$strLanguage = '';
 
-			if ($GLOBALS['TL_CONFIG']['addLanguageToUrl'])
+			if (\Config::get('addLanguageToUrl'))
 			{
 				if ($strForceLang != '')
 				{
@@ -2200,7 +1094,9 @@ abstract class Controller extends \System
 				}
 				elseif (TL_MODE == 'FE')
 				{
+					/** @var \PageModel $objPage */
 					global $objPage;
+
 					$strLanguage = $objPage->rootLanguage . '/';
 				}
 			}
@@ -2208,11 +1104,14 @@ abstract class Controller extends \System
 			// Correctly handle the "index" alias (see #3961)
 			if ($arrRow['alias'] == 'index' && $strParams == '')
 			{
-				$strUrl = ($GLOBALS['TL_CONFIG']['rewriteURL'] ? '' : 'index.php/') . $strLanguage;
+				if ($strLanguage != '') // see #7757
+				{
+					$strUrl = (\Config::get('rewriteURL') ? '' : 'index.php/') . $strLanguage;
+				}
 			}
 			else
 			{
-				$strUrl = ($GLOBALS['TL_CONFIG']['rewriteURL'] ? '' : 'index.php/') . $strLanguage . ($arrRow['alias'] ?: $arrRow['id']) . $strParams . $GLOBALS['TL_CONFIG']['urlSuffix'];
+				$strUrl = (\Config::get('rewriteURL') ? '' : 'index.php/') . $strLanguage . ($arrRow['alias'] ?: $arrRow['id']) . $strParams . \Config::get('urlSuffix');
 			}
 		}
 		else
@@ -2230,6 +1129,12 @@ abstract class Controller extends \System
 			}
 
 			$strUrl = 'index.php?id=' . $arrRow['id'] . $strRequest;
+		}
+
+		// Add the domain if it differs from the current one (see #3765 and #6927)
+		if ($blnFixDomain && $arrRow['domain'] != '' && $arrRow['domain'] != \Environment::get('host'))
+		{
+			$strUrl = ($arrRow['rootUseSSL'] ? 'https://' : 'http://') . $arrRow['domain'] . TL_PATH . '/' . $strUrl;
 		}
 
 		// HOOK: add custom logic
@@ -2304,7 +1209,7 @@ abstract class Controller extends \System
 		}
 
 		// Limit downloads to the files directory
-		if (!preg_match('@^' . preg_quote($GLOBALS['TL_CONFIG']['uploadPath'], '@') . '@i', $strFile))
+		if (!preg_match('@^' . preg_quote(\Config::get('uploadPath'), '@') . '@i', $strFile))
 		{
 			header('HTTP/1.1 404 Not Found');
 			die('Invalid path');
@@ -2318,7 +1223,7 @@ abstract class Controller extends \System
 		}
 
 		$objFile = new \File($strFile, true);
-		$arrAllowedTypes = trimsplit(',', strtolower($GLOBALS['TL_CONFIG']['allowedDownload']));
+		$arrAllowedTypes = trimsplit(',', strtolower(\Config::get('allowedDownload')));
 
 		// Check whether the file type is allowed to be downloaded
 		if (!in_array($objFile->extension, $arrAllowedTypes))
@@ -2344,53 +1249,13 @@ abstract class Controller extends \System
 	/**
 	 * Load a set of DCA files
 	 *
-	 * @param string  $strName    The table name
+	 * @param string  $strTable   The table name
 	 * @param boolean $blnNoCache If true, the cache will be bypassed
 	 */
-	public function loadDataContainer($strName, $blnNoCache=false)
+	public static function loadDataContainer($strTable, $blnNoCache=false)
 	{
-		// Return if the data has been loaded already
-		if (isset($GLOBALS['loadDataContainer'][$strName]) && !$blnNoCache)
-		{
-			return;
-		}
-
-		$GLOBALS['loadDataContainer'][$strName] = true; // see #6145
-		$strCacheFile = 'system/cache/dca/' . $strName . '.php';
-
-		// Try to load from cache
-		if (!$GLOBALS['TL_CONFIG']['bypassCache'] && file_exists(TL_ROOT . '/' . $strCacheFile))
-		{
-			include TL_ROOT . '/' . $strCacheFile;
-		}
-		else
-		{
-			foreach (\ModuleLoader::getActive() as $strModule)
-			{
-				$strFile = 'system/modules/' . $strModule . '/dca/' . $strName . '.php';
-
-				if (file_exists(TL_ROOT . '/' . $strFile))
-				{
-					include TL_ROOT . '/' . $strFile;
-				}
-			}
-		}
-
-		// HOOK: allow to load custom settings
-		if (isset($GLOBALS['TL_HOOKS']['loadDataContainer']) && is_array($GLOBALS['TL_HOOKS']['loadDataContainer']))
-		{
-			foreach ($GLOBALS['TL_HOOKS']['loadDataContainer'] as $callback)
-			{
-				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($strName);
-			}
-		}
-
-		// Local configuration file
-		if (file_exists(TL_ROOT . '/system/config/dcaconfig.php'))
-		{
-			include TL_ROOT . '/system/config/dcaconfig.php';
-		}
+		$loader = new \DcaLoader($strTable);
+		$loader->load($blnNoCache);
 	}
 
 
@@ -2417,15 +1282,12 @@ abstract class Controller extends \System
 			$varArticle = '/articles/' . $varArticle;
 		}
 
-		$strUrl = $this->generateFrontendUrl($objPage->row(), $varArticle, $objPage->language);
+		$strUrl = $this->generateFrontendUrl($objPage->row(), $varArticle, $objPage->language, true);
 
-		if ($objPage->domain != '' && $objPage->domain != \Environment::get('host'))
+		// Make sure the URL is absolute (see #4332)
+		if (strncmp($strUrl, 'http://', 7) !== 0 && strncmp($strUrl, 'https://', 8) !== 0)
 		{
-			$strUrl = ($objPage->rootUseSSL ? 'https://' : 'http://') . $objPage->domain . TL_PATH . '/' . $strUrl;
-		}
-		else
-		{
-			$strUrl = \Environment::get('base') . $strUrl; // see #4332
+			$strUrl = \Environment::get('base') . $strUrl;
 		}
 
 		if (!$blnReturn)
@@ -2553,14 +1415,25 @@ abstract class Controller extends \System
 	 */
 	public static function addImageToTemplate($objTemplate, $arrItem, $intMaxWidth=null, $strLightboxId=null)
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
 
+		try
+		{
+			$objFile = new \File($arrItem['singleSRC'], true);
+		}
+		catch (\Exception $e)
+		{
+			$objFile = new \stdClass();
+			$objFile->imageSize = false;
+		}
+
+		$imgSize = $objFile->imageSize;
 		$size = deserialize($arrItem['size']);
-		$imgSize = getimagesize(TL_ROOT .'/'. $arrItem['singleSRC']);
 
 		if ($intMaxWidth === null)
 		{
-			$intMaxWidth = (TL_MODE == 'BE') ? 320 : $GLOBALS['TL_CONFIG']['maxImageWidth'];
+			$intMaxWidth = (TL_MODE == 'BE') ? 320 : \Config::get('maxImageWidth');
 		}
 
 		$arrMargin = (TL_MODE == 'BE') ? array() : deserialize($arrItem['imagemargin']);
@@ -2599,14 +1472,35 @@ abstract class Controller extends \System
 			}
 		}
 
-		$src = \Image::get($arrItem['singleSRC'], $size[0], $size[1], $size[2]);
+		try
+		{
+			$src = \Image::create($arrItem['singleSRC'], $size)->executeResize()->getResizedPath();
+			$picture = \Picture::create($arrItem['singleSRC'], $size)->getTemplateData();
+
+			if ($src !== $arrItem['singleSRC'])
+			{
+				$objFile = new \File(rawurldecode($src), true);
+			}
+		}
+		catch (\Exception $e)
+		{
+			\System::log('Image "' . $arrItem['singleSRC'] . '" could not be processed: ' . $e->getMessage(), __METHOD__, TL_ERROR);
+
+			$src = '';
+			$picture = array('img'=>array('src'=>'', 'srcset'=>''), 'sources'=>array());
+		}
 
 		// Image dimensions
-		if (($imgSize = @getimagesize(TL_ROOT .'/'. rawurldecode($src))) !== false)
+		if (($imgSize = $objFile->imageSize) !== false)
 		{
 			$objTemplate->arrSize = $imgSize;
-			$objTemplate->imgSize = ' ' . $imgSize[3];
+			$objTemplate->imgSize = ' width="' . $imgSize[0] . '" height="' . $imgSize[1] . '"';
 		}
+
+		$picture['alt'] = specialchars($arrItem['alt']);
+		$picture['title'] = specialchars($arrItem['title']);
+
+		$objTemplate->picture = $picture;
 
 		// Provide an ID for single lightbox images in HTML5 (see #3742)
 		if ($strLightboxId === null && $arrItem['fullsize'])
@@ -2625,12 +1519,6 @@ abstract class Controller extends \System
 		if ($arrItem['floating'] != '')
 		{
 			$objTemplate->floatClass = ' float_' . $arrItem['floating'];
-
-			// Only float:left and float:right are supported (see #4758)
-			if ($arrItem['floating'] == 'left' || $arrItem['floating'] == 'right')
-			{
-				$objTemplate->float = 'float:' . $arrItem['floating'] . ';';
-			}
 		}
 
 		// Do not override the "href" key (see #6468)
@@ -2733,8 +1621,11 @@ abstract class Controller extends \System
 			$objFiles->reset();
 		}
 
+		/** @var \PageModel $objPage */
+		global $objPage;
+
 		$arrEnclosures = array();
-		$allowedDownload = trimsplit(',', strtolower($GLOBALS['TL_CONFIG']['allowedDownload']));
+		$allowedDownload = trimsplit(',', strtolower(\Config::get('allowedDownload')));
 
 		// Add download links
 		while ($objFiles->next())
@@ -2755,17 +1646,31 @@ abstract class Controller extends \System
 					$strHref = preg_replace('/(&(amp;)?|\?)file=[^&]+/', '', $strHref);
 				}
 
-				$strHref .= (($GLOBALS['TL_CONFIG']['disableAlias'] || strpos($strHref, '?') !== false) ? '&amp;' : '?') . 'file=' . \System::urlEncode($objFiles->path);
+				$strHref .= ((\Config::get('disableAlias') || strpos($strHref, '?') !== false) ? '&amp;' : '?') . 'file=' . \System::urlEncode($objFiles->path);
+
+				$arrMeta = \Frontend::getMetaData($objFiles->meta, $objPage->language);
+
+				if (empty($arrMeta) && $objPage->rootFallbackLanguage !== null)
+				{
+					$arrMeta = \Frontend::getMetaData($objFiles->meta, $objPage->rootFallbackLanguage);
+				}
+
+				// Use the file name as title if none is given
+				if ($arrMeta['title'] == '')
+				{
+					$arrMeta['title'] = specialchars($objFile->basename);
+				}
 
 				$arrEnclosures[] = array
 				(
-					'link'      => $objFiles->name,
+					'link'      => $arrMeta['title'],
 					'filesize'  => static::getReadableSize($objFile->filesize),
-					'title'     => ucfirst(str_replace('_', ' ', $objFile->filename)),
+					'title'     => specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['download'], $objFile->basename)),
 					'href'      => $strHref,
 					'enclosure' => $objFiles->path,
 					'icon'      => TL_ASSETS_URL . 'assets/contao/images/' . $objFile->icon,
-					'mime'      => $objFile->mime
+					'mime'      => $objFile->mime,
+					'meta'      => $arrMeta
 				);
 			}
 		}
@@ -2777,7 +1682,7 @@ abstract class Controller extends \System
 	/**
 	 * Set the static URL constants
 	 *
-	 * @param object $objPage An optional page object
+	 * @param \PageModel $objPage An optional page object
 	 */
 	public static function setStaticUrls($objPage=null)
 	{
@@ -2800,9 +1705,9 @@ abstract class Controller extends \System
 
 		foreach ($arrConstants as $strKey=>$strConstant)
 		{
-			$url = ($objPage !== null) ? $objPage->$strKey : $GLOBALS['TL_CONFIG'][$strKey];
+			$url = ($objPage !== null) ? $objPage->$strKey : \Config::get($strKey);
 
-			if ($url == '' || $GLOBALS['TL_CONFIG']['debugMode'])
+			if ($url == '' || \Config::get('debugMode'))
 			{
 				define($strConstant, '');
 			}
@@ -2874,19 +1779,22 @@ abstract class Controller extends \System
 	 *
 	 * @param mixed $intId A page ID or a Model object
 	 *
-	 * @return \Model|null The page model or null
+	 * @return \PageModel The page model or null
 	 *
 	 * @deprecated Use PageModel::findWithDetails() or PageModel->loadDetails() instead
 	 */
 	public static function getPageDetails($intId)
 	{
-		if ($intId instanceof \Model)
+		if ($intId instanceof \PageModel)
 		{
 			return $intId->loadDetails();
 		}
 		elseif ($intId instanceof \Model\Collection)
 		{
-			return $intId->current()->loadDetails();
+			/** @var \PageModel $objPage */
+			$objPage = $intId->current();
+
+			return $objPage->loadDetails();
 		}
 		elseif (is_object($intId))
 		{
@@ -2904,6 +1812,7 @@ abstract class Controller extends \System
 			$objPage->loadDetails();
 
 			\Cache::set($strKey, $objPage);
+
 			return $objPage;
 		}
 		else
@@ -2925,6 +1834,7 @@ abstract class Controller extends \System
 			$objPage = \PageModel::findWithDetails($intId);
 
 			\Cache::set($strKey, $objPage);
+
 			return $objPage;
 		}
 	}
@@ -3132,7 +2042,7 @@ abstract class Controller extends \System
 	/**
 	 * Print an article as PDF and stream it to the browser
 	 *
-	 * @param object $objArticle An article object
+	 * @param \ModuleModel $objArticle An article object
 	 *
 	 * @deprecated Use ModuleArticle->generatePdf() instead
 	 */

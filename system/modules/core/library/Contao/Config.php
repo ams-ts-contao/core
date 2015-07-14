@@ -125,7 +125,7 @@ class Config
 		$strCacheFile = 'system/cache/config/config.php';
 
 		// Try to load from cache
-		if (!$GLOBALS['TL_CONFIG']['bypassCache'] && file_exists(TL_ROOT . '/' . $strCacheFile))
+		if (!static::get('bypassCache') && file_exists(TL_ROOT . '/' . $strCacheFile))
 		{
 			include TL_ROOT . '/' . $strCacheFile;
 		}
@@ -143,7 +143,7 @@ class Config
 			}
 		}
 
-		// // Include the local configuration file again
+		// Include the local configuration file again
 		if (static::$blnHasLcf)
 		{
 			include TL_ROOT . '/system/config/localconfig.php';
@@ -252,6 +252,7 @@ class Config
 		if (!filesize(TL_ROOT . '/system/tmp/' . $strTemp))
 		{
 			\System::log('The local configuration file could not be written. Have your reached your quota limit?', __METHOD__, TL_ERROR);
+
 			return;
 		}
 
@@ -297,13 +298,28 @@ class Config
 
 
 	/**
-	 * Return true if the installation is completed
+	 * Return true if the installation is complete
 	 *
-	 * @return boolean True if the local configuration file exists
+	 * @return boolean True if the installation is complete
 	 */
 	public function isComplete()
 	{
-		return static::$blnHasLcf;
+		if (!static::$blnHasLcf)
+		{
+			return false;
+		}
+
+		if (!$this->get('licenseAccepted'))
+		{
+			return false;
+		}
+
+		if ($this->get('dbDriver') == '')
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 
@@ -311,6 +327,8 @@ class Config
 	 * Return all active modules as array
 	 *
 	 * @return array An array of active modules
+	 *
+	 * @deprecated Use ModuleLoader::getActive() instead
 	 */
 	public function getActiveModules()
 	{
@@ -344,6 +362,18 @@ class Config
 
 
 	/**
+	 * Remove a configuration variable
+	 *
+	 * @param string $strKey The full variable name
+	 */
+	public function delete($strKey)
+	{
+		$this->markModified();
+		unset($this->arrData[$strKey]);
+	}
+
+
+	/**
 	 * Return a configuration value
 	 *
 	 * @param string $strKey The short key (e.g. "displayErrors")
@@ -362,6 +392,55 @@ class Config
 
 
 	/**
+	 * Temporarily set a configuration value
+	 *
+	 * @param string $strKey   The short key (e.g. "displayErrors")
+	 * @param string $varValue The configuration value
+	 */
+	public static function set($strKey, $varValue)
+	{
+		$GLOBALS['TL_CONFIG'][$strKey] = $varValue;
+	}
+
+
+	/**
+	 * Permanently set a configuration value
+	 *
+	 * @param string $strKey   The short key or full variable name
+	 * @param mixed  $varValue The configuration value
+	 */
+	public static function persist($strKey, $varValue)
+	{
+		$objConfig = static::getInstance();
+
+		if (strncmp($strKey, '$GLOBALS', 8) !== 0)
+		{
+			$strKey = "\$GLOBALS['TL_CONFIG']['$strKey']";
+		}
+
+		$objConfig->add($strKey, $varValue);
+	}
+
+
+	/**
+	 * Permanently remove a configuration value
+	 *
+	 * @param string $strKey The short key or full variable name
+	 */
+	public static function remove($strKey)
+	{
+		$objConfig = static::getInstance();
+
+		if (strncmp($strKey, '$GLOBALS', 8) !== 0)
+		{
+			$strKey = "\$GLOBALS['TL_CONFIG']['$strKey']";
+		}
+
+		$objConfig->delete($strKey);
+	}
+
+
+	/**
 	 * Preload the default and local configuration
 	 */
 	public static function preload()
@@ -369,6 +448,7 @@ class Config
 		// Load the default files
 		include TL_ROOT . '/system/config/default.php';
 		include TL_ROOT . '/system/config/agents.php';
+		include TL_ROOT . '/system/config/mimetypes.php';
 
 		// Include the local configuration file
 		if (($blnHasLcf = file_exists(TL_ROOT . '/system/config/localconfig.php')) === true)
@@ -377,18 +457,6 @@ class Config
 		}
 
 		static::$blnHasLcf = $blnHasLcf;
-	}
-
-
-	/**
-	 * Remove a configuration variable
-	 *
-	 * @param string $strKey The full variable name
-	 */
-	public function delete($strKey)
-	{
-		$this->markModified();
-		unset($this->arrData[$strKey]);
 	}
 
 

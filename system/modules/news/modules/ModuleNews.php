@@ -28,7 +28,9 @@ abstract class ModuleNews extends \Module
 
 	/**
 	 * Sort out protected archives
-	 * @param array
+	 *
+	 * @param array $arrArchives
+	 *
 	 * @return array
 	 */
 	protected function sortOutProtected($arrArchives)
@@ -71,19 +73,23 @@ abstract class ModuleNews extends \Module
 
 	/**
 	 * Parse an item and return it as string
-	 * @param object
-	 * @param boolean
-	 * @param string
-	 * @param integer
+	 *
+	 * @param \NewsModel $objArticle
+	 * @param boolean    $blnAddArchive
+	 * @param string     $strClass
+	 * @param integer    $intCount
+	 *
 	 * @return string
 	 */
 	protected function parseArticle($objArticle, $blnAddArchive=false, $strClass='', $intCount=0)
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
 
+		/** @var \FrontendTemplate|object $objTemplate */
 		$objTemplate = new \FrontendTemplate($this->news_template);
-		$objTemplate->setData($objArticle->row());
 
+		$objTemplate->setData($objArticle->row());
 		$objTemplate->class = (($objArticle->cssClass != '') ? ' ' . $objArticle->cssClass : '') . $strClass;
 		$objTemplate->newsHeadline = $objArticle->headline;
 		$objTemplate->subHeadline = $objArticle->subheadline;
@@ -119,15 +125,23 @@ abstract class ModuleNews extends \Module
 		// Compile the news text
 		else
 		{
-			$objElement = \ContentModel::findPublishedByPidAndTable($objArticle->id, 'tl_news');
+			$id = $objArticle->id;
 
-			if ($objElement !== null)
+			$objTemplate->text = function () use ($id)
 			{
-				while ($objElement->next())
+				$strText = '';
+				$objElement = \ContentModel::findPublishedByPidAndTable($id, 'tl_news');
+
+				if ($objElement !== null)
 				{
-					$objTemplate->text .= $this->getContentElement($objElement->id);
+					while ($objElement->next())
+					{
+						$strText .= $this->getContentElement($objElement->current());
+					}
 				}
-			}
+
+				return $strText;
+			};
 		}
 
 		$arrMeta = $this->getMetaFields($objArticle);
@@ -165,7 +179,7 @@ abstract class ModuleNews extends \Module
 				{
 					$size = deserialize($this->imgSize);
 
-					if ($size[0] > 0 || $size[1] > 0)
+					if ($size[0] > 0 || $size[1] > 0 || is_numeric($size[2]))
 					{
 						$arrArticle['size'] = $this->imgSize;
 					}
@@ -200,8 +214,10 @@ abstract class ModuleNews extends \Module
 
 	/**
 	 * Parse one or more items and return them as array
-	 * @param object
-	 * @param boolean
+	 *
+	 * @param \Model\Collection $objArticles
+	 * @param boolean           $blnAddArchive
+	 *
 	 * @return array
 	 */
 	protected function parseArticles($objArticles, $blnAddArchive=false)
@@ -218,7 +234,10 @@ abstract class ModuleNews extends \Module
 
 		while ($objArticles->next())
 		{
-			$arrArticles[] = $this->parseArticle($objArticles, $blnAddArchive, ((++$count == 1) ? ' first' : '') . (($count == $limit) ? ' last' : '') . ((($count % 2) == 0) ? ' odd' : ' even'), $count);
+			/** @var \NewsModel $objArticle */
+			$objArticle = $objArticles->current();
+
+			$arrArticles[] = $this->parseArticle($objArticle, $blnAddArchive, ((++$count == 1) ? ' first' : '') . (($count == $limit) ? ' last' : '') . ((($count % 2) == 0) ? ' odd' : ' even'), $count);
 		}
 
 		return $arrArticles;
@@ -227,7 +246,9 @@ abstract class ModuleNews extends \Module
 
 	/**
 	 * Return the meta fields of a news article as array
-	 * @param object
+	 *
+	 * @param \NewsModel $objArticle
+	 *
 	 * @return array
 	 */
 	protected function getMetaFields($objArticle)
@@ -239,7 +260,9 @@ abstract class ModuleNews extends \Module
 			return array();
 		}
 
+		/** @var \PageModel $objPage */
 		global $objPage;
+
 		$return = array();
 
 		foreach ($meta as $field)
@@ -251,16 +274,10 @@ abstract class ModuleNews extends \Module
 					break;
 
 				case 'author':
+					/** @var \UserModel $objAuthor */
 					if (($objAuthor = $objArticle->getRelated('author')) !== null)
 					{
-						if ($objAuthor->google != '')
-						{
-							$return['author'] = $GLOBALS['TL_LANG']['MSC']['by'] . ' <a href="https://plus.google.com/' . $objAuthor->google . '" rel="author" target="_blank">' . $objAuthor->name . '</a>';
-						}
-						else
-						{
-							$return['author'] = $GLOBALS['TL_LANG']['MSC']['by'] . ' ' . $objAuthor->name;
-						}
+						$return['author'] = $GLOBALS['TL_LANG']['MSC']['by'] . ' ' . $objAuthor->name;
 					}
 					break;
 
@@ -282,8 +299,10 @@ abstract class ModuleNews extends \Module
 
 	/**
 	 * Generate a URL and return it as string
-	 * @param object
-	 * @param boolean
+	 *
+	 * @param \NewsModel $objItem
+	 * @param boolean    $blnAddArchive
+	 *
 	 * @return string
 	 */
 	protected function generateNewsUrl($objItem, $blnAddArchive=false)
@@ -325,7 +344,7 @@ abstract class ModuleNews extends \Module
 			case 'article':
 				if (($objArticle = \ArticleModel::findByPk($objItem->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 				{
-					self::$arrUrlCache[$strCacheKey] = ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
+					self::$arrUrlCache[$strCacheKey] = ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
 				}
 				break;
 		}
@@ -341,13 +360,13 @@ abstract class ModuleNews extends \Module
 			}
 			else
 			{
-				self::$arrUrlCache[$strCacheKey] = ampersand($this->generateFrontendUrl($objPage->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/' : '/items/') . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objItem->alias != '') ? $objItem->alias : $objItem->id)));
+				self::$arrUrlCache[$strCacheKey] = ampersand($this->generateFrontendUrl($objPage->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/' : '/items/') . ((!\Config::get('disableAlias') && $objItem->alias != '') ? $objItem->alias : $objItem->id)));
 			}
 
 			// Add the current archive parameter (news archive)
 			if ($blnAddArchive && \Input::get('month') != '')
 			{
-				self::$arrUrlCache[$strCacheKey] .= ($GLOBALS['TL_CONFIG']['disableAlias'] ? '&amp;' : '?') . 'month=' . \Input::get('month');
+				self::$arrUrlCache[$strCacheKey] .= (\Config::get('disableAlias') ? '&amp;' : '?') . 'month=' . \Input::get('month');
 			}
 		}
 
@@ -357,10 +376,12 @@ abstract class ModuleNews extends \Module
 
 	/**
 	 * Generate a link and return it as string
-	 * @param string
-	 * @param object
-	 * @param boolean
-	 * @param boolean
+	 *
+	 * @param string     $strLink
+	 * @param \NewsModel $objArticle
+	 * @param boolean    $blnAddArchive
+	 * @param boolean    $blnIsReadMore
+	 *
 	 * @return string
 	 */
 	protected function generateLink($strLink, $objArticle, $blnAddArchive=false, $blnIsReadMore=false)
@@ -387,6 +408,7 @@ abstract class ModuleNews extends \Module
 			$strArticleUrl = ampersand($objArticle->url);
 		}
 
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		// External link

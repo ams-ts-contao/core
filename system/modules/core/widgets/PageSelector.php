@@ -14,6 +14,9 @@ namespace Contao;
 /**
  * Provide methods to handle input field "page tree".
  *
+ * @property array  $rootNodes
+ * @property string $fieldType
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class PageSelector extends \Widget
@@ -40,7 +43,8 @@ class PageSelector extends \Widget
 
 	/**
 	 * Load the database object
-	 * @param array
+	 *
+	 * @param array $arrAttributes
 	 */
 	public function __construct($arrAttributes=null)
 	{
@@ -51,6 +55,7 @@ class PageSelector extends \Widget
 
 	/**
 	 * Generate the widget and return it as string
+	 *
 	 * @return string
 	 */
 	public function generate()
@@ -78,48 +83,53 @@ class PageSelector extends \Widget
 				$for = substr($for, 1);
 			}
 
-			$objRoot = $this->Database->prepare("SELECT id FROM tl_page WHERE CAST(title AS CHAR) REGEXP ?")
-									  ->execute($for);
-
-			if ($objRoot->numRows > 0)
+			// Wrap in a try catch block in case the regular expression is invalid (see #7743)
+			try
 			{
-				// Respect existing limitations
-				if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes']))
-				{
-					$arrRoot = array();
+				$objRoot = $this->Database->prepare("SELECT id FROM tl_page WHERE CAST(title AS CHAR) REGEXP ?")
+										  ->execute($for);
 
-					while ($objRoot->next())
+				if ($objRoot->numRows > 0)
+				{
+					// Respect existing limitations
+					if (is_array($this->rootNodes))
 					{
-						// Predefined node set (see #3563)
-						if (count(array_intersect($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes'], $this->Database->getParentRecords($objRoot->id, 'tl_page'))) > 0)
+						$arrRoot = array();
+
+						while ($objRoot->next())
 						{
-							$arrRoot[] = $objRoot->id;
+							// Predefined node set (see #3563)
+							if (count(array_intersect($this->rootNodes, $this->Database->getParentRecords($objRoot->id, 'tl_page'))) > 0)
+							{
+								$arrRoot[] = $objRoot->id;
+							}
 						}
+
+						$arrIds = $arrRoot;
 					}
-
-					$arrIds = $arrRoot;
-				}
-				elseif ($this->User->isAdmin)
-				{
-					// Show all pages to admins
-					$arrIds = $objRoot->fetchEach('id');
-				}
-				else
-				{
-					$arrRoot = array();
-
-					while ($objRoot->next())
+					elseif ($this->User->isAdmin)
 					{
-						// Show only mounted pages to regular users
-						if (count(array_intersect($this->User->pagemounts, $this->Database->getParentRecords($objRoot->id, 'tl_page'))) > 0)
-						{
-							$arrRoot[] = $objRoot->id;
-						}
+						// Show all pages to admins
+						$arrIds = $objRoot->fetchEach('id');
 					}
+					else
+					{
+						$arrRoot = array();
 
-					$arrIds = $arrRoot;
+						while ($objRoot->next())
+						{
+							// Show only mounted pages to regular users
+							if (count(array_intersect($this->User->pagemounts, $this->Database->getParentRecords($objRoot->id, 'tl_page'))) > 0)
+							{
+								$arrRoot[] = $objRoot->id;
+							}
+						}
+
+						$arrIds = $arrRoot;
+					}
 				}
 			}
+			catch (\Exception $e) {}
 
 			// Build the tree
 			foreach ($arrIds as $id)
@@ -132,9 +142,9 @@ class PageSelector extends \Widget
 			$strNode = $this->Session->get('tl_page_picker');
 
 			// Unset the node if it is not within the predefined node set (see #5899)
-			if ($strNode > 0 && is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes']))
+			if ($strNode > 0 && is_array($this->rootNodes))
 			{
-				if (!in_array($strNode, $this->Database->getChildRecords($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes'], 'tl_page')))
+				if (!in_array($strNode, $this->Database->getChildRecords($this->rootNodes, 'tl_page')))
 				{
 					$this->Session->remove('tl_page_picker');
 				}
@@ -158,9 +168,9 @@ class PageSelector extends \Widget
 			}
 
 			// Predefined node set (see #3563)
-			elseif (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes']))
+			elseif (is_array($this->rootNodes))
 			{
-				$nodes = $this->eliminateNestedPages($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['rootNodes']);
+				$nodes = $this->eliminateNestedPages($this->rootNodes);
 
 				foreach ($nodes as $node)
 				{
@@ -193,7 +203,7 @@ class PageSelector extends \Widget
 		}
 
 		// Select all checkboxes
-		if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['fieldType'] == 'checkbox')
+		if ($this->fieldType == 'checkbox')
 		{
 			$strReset = "\n" . '    <li class="tl_folder"><div class="tl_left">&nbsp;</div> <div class="tl_right"><label for="check_all_' . $this->strId . '" class="tl_change_selected">' . $GLOBALS['TL_LANG']['MSC']['selectAll'] . '</label> <input type="checkbox" id="check_all_' . $this->strId . '" class="tl_tree_checkbox" value="" onclick="Backend.toggleCheckboxGroup(this,\'' . $this->strName . '\')"></div><div style="clear:both"></div></li>';
 		}
@@ -205,16 +215,18 @@ class PageSelector extends \Widget
 
 		// Return the tree
 		return '<ul class="tl_listing tree_view picker_selector'.(($this->strClass != '') ? ' ' . $this->strClass : '').'" id="'.$this->strId.'">
-    <li class="tl_folder_top"><div class="tl_left">'.\Image::getHtml($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['icon'] ?: 'pagemounts.gif').' '.($GLOBALS['TL_CONFIG']['websiteTitle'] ?: 'Contao Open Source CMS').'</div> <div class="tl_right">&nbsp;</div><div style="clear:both"></div></li><li class="parent" id="'.$this->strId.'_parent"><ul>'.$tree.$strReset.'
+    <li class="tl_folder_top"><div class="tl_left">'.\Image::getHtml($GLOBALS['TL_DCA']['tl_page']['list']['sorting']['icon'] ?: 'pagemounts.gif').' '.(\Config::get('websiteTitle') ?: 'Contao Open Source CMS').'</div> <div class="tl_right">&nbsp;</div><div style="clear:both"></div></li><li class="parent" id="'.$this->strId.'_parent"><ul>'.$tree.$strReset.'
   </ul></li></ul>';
 	}
 
 
 	/**
 	 * Generate a particular subpart of the page tree and return it as HTML string
-	 * @param integer
-	 * @param string
-	 * @param integer
+	 *
+	 * @param integer $id
+	 * @param string  $strField
+	 * @param integer $level
+	 *
 	 * @return string
 	 */
 	public function generateAjax($id, $strField, $level)
@@ -231,9 +243,9 @@ class PageSelector extends \Widget
 		switch ($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'])
 		{
 			case 'File':
-				if ($GLOBALS['TL_CONFIG'][$this->strField] != '')
+				if (\Config::get($this->strField) != '')
 				{
-					$this->varValue = $GLOBALS['TL_CONFIG'][$this->strField];
+					$this->varValue = \Config::get($this->strField);
 				}
 				break;
 
@@ -274,10 +286,12 @@ class PageSelector extends \Widget
 
 	/**
 	 * Recursively render the pagetree
-	 * @param int
-	 * @param integer
-	 * @param boolean
-	 * @param boolean
+	 *
+	 * @param integer $id
+	 * @param integer $intMargin
+	 * @param boolean $protectedPage
+	 * @param boolean $blnNoRecursion
+	 *
 	 * @return string
 	 */
 	protected function renderPagetree($id, $intMargin, $protectedPage=false, $blnNoRecursion=false)
@@ -323,7 +337,7 @@ class PageSelector extends \Widget
 			}
 		}
 
-		$return .= "\n    " . '<li class="'.(($objPage->type == 'root') ? 'tl_folder' : 'tl_file').'" onmouseover="Theme.hoverDiv(this, 1)" onmouseout="Theme.hoverDiv(this, 0)" onclick="Theme.toggleSelect(this)"><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
+		$return .= "\n    " . '<li class="'.(($objPage->type == 'root') ? 'tl_folder' : 'tl_file').' toggle_select" onmouseover="Theme.hoverDiv(this, 1)" onmouseout="Theme.hoverDiv(this, 0)"><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
 
 		$folderAttribute = 'style="margin-left:20px"';
 		$session[$node][$id] = is_numeric($session[$node][$id]) ? $session[$node][$id] : 0;
@@ -344,7 +358,7 @@ class PageSelector extends \Widget
 		// Add the current page
 		if (!empty($childs))
 		{
-			$return .= \Image::getHtml($this->getPageStatusIcon($objPage), '', $folderAttribute).' <a href="' . $this->addToUrl('node='.$objPage->id) . '" title="'.specialchars($objPage->title . ' (' . $objPage->alias . $GLOBALS['TL_CONFIG']['urlSuffix'] . ')').'">'.(($objPage->type == 'root') ? '<strong>' : '').$objPage->title.(($objPage->type == 'root') ? '</strong>' : '').'</a></div> <div class="tl_right">';
+			$return .= \Image::getHtml($this->getPageStatusIcon($objPage), '', $folderAttribute).' <a href="' . $this->addToUrl('node='.$objPage->id) . '" title="'.specialchars($objPage->title . ' (' . $objPage->alias . \Config::get('urlSuffix') . ')').'">'.(($objPage->type == 'root') ? '<strong>' : '').$objPage->title.(($objPage->type == 'root') ? '</strong>' : '').'</a></div> <div class="tl_right">';
 		}
 		else
 		{
@@ -352,7 +366,7 @@ class PageSelector extends \Widget
 		}
 
 		// Add checkbox or radio button
-		switch ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['fieldType'])
+		switch ($this->fieldType)
 		{
 			case 'checkbox':
 				$return .= '<input type="checkbox" name="'.$this->strName.'[]" id="'.$this->strName.'_'.$id.'" class="tl_tree_checkbox" value="'.specialchars($id).'" onfocus="Backend.getScrollOffset()"'.static::optionChecked($id, $this->varValue).'>';

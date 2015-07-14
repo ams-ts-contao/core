@@ -12,7 +12,9 @@ namespace Contao;
 
 
 /**
- * Form field "check box".
+ * Class FormCheckBox
+ *
+ * @property array $options
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -21,27 +23,38 @@ class FormCheckBox extends \Widget
 
 	/**
 	 * Submit user input
+	 *
 	 * @var boolean
 	 */
 	protected $blnSubmitInput = true;
 
 	/**
 	 * Template
+	 *
 	 * @var string
 	 */
 	protected $strTemplate = 'form_checkbox';
 
 	/**
 	 * Error message
+	 *
 	 * @var string
 	 */
 	protected $strError = '';
 
+	/**
+	 * The CSS class prefix
+	 *
+	 * @var string
+	 */
+	protected $strPrefix = 'widget widget-checkbox';
+
 
 	/**
 	 * Add specific attributes
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey   The attribute name
+	 * @param mixed  $varValue The attribute value
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -66,8 +79,10 @@ class FormCheckBox extends \Widget
 
 	/**
 	 * Return a parameter
-	 * @param string
-	 * @return mixed
+	 *
+	 * @param string $strKey The parameter key
+	 *
+	 * @return mixed The parameter value
 	 */
 	public function __get($strKey)
 	{
@@ -134,22 +149,13 @@ class FormCheckBox extends \Widget
 
 
 	/**
-	 * Override the parent method and inject the error message inside the fieldset (see #3392)
-	 * @param boolean
-	 * @return string
+	 * Return all attributes as string
+	 *
+	 * @param array $arrStrip An optional array with attributes to strip
+	 *
+	 * @return string The attributes string
 	 */
-	public function generateWithError($blnSwitchOrder=false)
-	{
-		$this->strError = $this->getErrorAsHTML();
-		return $this->generate();
-	}
-
-
-	/**
-	 * Generate the widget and return it as string
-	 * @return string
-	 */
-	public function generate()
+	public function getAttributes($arrStrip=array())
 	{
 		// The "required" attribute only makes sense for single checkboxes
 		if (count($this->arrOptions) == 1 && $this->mandatory)
@@ -157,6 +163,58 @@ class FormCheckBox extends \Widget
 			$this->arrAttributes['required'] = 'required';
 		}
 
+		return parent::getAttributes($arrStrip);
+	}
+
+
+	/**
+	 * Generate the options
+	 *
+	 * @return array The options array
+	 */
+	protected function getOptions()
+	{
+		$arrOptions = array();
+
+		foreach ($this->arrOptions as $i=>$arrOption)
+		{
+			$arrOptions[] = array
+			(
+				'name'       => $this->strName . ((count($this->arrOptions) > 1) ? '[]' : ''),
+				'id'         => $this->strId . '_' . $i,
+				'value'      => $arrOption['value'],
+				'checked'    => $this->isChecked($arrOption),
+				'attributes' => $this->getAttributes(),
+				'label'      => $arrOption['label']
+			);
+		}
+
+		return $arrOptions;
+	}
+
+
+	/**
+	 * Override the parent method and inject the error message inside the fieldset (see #3392)
+	 *
+	 * @param boolean $blnSwitchOrder If true, the error message will be shown below the field
+	 *
+	 * @return string The form field markup
+	 */
+	public function generateWithError($blnSwitchOrder=false)
+	{
+		$this->strError = $this->getErrorAsHTML();
+
+		return $this->generate();
+	}
+
+
+	/**
+	 * Generate the widget and return it as string
+	 *
+	 * @return string The widget markup
+	 */
+	public function generate()
+	{
 		$strOptions = '';
 
 		foreach ($this->arrOptions as $i=>$arrOption)
@@ -176,7 +234,7 @@ class FormCheckBox extends \Widget
 		if ($this->strLabel != '')
 		{
 			return sprintf('<fieldset id="ctrl_%s" class="checkbox_container%s"><legend>%s%s%s</legend>%s<input type="hidden" name="%s" value=""%s%s</fieldset>',
-	        				$this->strId,
+							$this->strId,
 							(($this->strClass != '') ? ' ' . $this->strClass : ''),
 							($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
 							$this->strLabel,
@@ -188,7 +246,7 @@ class FormCheckBox extends \Widget
 		}
 		else
 		{
-	        return sprintf('<fieldset id="ctrl_%s" class="checkbox_container%s">%s<input type="hidden" name="%s" value=""%s%s</fieldset>',
+			return sprintf('<fieldset id="ctrl_%s" class="checkbox_container%s">%s<input type="hidden" name="%s" value=""%s%s</fieldset>',
 							$this->strId,
 							(($this->strClass != '') ? ' ' . $this->strClass : ''),
 							$this->strError,

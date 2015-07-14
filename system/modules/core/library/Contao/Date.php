@@ -27,6 +27,18 @@ namespace Contao;
  *
  *     Date::formatToJs('m/d/Y H:i');
  *
+ * @property integer $tstamp     The Unix timestamp
+ * @property string  $date       The formatted date
+ * @property string  $time       The formatted time
+ * @property string  $datim      The formatted date and time
+ * @property integer $dayBegin   The beginning of the current day
+ * @property integer $dayEnd     The end of the current day
+ * @property integer $monthBegin The beginning of the current month
+ * @property integer $monthEnd   The end of the current month
+ * @property integer $yearBegin  The beginning of the current year
+ * @property integer $yearEnd    The end of the current year
+ * @property string  $format     The date format string
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Date
@@ -45,24 +57,6 @@ class Date
 	protected $strFormat;
 
 	/**
-	 * Formatted date
-	 * @var string
-	 */
-	protected $strToDate;
-
-	/**
-	 * Formatted time
-	 * @var string
-	 */
-	protected $strToTime;
-
-	/**
-	 * Formatted date and time
-	 * @var string
-	 */
-	protected $strToDatim;
-
-	/**
 	 * Date range
 	 * @var array
 	 */
@@ -70,7 +64,7 @@ class Date
 
 
 	/**
-	 * Create the object properties and date ranges
+	 * Set the object properties
 	 *
 	 * @param integer $strDate   An optional date string
 	 * @param string  $strFormat An optional format string
@@ -84,42 +78,11 @@ class Date
 		{
 			$this->dateToUnix();
 		}
-
-		// Create the formatted dates
-		$this->strToDate = static::parse(static::getNumericDateFormat(), $this->strDate);
-		$this->strToTime = static::parse(static::getNumericTimeFormat(), $this->strDate);
-		$this->strToDatim = static::parse(static::getNumericDatimFormat(), $this->strDate);
-
-		$intYear = date('Y', $this->strDate);
-		$intMonth = date('m', $this->strDate);
-		$intDay = date('d', $this->strDate);
-
-		// Create the date ranges
-		$this->arrRange['day']['begin'] = mktime(0, 0, 0, $intMonth, $intDay, $intYear);
-		$this->arrRange['day']['end'] = mktime(23, 59, 59, $intMonth, $intDay, $intYear);
-		$this->arrRange['month']['begin'] = mktime(0, 0, 0, $intMonth, 1, $intYear);
-		$this->arrRange['month']['end'] = mktime(23, 59, 59, $intMonth, date('t', $this->strDate), $intYear);
-		$this->arrRange['year']['begin'] = mktime(0, 0, 0, 1, 1, $intYear);
-		$this->arrRange['year']['end'] = mktime(23, 59, 59, 12, 31, $intYear);
 	}
 
 
 	/**
 	 * Return an object property
-	 *
-	 * Supported keys:
-	 *
-	 * * timestamp:  the Unix timestamp
-	 * * date:       the formatted date
-	 * * time:       the formatted time
-	 * * datim:      the formatted date and time
-	 * * dayBegin:   the beginning of the current day
-	 * * dayEnd:     the end of the current day
-	 * * monthBegin: the beginning of the current month
-	 * * monthEnd:   the end of the current month
-	 * * yearBegin:  the beginning of the current year
-	 * * yearEnd:    the end of the current year
-	 * * format:     the date format string
 	 *
 	 * @param string $strKey The property name
 	 *
@@ -135,38 +98,50 @@ class Date
 				break;
 
 			case 'date':
-				return $this->strToDate;
+				return static::parse(static::getNumericDateFormat(), $this->strDate);
 				break;
 
 			case 'time':
-				return $this->strToTime;
+				return static::parse(static::getNumericTimeFormat(), $this->strDate);
 				break;
 
 			case 'datim':
-				return $this->strToDatim;
+				return static::parse(static::getNumericDatimFormat(), $this->strDate);
 				break;
 
 			case 'dayBegin':
+				$this->createDateRanges();
+
 				return $this->arrRange['day']['begin'];
 				break;
 
 			case 'dayEnd':
+				$this->createDateRanges();
+
 				return $this->arrRange['day']['end'];
 				break;
 
 			case 'monthBegin':
+				$this->createDateRanges();
+
 				return $this->arrRange['month']['begin'];
 				break;
 
 			case 'monthEnd':
+				$this->createDateRanges();
+
 				return $this->arrRange['month']['end'];
 				break;
 
 			case 'yearBegin':
+				$this->createDateRanges();
+
 				return $this->arrRange['year']['begin'];
 				break;
 
 			case 'yearEnd':
+				$this->createDateRanges();
+
 				return $this->arrRange['year']['end'];
 				break;
 
@@ -176,6 +151,29 @@ class Date
 		}
 
 		return null;
+	}
+
+
+	/**
+	 * Create the date ranges
+	 */
+	protected function createDateRanges()
+	{
+		if (!empty($this->arrRange))
+		{
+			return;
+		}
+
+		$intYear = date('Y', $this->strDate);
+		$intMonth = date('m', $this->strDate);
+		$intDay = date('d', $this->strDate);
+
+		$this->arrRange['day']['begin'] = mktime(0, 0, 0, $intMonth, $intDay, $intYear);
+		$this->arrRange['day']['end'] = mktime(23, 59, 59, $intMonth, $intDay, $intYear);
+		$this->arrRange['month']['begin'] = mktime(0, 0, 0, $intMonth, 1, $intYear);
+		$this->arrRange['month']['end'] = mktime(23, 59, 59, $intMonth, date('t', $this->strDate), $intYear);
+		$this->arrRange['year']['begin'] = mktime(0, 0, 0, 1, 1, $intYear);
+		$this->arrRange['year']['end'] = mktime(23, 59, 59, 12, 31, $intYear);
 	}
 
 
@@ -440,7 +438,7 @@ class Date
 			throw new \OutOfBoundsException(sprintf('Invalid date "%s"', $this->strDate));
 		}
 
-		$this->strDate =  mktime((int) $intHour, (int) $intMinute, (int) $intSecond, (int) $intMonth, (int) $intDay, (int) $intYear);
+		$this->strDate = mktime((int) $intHour, (int) $intMinute, (int) $intSecond, (int) $intMonth, (int) $intDay, (int) $intYear);
 	}
 
 
@@ -502,6 +500,7 @@ class Date
 	{
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->dateFormat != '' && static::isNumericFormat($objPage->dateFormat))
@@ -510,7 +509,7 @@ class Date
 			}
 		}
 
-		return $GLOBALS['TL_CONFIG']['dateFormat'];
+		return \Config::get('dateFormat');
 	}
 
 
@@ -523,6 +522,7 @@ class Date
 	{
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->timeFormat != '' && static::isNumericFormat($objPage->timeFormat))
@@ -531,7 +531,7 @@ class Date
 			}
 		}
 
-		return $GLOBALS['TL_CONFIG']['timeFormat'];
+		return \Config::get('timeFormat');
 	}
 
 
@@ -544,6 +544,7 @@ class Date
 	{
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->datimFormat != '' && static::isNumericFormat($objPage->datimFormat))
@@ -552,7 +553,7 @@ class Date
 			}
 		}
 
-		return $GLOBALS['TL_CONFIG']['datimFormat'];
+		return \Config::get('datimFormat');
 	}
 
 
@@ -658,6 +659,33 @@ class Date
 			}
 		}
 
+		// HOOK: add custom logic (see #4260)
+		if (isset($GLOBALS['TL_HOOKS']['parseDate']) && is_array($GLOBALS['TL_HOOKS']['parseDate']))
+		{
+			foreach ($GLOBALS['TL_HOOKS']['parseDate'] as $callback)
+			{
+				$strReturn = \System::importStatic($callback[0])->$callback[1]($strReturn, $strFormat, $intTstamp);
+			}
+		}
+
 		return $strReturn;
+	}
+
+
+	/**
+	 * Round a UNIX timestamp to the full minute
+	 *
+	 * @param integer $intTime The timestamp
+	 *
+	 * @return integer The rounded timestamp
+	 */
+	public static function floorToMinute($intTime=null)
+	{
+		if ($intTime === null)
+		{
+			$intTime = time();
+		}
+
+		return $intTime - ($intTime % 60);
 	}
 }

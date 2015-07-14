@@ -184,7 +184,7 @@ class Input
 			$varValue = static::stripSlashes($varValue);
 			$varValue = static::decodeEntities($varValue);
 			$varValue = static::xssClean($varValue);
-			$varValue = static::stripTags($varValue, $GLOBALS['TL_CONFIG']['allowedTags']);
+			$varValue = static::stripTags($varValue, \Config::get('allowedTags'));
 
 			if (!$blnDecodeEntities)
 			{
@@ -317,6 +317,9 @@ class Input
 	 */
 	public static function setGet($strKey, $varValue, $blnAddUnused=false)
 	{
+		// Convert special characters (see #7829)
+		$strKey = str_replace(array(' ', '.', '['), '_', $strKey);
+
 		$strKey = static::cleanKey($strKey);
 
 		unset(static::$arrCache['getEncoded'][$strKey]);
@@ -332,7 +335,7 @@ class Input
 
 			if ($blnAddUnused)
 			{
-				static::$arrUnusedGet[$strKey] = $varValue; // see #4277
+				static::setUnusedGet($strKey, $varValue); // see #4277
 			}
 		}
 	}
@@ -407,6 +410,29 @@ class Input
 	public static function hasUnusedGet()
 	{
 		return count(static::$arrUnusedGet) > 0;
+	}
+
+
+	/**
+	 * Return the unused GET parameters as array
+	 *
+	 * @return array The unused GET parameter array
+	 */
+	public static function getUnusedGet()
+	{
+		return array_keys(static::$arrUnusedGet);
+	}
+
+
+	/**
+	 * Set an unused GET parameter
+	 *
+	 * @param string $strKey   The array key
+	 * @param mixed  $varValue The array value
+	 */
+	public static function setUnusedGet($strKey, $varValue)
+	{
+		static::$arrUnusedGet[$strKey] = $varValue;
 	}
 
 
@@ -503,9 +529,20 @@ class Input
 			return $varValue;
 		}
 
-		$varValue = str_replace(array('<!--','<![', '-->'), array('&lt;!--', '&lt;![', '--&gt;'), $varValue);
+		// Encode opening arrow brackets (see #3998)
+		$varValue = preg_replace_callback('@</?([^\s<>/]*)@', function ($matches) use ($strAllowedTags)
+		{
+			if ($matches[1] == '' || strpos(strtolower($strAllowedTags), '<' . strtolower($matches[1]) . '>') === false)
+			{
+				$matches[0] = str_replace('<', '&lt;', $matches[0]);
+			}
+
+			return $matches[0];
+		}, $varValue);
+
+		// Strip the tags and restore HTML comments
 		$varValue = strip_tags($varValue, $strAllowedTags);
-		$varValue = str_replace(array('&lt;!--', '&lt;![', '--&gt;'), array('<!--', '<![', '-->'), $varValue);
+		$varValue = str_replace(array('&lt;!--', '&lt;!['), array('<!--', '<!['), $varValue);
 
 		// Recheck for encoded null bytes
 		while (strpos($varValue, '\\0') !== false)
@@ -670,7 +707,7 @@ class Input
 
 		// Preserve basic entities
 		$varValue = static::preserveBasicEntities($varValue);
-		$varValue = html_entity_decode($varValue, ENT_QUOTES, $GLOBALS['TL_CONFIG']['characterSet']);
+		$varValue = html_entity_decode($varValue, ENT_QUOTES, \Config::get('characterSet'));
 
 		return $varValue;
 	}

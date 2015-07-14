@@ -51,8 +51,7 @@ class RepositoryManager extends RepositoryBackendModule
 
 		// Switch to maintenance mode (see #4561)
 		if (Input::post('repository_action') == 'install' || Input::post('repository_action') == 'uninstall') {
-			$this->Config->update("\$GLOBALS['TL_CONFIG']['maintenanceMode']", true);
-			$this->Config->save();
+			Config::persist('maintenanceMode', true);
 		}
 
 		return parent::generate();
@@ -90,7 +89,7 @@ class RepositoryManager extends RepositoryBackendModule
 
 	/**
 	 * Edit extension settings
-	 * @param string
+	 * @param string $aName
 	 */
 	protected function edit($aName)
 	{
@@ -129,7 +128,7 @@ class RepositoryManager extends RepositoryBackendModule
 
 	/**
 	 * Install new extension
-	 * @param string
+	 * @param string $aParams
 	 */
 	protected function install($aParams)
 	{
@@ -355,7 +354,7 @@ class RepositoryManager extends RepositoryBackendModule
 
 	/**
 	 * Upgrade extensions
-	 * @param string
+	 * @param string $aParams
 	 */
 	protected function upgrade($aParams)
 	{
@@ -475,7 +474,7 @@ class RepositoryManager extends RepositoryBackendModule
 			if (!empty($sql) && is_array($sql)) {
 				foreach ($sql as $key) {
 					if (isset($_SESSION['sql_commands'][$key])) {
-						$this->Database->query(str_replace('DEFAULT CHARSET=utf8;', 'DEFAULT CHARSET=utf8 COLLATE ' . $GLOBALS['TL_CONFIG']['dbCollation'] . ';', $_SESSION['sql_commands'][$key]));
+						$this->Database->query(str_replace('DEFAULT CHARSET=utf8;', 'DEFAULT CHARSET=utf8 COLLATE ' . Config::get('dbCollation') . ';', $_SESSION['sql_commands'][$key]));
 					} // if
 				} // foreach
 			} // if
@@ -493,7 +492,7 @@ class RepositoryManager extends RepositoryBackendModule
 
 	/**
 	 * Uninstall an extension
-	 * @param string
+	 * @param string $aName
 	 */
 	protected function uninstall($aName)
 	{
@@ -646,7 +645,7 @@ class RepositoryManager extends RepositoryBackendModule
 					// save new or changed file - by Request
 					if ($save) {
 						// HOOK: proxy module
-						if ($GLOBALS['TL_CONFIG']['useProxy']) {
+						if (Config::get('useProxy')) {
 							$req = new ProxyRequest();
 						} else {
 							$req = new Request();
@@ -733,7 +732,7 @@ class RepositoryManager extends RepositoryBackendModule
 
 			// fetch package - using Request class
 			// HOOK: proxy module
-			if ($GLOBALS['TL_CONFIG']['useProxy']) {
+			if (Config::get('useProxy')) {
 				$req = new ProxyRequest();
 			} else {
 				$req = new Request();
@@ -934,10 +933,10 @@ class RepositoryManager extends RepositoryBackendModule
 
 	/**
 	 * Create comma separated list of states
-	 * @param integer
-	 * @param integer
-	 * @param integer
-	 * @param integer
+	 * @param integer $aAlpha
+	 * @param integer $aBeta
+	 * @param integer $aRc
+	 * @param integer $aStable
 	 * @return string
 	 */
 	private function stateList($aAlpha, $aBeta, $aRc, $aStable)
@@ -952,15 +951,15 @@ class RepositoryManager extends RepositoryBackendModule
 
 	/**
 	 * Collect all acctions necessary to install/update an extension.
-	 * @param string
-	 * @param string
-	 * @param array
-	 * @param string
-	 * @param boolean
-	 * @param string
-	 * @param integer
-	 * @param integer
-	 * @param integer
+	 * @param string  $aName
+	 * @param string  $aVersion
+	 * @param array   $aActions
+	 * @param string  $aAction
+	 * @param boolean $aDeps
+	 * @param string  $aParent
+	 * @param integer $aParentVersion
+	 * @param integer $aMinversion
+	 * @param integer $aMaxversion
 	 */
 	private function addActions($aName, $aVersion, &$aActions, &$aAction, $aDeps=true, $aParent='', $aParentVersion=0, $aMinversion=0, $aMaxversion=0)
 	{
@@ -1111,7 +1110,7 @@ class RepositoryManager extends RepositoryBackendModule
 
 	/**
 	 * Get installed extensions list.
-	 * @param string
+	 * @param string $aIds
 	 * @return array Array with the extension records.
 	 */
 	private function getInstalledExtensions($aIds = '')

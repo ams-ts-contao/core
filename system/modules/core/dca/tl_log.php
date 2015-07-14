@@ -43,7 +43,6 @@ $GLOBALS['TL_DCA']['tl_log'] = array
 		(
 			'fields'                  => array('tstamp', 'text'),
 			'format'                  => '<span style="color:#b3b3b3;padding-right:3px">[%s]</span> %s',
-			'maxCharacters'           => 96,
 			'label_callback'          => array('tl_log', 'colorize')
 		),
 		'global_operations' => array
@@ -155,8 +154,10 @@ class tl_log extends Backend
 
 	/**
 	 * Colorize the log entries depending on their category
-	 * @param array
-	 * @param string
+	 *
+	 * @param array  $row
+	 * @param string $label
+	 *
 	 * @return string
 	 */
 	public function colorize($row, $label)
@@ -175,8 +176,19 @@ class tl_log extends Backend
 			case 'ERROR':
 				$label = preg_replace('@^(.*</span> )(.*)$@U', '$1 <span class="tl_red">$2</span>', $label);
 				break;
+
+			default:
+				if (isset($GLOBALS['TL_HOOKS']['colorizeLogEntries']) && is_array($GLOBALS['TL_HOOKS']['colorizeLogEntries']))
+				{
+					foreach ($GLOBALS['TL_HOOKS']['colorizeLogEntries'] as $callback)
+					{
+						$this->import($callback[0]);
+						$label = $this->$callback[0]->$callback[1]($row, $label);
+					}
+				}
+				break;
 		}
 
-		return $label;
+		return '<div class="ellipsis">' . $label . '</div>';
 	}
 }

@@ -21,7 +21,7 @@ class ModuleCalendar extends \Events
 
 	/**
 	 * Current date object
-	 * @var integer
+	 * @var \Date
 	 */
 	protected $Date;
 
@@ -40,12 +40,14 @@ class ModuleCalendar extends \Events
 
 	/**
 	 * Do not show the module if no calendar has been selected
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
 		if (TL_MODE == 'BE')
 		{
+			/** @var \BackendTemplate|object $objTemplate */
 			$objTemplate = new \BackendTemplate('be_wildcard');
 
 			$objTemplate->wildcard = '### ' . utf8_strtoupper($GLOBALS['TL_LANG']['FMD']['calendar'][0]) . ' ###';
@@ -82,28 +84,38 @@ class ModuleCalendar extends \Events
 	 */
 	protected function compile()
 	{
-		// Respond to month
-		if (\Input::get('month'))
+		// Create the date object
+		try
 		{
-			$this->Date = new \Date(\Input::get('month'), 'Ym');
+			if (\Input::get('month'))
+			{
+				$this->Date = new \Date(\Input::get('month'), 'Ym');
+			}
+			elseif (\Input::get('day'))
+			{
+				$this->Date = new \Date(\Input::get('day'), 'Ymd');
+			}
+			else
+			{
+				$this->Date = new \Date();
+			}
 		}
-		// Respond to day
-		elseif (\Input::get('day'))
+		catch (\OutOfBoundsException $e)
 		{
-			$this->Date = new \Date(\Input::get('day'), 'Ymd');
-		}
-		// Fallback to today
-		else
-		{
-			$this->Date = new \Date();
+			/** @var \PageModel $objPage */
+			global $objPage;
+
+			/** @var \PageError404 $objHandler */
+			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
+			$objHandler->generate($objPage->id);
 		}
 
-		$time = time();
+		$time = \Date::floorToMinute();
 
 		// Find the boundaries
-		$objMinMax = $this->Database->query("SELECT MIN(startTime) AS dateFrom, MAX(endTime) AS dateTo, MAX(repeatEnd) AS repeatUntil FROM tl_calendar_events WHERE pid IN(". implode(',', array_map('intval', $this->cal_calendar)) .")" . (!BE_USER_LOGGED_IN ? " AND (start='' OR start<$time) AND (stop='' OR stop>$time) AND published=1" : ""));
+		$objMinMax = $this->Database->query("SELECT MIN(startTime) AS dateFrom, MAX(endTime) AS dateTo, MAX(repeatEnd) AS repeatUntil FROM tl_calendar_events WHERE pid IN(". implode(',', array_map('intval', $this->cal_calendar)) .")" . (!BE_USER_LOGGED_IN ? " AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "') AND published='1'" : ""));
 
-		// Instantiate the template
+		/** @var \FrontendTemplate|object $objTemplate */
 		$objTemplate = new \FrontendTemplate(($this->cal_ctemplate ? $this->cal_ctemplate : 'cal_default'));
 
 		// Store year and month
@@ -121,7 +133,7 @@ class ModuleCalendar extends \Events
 		// Only generate a link if there are events (see #4160)
 		if ($objMinMax->dateFrom !== null && $intPrevYm >= date('Ym', $objMinMax->dateFrom))
 		{
-			$objTemplate->prevHref = $this->strUrl . ($GLOBALS['TL_CONFIG']['disableAlias'] ? '?id=' . \Input::get('id') . '&amp;' : '?') . 'month=' . $intPrevYm;
+			$objTemplate->prevHref = $this->strUrl . (\Config::get('disableAlias') ? '?id=' . \Input::get('id') . '&amp;' : '?') . 'month=' . $intPrevYm;
 			$objTemplate->prevTitle = specialchars($lblPrevious);
 			$objTemplate->prevLink = $GLOBALS['TL_LANG']['MSC']['cal_previous'] . ' ' . $lblPrevious;
 			$objTemplate->prevLabel = $GLOBALS['TL_LANG']['MSC']['cal_previous'];
@@ -139,7 +151,7 @@ class ModuleCalendar extends \Events
 		// Only generate a link if there are events (see #4160)
 		if ($objMinMax->dateTo !== null && $intNextYm <= date('Ym', max($objMinMax->dateTo, $objMinMax->repeatUntil)))
 		{
-			$objTemplate->nextHref = $this->strUrl . ($GLOBALS['TL_CONFIG']['disableAlias'] ? '?id=' . \Input::get('id') . '&amp;' : '?') . 'month=' . $intNextYm;
+			$objTemplate->nextHref = $this->strUrl . (\Config::get('disableAlias') ? '?id=' . \Input::get('id') . '&amp;' : '?') . 'month=' . $intNextYm;
 			$objTemplate->nextTitle = specialchars($lblNext);
 			$objTemplate->nextLink = $lblNext . ' ' . $GLOBALS['TL_LANG']['MSC']['cal_next'];
 			$objTemplate->nextLabel = $GLOBALS['TL_LANG']['MSC']['cal_next'];
@@ -161,6 +173,7 @@ class ModuleCalendar extends \Events
 
 	/**
 	 * Return the week days and labels as array
+	 *
 	 * @return array
 	 */
 	protected function compileDays()
@@ -199,6 +212,7 @@ class ModuleCalendar extends \Events
 
 	/**
 	 * Return all weeks of the current month as array
+	 *
 	 * @return array
 	 */
 	protected function compileWeeks()
@@ -273,7 +287,7 @@ class ModuleCalendar extends \Events
 
 			$arrDays[$strWeekClass][$i]['label'] = $intDay;
 			$arrDays[$strWeekClass][$i]['class'] = 'days active' . $strClass;
-			$arrDays[$strWeekClass][$i]['href'] = $this->strLink . ($GLOBALS['TL_CONFIG']['disableAlias'] ? '&amp;' : '?') . 'day=' . $intKey;
+			$arrDays[$strWeekClass][$i]['href'] = $this->strLink . (\Config::get('disableAlias') ? '&amp;' : '?') . 'day=' . $intKey;
 			$arrDays[$strWeekClass][$i]['title'] = sprintf(specialchars($GLOBALS['TL_LANG']['MSC']['cal_events']), count($arrEvents));
 			$arrDays[$strWeekClass][$i]['events'] = $arrEvents;
 		}

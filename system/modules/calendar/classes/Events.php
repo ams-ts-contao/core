@@ -46,7 +46,9 @@ abstract class Events extends \Module
 
 	/**
 	 * Sort out protected archives
-	 * @param array
+	 *
+	 * @param array $arrCalendars
+	 *
 	 * @return array
 	 */
 	protected function sortOutProtected($arrCalendars)
@@ -89,9 +91,11 @@ abstract class Events extends \Module
 
 	/**
 	 * Get all events of a certain period
-	 * @param array
-	 * @param integer
-	 * @param integer
+	 *
+	 * @param array   $arrCalendars
+	 * @param integer $intStart
+	 * @param integer $intEnd
+	 *
 	 * @return array
 	 */
 	protected function getAllEvents($arrCalendars, $intStart, $intEnd)
@@ -111,7 +115,7 @@ abstract class Events extends \Module
 			// Get the current "jumpTo" page
 			if ($objCalendar !== null && $objCalendar->jumpTo && ($objTarget = $objCalendar->getRelated('jumpTo')) !== null)
 			{
-				$strUrl = $this->generateFrontendUrl($objTarget->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/%s' : '/events/%s'));
+				$strUrl = $this->generateFrontendUrl($objTarget->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/events/%s'));
 			}
 
 			// Get the events of the current period
@@ -185,17 +189,20 @@ abstract class Events extends \Module
 
 	/**
 	 * Add an event to the array of active events
-	 * @param object
-	 * @param integer
-	 * @param integer
-	 * @param string
-	 * @param integer
-	 * @param integer
-	 * @param integer
+	 *
+	 * @param \CalendarEventsModel $objEvents
+	 * @param integer              $intStart
+	 * @param integer              $intEnd
+	 * @param string               $strUrl
+	 * @param integer              $intBegin
+	 * @param integer              $intLimit
+	 * @param integer              $intCalendar
 	 */
 	protected function addEvent($objEvents, $intStart, $intEnd, $strUrl, $intBegin, $intLimit, $intCalendar)
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
+
 		$span = \Calendar::calculateSpan($intStart, $intEnd);
 
 		// Adjust the start time of a multi-day event (see #6802)
@@ -243,6 +250,7 @@ abstract class Events extends \Module
 		$arrEvent['day'] = $strDay;
 		$arrEvent['month'] = $strMonth;
 		$arrEvent['parent'] = $intCalendar;
+		$arrEvent['calendar'] = $objEvents->getRelated('pid');
 		$arrEvent['link'] = $objEvents->title;
 		$arrEvent['target'] = '';
 		$arrEvent['title'] = specialchars($objEvents->title, true);
@@ -280,15 +288,23 @@ abstract class Events extends \Module
 		// Compile the event text
 		else
 		{
-			$objElement = \ContentModel::findPublishedByPidAndTable($objEvents->id, 'tl_calendar_events');
+			$id = $objEvents->id;
 
-			if ($objElement !== null)
+			$arrEvent['details'] = function () use ($id)
 			{
-				while ($objElement->next())
+				$strDetails = '';
+				$objElement = \ContentModel::findPublishedByPidAndTable($id, 'tl_calendar_events');
+
+				if ($objElement !== null)
 				{
-					$arrEvent['details'] .= $this->getContentElement($objElement->id);
+					while ($objElement->next())
+					{
+						$strDetails .= $this->getContentElement($objElement->current());
+					}
 				}
-			}
+
+				return $strDetails;
+			};
 		}
 
 		// Get todays start and end timestamp
@@ -336,8 +352,10 @@ abstract class Events extends \Module
 
 	/**
 	 * Generate a URL and return it as string
-	 * @param object
-	 * @param string
+	 *
+	 * @param \CalendarEventsModel $objEvent
+	 * @param string               $strUrl
+	 *
 	 * @return string
 	 */
 	protected function generateEventUrl($objEvent, $strUrl)
@@ -368,20 +386,22 @@ abstract class Events extends \Module
 			case 'article':
 				if (($objArticle = \ArticleModel::findByPk($objEvent->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 				{
-					return ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
+					return ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
 				}
 				break;
 		}
 
 		// Link to the default page
-		return ampersand(sprintf($strUrl, ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objEvent->alias != '') ? $objEvent->alias : $objEvent->id)));
+		return ampersand(sprintf($strUrl, ((!\Config::get('disableAlias') && $objEvent->alias != '') ? $objEvent->alias : $objEvent->id)));
 	}
 
 
 	/**
 	 * Return the begin and end timestamp and an error message as array
-	 * @param \Date
-	 * @param string
+	 *
+	 * @param \Date  $objDate
+	 * @param string $strFormat
+	 *
 	 * @return array
 	 */
 	protected function getDatesFromFormat(\Date $objDate, $strFormat)
@@ -435,21 +455,25 @@ abstract class Events extends \Module
 
 			case 'next_cur_month':
 				$objToday = new \Date();
+
 				return array(time(), $objToday->monthEnd, $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
 			case 'next_cur_year':
 				$objToday = new \Date();
+
 				return array(time(), $objToday->yearEnd, $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
 			case 'next_next_month':
 				$objToday = new \Date();
+
 				return array(($objToday->monthEnd + 1), strtotime('+1 month', $objToday->monthEnd), $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
 			case 'next_next_year':
 				$objToday = new \Date();
+
 				return array(($objToday->yearEnd + 1), strtotime('+1 year', $objToday->yearEnd), $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
@@ -487,26 +511,31 @@ abstract class Events extends \Module
 
 			case 'past_cur_month':
 				$objToday = new \Date();
+
 				return array($objToday->monthBegin, (time() - 1), $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
 			case 'past_cur_year':
 				$objToday = new \Date();
+
 				return array($objToday->yearBegin, (time() - 1), $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
 			case 'past_prev_month':
 				$objToday = new \Date();
+
 				return array(strtotime('-1 month', $objToday->monthBegin), ($objToday->monthBegin - 1), $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
 			case 'past_prev_year':
 				$objToday = new \Date();
+
 				return array(strtotime('-1 year', $objToday->yearBegin), ($objToday->yearBegin - 1), $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 
 			case 'past_all': // 1970-01-01 00:00:00
 				$objToday = new \Date();
+
 				return array(0, ($objToday->dayBegin - 1), $GLOBALS['TL_LANG']['MSC']['cal_empty']);
 				break;
 		}

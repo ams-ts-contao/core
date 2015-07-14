@@ -34,9 +34,71 @@ namespace Contao;
  *         }
  *     }
  *
+ * @property string                  $id                The field ID
+ * @property string                  $name              the field name
+ * @property string                  $label             The field label
+ * @property mixed                   $value             The field value
+ * @property string                  $class             One or more CSS classes
+ * @property string                  $prefix            The CSS class prefix
+ * @property string                  $template          The template name
+ * @property string                  $wizard            The field wizard markup
+ * @property string                  $alt               The alternative text
+ * @property string                  $style             The style attribute
+ * @property string                  $accesskey         The key to focus the field
+ * @property integer                 $tabindex          The tabindex of the field
+ * @property boolean                 $disabled          Adds the disabled attribute
+ * @property boolean                 $readonly          Adds the readonly attribute
+ * @property boolean                 $autofocus         Adds the autofocus attribute
+ * @property boolean                 $required          Adds the required attribute
+ * @property string                  $onblur            The blur event
+ * @property string                  $onchange          The change event
+ * @property string                  $onclick           The click event
+ * @property string                  $ondblclick        The double click event
+ * @property string                  $onfocus           The focus event
+ * @property string                  $onmousedown       The mouse down event
+ * @property string                  $onmousemove       The mouse move event
+ * @property string                  $onmouseout        The mouse out event
+ * @property string                  $onmouseover       The mouse over event
+ * @property string                  $onmouseup         The mouse up event
+ * @property string                  $onkeydown         The key down event
+ * @property string                  $onkeypress        The key press event
+ * @property string                  $onkeyup           The key up event
+ * @property string                  $onselect          The select event
+ * @property boolean                 $mandatory         The field value must not be empty
+ * @property boolean                 $nospace           Do not allow whitespace characters
+ * @property boolean                 $allowHtml         Allow HTML tags in the field value
+ * @property boolean                 $addSubmit         Add an inline submit button
+ * @property boolean                 $storeFile         Store uploaded files in a given folder
+ * @property boolean                 $useHomeDir        Store uploaded files in the user's home directory
+ * @property boolean                 $trailingSlash     Add or remove a trailing slash
+ * @property boolean                 $spaceToUnderscore Convert spaces to underscores
+ * @property boolean                 $nullIfEmpty       Set to NULL if the value is empty
+ * @property boolean                 $doNotTrim         Do not trim the user input
+ * @property string                  $forAttribute      The "for" attribute
+ * @property \DataContainer          $dataContainer     The data container object
+ * @property \Database\Result|object $activeRecord      The active record
+ * @property string                  $mandatoryField    The "mandatory field" label
+ * @property string                  $customTpl         A custom template name
+ * @property string                  $slabel            The submit button label
+ * @property boolean                 $preserveTags      Preserve HTML tags
+ * @property boolean                 $decodeEntities    Decode HTML entities
+ * @property integer                 $minlength         The minimum length
+ * @property integer                 $maxlength         The maximum length
+ * @property integer                 $minval            The minimum value
+ * @property integer                 $maxval            The maximum value
+ * @property integer                 $rgxp              The regular expression name
+ * @property boolean                 $isHexColor        The field value is a hex color
+ * @property string                  $strTable          The table name
+ * @property string                  $strField          The field name
+ * @property string                  $xlabel
+ * @property integer                 $currentRecord
+ * @property integer                 $rowClass
+ * @property integer                 $rowClassConfirm
+ * @property integer                 $storeValues
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-abstract class Widget extends \Controller
+abstract class Widget extends \BaseTemplate
 {
 
 	/**
@@ -70,28 +132,16 @@ abstract class Widget extends \Controller
 	protected $strClass;
 
 	/**
-	 * Template
+	 * CSS class prefix
 	 * @var string
 	 */
-	protected $strTemplate;
+	protected $strPrefix;
 
 	/**
 	 * Wizard
 	 * @var string
 	 */
 	protected $strWizard;
-
-	/**
-	 * Output format
-	 * @var string
-	 */
-	protected $strFormat = 'html5';
-
-	/**
-	 * Tag ending
-	 * @var string
-	 */
-	protected $strTagEnding = '>';
 
 	/**
 	 * Errors
@@ -148,14 +198,14 @@ abstract class Widget extends \Controller
 		// Override the output format in the front end
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->outputFormat != '')
 			{
 				$this->strFormat = $objPage->outputFormat;
+				$this->strTagEnding = ($this->strFormat == 'xhtml') ? ' />' : '>';
 			}
-
-			$this->strTagEnding = ($this->strFormat == 'xhtml') ? ' />' : '>';
 		}
 
 		$this->addAttributes($arrAttributes);
@@ -164,52 +214,6 @@ abstract class Widget extends \Controller
 
 	/**
 	 * Set an object property
-	 *
-	 * Supported keys:
-	 *
-	 * * id:                the field ID
-	 * * name:              the field name
-	 * * label:             the field label
-	 * * value:             the field value
-	 * * class:             one or more CSS classes
-	 * * template:          the template name
-	 * * wizard:            the field wizard markup
-	 * * alt:               an alternative text
-	 * * style:             the style attribute
-	 * * accesskey:         the key to focus the field
-	 * * tabindex:          the tabindex of the field
-	 * * disabled:          adds the disabled attribute
-	 * * readonly:          adds the readonly attribute
-	 * * autofocus:         adds the autofocus attribute
-	 * * required:          adds the required attribute
-	 *
-	 * Event handler:
-	 *
-	 * * onblur:            the blur event
-	 * * onchange:          the change event
-	 * * onclick:           the click event
-	 * * ondblclick:        the double click event
-	 * * onfocus:           the focus event
-	 * * onmousedown:       the mouse down event
-	 * * onmousemove:       the mouse move event
-	 * * onmouseout:        the mouse out event
-	 * * onmouseover:       the mouse over event
-	 * * onmouseup:         the mouse up event
-	 * * onkeydown:         the key down event
-	 * * onkeypress:        the key press event
-	 * * onkeyup:           the key up event
-	 * * onselect:          the select event
-	 *
-	 * Miscellaneous:
-	 *
-	 * * mandatory:         the field value must not be empty
-	 * * nospace:           does not allow whitespace characters
-	 * * allowHtml:         allows HTML tags in the field value
-	 * * addSubmit:         adds an inline submit button
-	 * * storeFile:         store uploaded files in a given folder
-	 * * useHomeDir:        store uploaded files in the user's home directory
-	 * * trailingSlash:     add or remove a trailing slash
-	 * * spaceToUnderscore: convert spaces to underscores
 	 *
 	 * @param string $strKey   The property name
 	 * @param mixed  $varValue The property value
@@ -245,6 +249,10 @@ abstract class Widget extends \Controller
 				{
 					$this->strClass = trim($this->strClass . ' ' . $varValue);
 				}
+				break;
+
+			case 'prefix':
+				$this->strPrefix = $varValue;
 				break;
 
 			case 'template':
@@ -294,14 +302,7 @@ abstract class Widget extends \Controller
 
 			case 'disabled':
 			case 'readonly':
-				if ($varValue)
-				{
-					$this->blnSubmitInput = false;
-				}
-				else
-				{
-					$this->blnSubmitInput = true;
-				}
+				$this->blnSubmitInput = $varValue ? false : true;
 				// Do not add a break; statement here
 
 			case 'autofocus':
@@ -332,11 +333,21 @@ abstract class Widget extends \Controller
 			case 'trailingSlash':
 			case 'spaceToUnderscore':
 			case 'nullIfEmpty':
+			case 'doNotTrim':
 				$this->arrConfiguration[$strKey] = $varValue ? true : false;
 				break;
 
 			case 'forAttribute':
 				$this->blnForAttribute = $varValue;
+				break;
+
+			case 'dataContainer':
+				$this->objDca = $varValue;
+				break;
+
+			case strncmp($strKey, 'ng-', 3) === 0:
+			case strncmp($strKey, 'data-', 5) === 0:
+				$this->arrAttributes[$strKey] = $varValue;
 				break;
 
 			default:
@@ -348,17 +359,6 @@ abstract class Widget extends \Controller
 
 	/**
 	 * Return an object property
-	 *
-	 * Supported keys:
-	 *
-	 * * id:       the field ID
-	 * * name:     the field name
-	 * * label:    the field label
-	 * * value:    the field value
-	 * * class:    one or more CSS classes
-	 * * template: the template name
-	 * * wizard:   the field wizard markup
-	 * * required: makes the widget a required field
 	 *
 	 * @param string $strKey The property name
 	 *
@@ -397,6 +397,10 @@ abstract class Widget extends \Controller
 				return $this->strClass;
 				break;
 
+			case 'prefix':
+				return $this->strPrefix;
+				break;
+
 			case 'template':
 				return $this->strTemplate;
 				break;
@@ -411,6 +415,14 @@ abstract class Widget extends \Controller
 
 			case 'forAttribute':
 				return $this->blnForAttribute;
+				break;
+
+			case 'dataContainer':
+				return $this->objDca;
+				break;
+
+			case 'activeRecord':
+				return $this->objDca->activeRecord;
 				break;
 
 			default:
@@ -474,6 +486,14 @@ abstract class Widget extends \Controller
 
 			case 'forAttribute':
 				return isset($this->blnForAttribute);
+				break;
+
+			case 'dataContainer':
+				return isset($this->objDca);
+				break;
+
+			case 'activeRecord':
+				return isset($this->objDca->activeRecord);
 				break;
 
 			default:
@@ -600,10 +620,14 @@ abstract class Widget extends \Controller
 
 		$this->addAttributes($arrAttributes);
 
-		ob_start();
-		include $this->getTemplate($this->strTemplate, $this->strFormat);
-		$strBuffer = ob_get_contents();
-		ob_end_clean();
+		$this->mandatoryField = $GLOBALS['TL_LANG']['MSC']['mandatory'];
+
+		if ($this->customTpl != '' && TL_MODE == 'FE')
+		{
+			$this->strTemplate = $this->customTpl;
+		}
+
+		$strBuffer = parent::parse();
 
 		// HOOK: add custom parse filters (see #5553)
 		if (isset($GLOBALS['TL_HOOKS']['parseWidget']) && is_array($GLOBALS['TL_HOOKS']['parseWidget']))
@@ -705,6 +729,7 @@ abstract class Widget extends \Controller
 
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->outputFormat == 'xhtml')
@@ -804,7 +829,7 @@ abstract class Widget extends \Controller
 		{
 			$varValue = \Input::$strMethod(array_shift($arrParts), $this->decodeEntities);
 
-			foreach($arrParts as $part)
+			foreach ($arrParts as $part)
 			{
 				if (!is_array($varValue))
 				{
@@ -840,7 +865,10 @@ abstract class Widget extends \Controller
 			return $varInput;
 		}
 
-		$varInput = trim($varInput);
+		if (!$this->doNotTrim)
+		{
+			$varInput = trim($varInput);
+		}
 
 		if ($varInput == '')
 		{
@@ -871,6 +899,16 @@ abstract class Widget extends \Controller
 			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['maxlength'], $this->strLabel, $this->maxlength));
 		}
 
+		if ($this->minval && is_numeric($varInput) && $varInput < $this->minval)
+		{
+			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['minval'], $this->strLabel, $this->minval));
+		}
+
+		if ($this->maxval && is_numeric($varInput) && $varInput > $this->maxval)
+		{
+			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['maxval'], $this->strLabel, $this->maxval));
+		}
+
 		if ($this->rgxp != '')
 		{
 			switch ($this->rgxp)
@@ -896,6 +934,14 @@ abstract class Widget extends \Controller
 					if (!\Validator::isNumeric($varInput))
 					{
 						$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['digit'], $this->strLabel));
+					}
+					break;
+
+				// Natural numbers (positive integers)
+				case 'natural':
+					if (!\Validator::isNatural($varInput))
+					{
+						$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['natural'], $this->strLabel));
 					}
 					break;
 
@@ -1186,6 +1232,7 @@ abstract class Widget extends \Controller
 
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->outputFormat == 'xhtml')
@@ -1217,6 +1264,7 @@ abstract class Widget extends \Controller
 
 		if (TL_MODE == 'FE')
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			if ($objPage->outputFormat == 'xhtml')
@@ -1304,8 +1352,7 @@ abstract class Widget extends \Controller
 		$arrAttributes['label'] = (($label = is_array($arrData['label']) ? $arrData['label'][0] : $arrData['label']) != false) ? $label : $strField;
 		$arrAttributes['description'] = $arrData['label'][1];
 		$arrAttributes['type'] = $arrData['inputType'];
-		$arrAttributes['activeRecord'] = $arrData['activeRecord'];
-		$arrAttributes['objDca'] = $objDca;
+		$arrAttributes['dataContainer'] = $objDca;
 
 		// Internet Explorer does not support onchange for checkboxes and radio buttons
 		if ($arrData['eval']['submitOnChange'])
@@ -1352,7 +1399,7 @@ abstract class Widget extends \Controller
 			$objOptions = \Database::getInstance()->query("SELECT id, " . $arrKey[1] . " AS value FROM " . $arrKey[0] . " WHERE tstamp>0 ORDER BY value");
 			$arrData['options'] = array();
 
-			while($objOptions->next())
+			while ($objOptions->next())
 			{
 				$arrData['options'][$objOptions->id] = $objOptions->value;
 			}
@@ -1408,6 +1455,12 @@ abstract class Widget extends \Controller
 		{
 			$objDate = new \Date($varValue, \Date::getFormatFromRgxp($arrData['eval']['rgxp']));
 			$arrAttributes['value'] = $objDate->{$arrData['eval']['rgxp']};
+		}
+
+		// Add the "rootNodes" array as attribute (see #3563)
+		if (isset($arrData['rootNodes']) && !isset($arrData['eval']['rootNodes']))
+		{
+			$arrAttributes['rootNodes'] = $arrData['rootNodes'];
 		}
 
 		// HOOK: add custom logic

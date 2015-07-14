@@ -160,6 +160,10 @@ $GLOBALS['TL_DCA']['tl_newsletter'] = array
 			'inputType'               => 'textarea',
 			'eval'                    => array('rte'=>'tinyNews', 'helpwizard'=>true),
 			'explanation'             => 'insertTags',
+			'load_callback' => array
+			(
+				array('tl_newsletter', 'convertAbsoluteLinks')
+			),
 			'save_callback' => array
 			(
 				array('tl_newsletter', 'convertRelativeLinks')
@@ -407,23 +411,40 @@ class tl_newsletter extends Backend
 
 	/**
 	 * List records
-	 * @param array
+	 *
+	 * @param array $arrRow
+	 *
 	 * @return string
 	 */
 	public function listNewsletters($arrRow)
 	{
 		return '
-<div class="cte_type ' . (($arrRow['sent'] && $arrRow['date']) ? 'published' : 'unpublished') . '"><strong>' . $arrRow['subject'] . '</strong> - ' . (($arrRow['sent'] && $arrRow['date']) ? sprintf($GLOBALS['TL_LANG']['tl_newsletter']['sentOn'], Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $arrRow['date'])) : $GLOBALS['TL_LANG']['tl_newsletter']['notSent']) . '</div>
-<div class="limit_height' . (!$GLOBALS['TL_CONFIG']['doNotCollapse'] ? ' h128' : '') . '">' . (!$arrRow['sendText'] ? '
-' . $this->replaceInsertTags($arrRow['content'], false) . '<hr>' : '' ) . '
+<div class="cte_type ' . (($arrRow['sent'] && $arrRow['date']) ? 'published' : 'unpublished') . '"><strong>' . $arrRow['subject'] . '</strong> - ' . (($arrRow['sent'] && $arrRow['date']) ? sprintf($GLOBALS['TL_LANG']['tl_newsletter']['sentOn'], Date::parse(Config::get('datimFormat'), $arrRow['date'])) : $GLOBALS['TL_LANG']['tl_newsletter']['notSent']) . '</div>
+<div class="limit_height' . (!Config::get('doNotCollapse') ? ' h128' : '') . '">' . (!$arrRow['sendText'] ? '
+' . String::insertTagToSrc($arrRow['content']) . '<hr>' : '' ) . '
 <pre style="white-space:pre-wrap">' . $arrRow['text'] . '</pre>
 </div>' . "\n";
 	}
 
 
 	/**
+	 * Convert absolute URLs from TinyMCE to relative URLs
+	 *
+	 * @param string $strContent
+	 *
+	 * @return string
+	 */
+	public function convertAbsoluteLinks($strContent)
+	{
+		return str_replace('src="' .Environment::get('base'), 'src="', $strContent);
+	}
+
+
+	/**
 	 * Convert relative URLs from TinyMCE to absolute URLs
-	 * @param string
+	 *
+	 * @param string $strContent
+	 *
 	 * @return string
 	 */
 	public function convertRelativeLinks($strContent)
@@ -434,10 +455,13 @@ class tl_newsletter extends Backend
 
 	/**
 	 * Auto-generate the newsletter alias if it has not been set yet
-	 * @param mixed
-	 * @param \DataContainer
+	 *
+	 * @param mixed         $varValue
+	 * @param DataContainer $dc
+	 *
 	 * @return mixed
-	 * @throws \Exception
+	 *
+	 * @throws Exception
 	 */
 	public function generateAlias($varValue, DataContainer $dc)
 	{
@@ -471,6 +495,7 @@ class tl_newsletter extends Backend
 
 	/**
 	 * Return all mail templates as array
+	 *
 	 * @return array
 	 */
 	public function getMailTemplates()

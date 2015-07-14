@@ -24,6 +24,18 @@ namespace Contao;
  *     $email->text = 'Is it me you are looking for?';
  *     $email->sendTo('lionel@richie.com');
  *
+ * @property string  $subject     The e-mail subject
+ * @property string  $text        The text part of the mail
+ * @property string  $html        The HTML part of the mail
+ * @property string  $from        The sender's e-mail address
+ * @property string  $fromName    The sender's name
+ * @property string  $priority    The e-mail priority
+ * @property string  $charset     The e-mail character set
+ * @property string  $imageDir    The base directory to look for internal images
+ * @property boolean $embedImages Whether to embed images inline
+ * @property string  $logFile     The log file path
+ * @property array   $failures    An array of rejected e-mail addresses
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class Email
@@ -113,12 +125,12 @@ class Email
 	 */
 	public function __construct()
 	{
-		$this->strCharset = $GLOBALS['TL_CONFIG']['characterSet'];
+		$this->strCharset = \Config::get('characterSet');
 
 		// Instantiate mailer
 		if (self::$objMailer === null)
 		{
-			if (!$GLOBALS['TL_CONFIG']['useSMTP'])
+			if (!\Config::get('useSMTP'))
 			{
 				// Mail
 				$objTransport = \Swift_MailTransport::newInstance();
@@ -126,18 +138,18 @@ class Email
 			else
 			{
 				// SMTP
-				$objTransport = \Swift_SmtpTransport::newInstance($GLOBALS['TL_CONFIG']['smtpHost'], $GLOBALS['TL_CONFIG']['smtpPort']);
+				$objTransport = \Swift_SmtpTransport::newInstance(\Config::get('smtpHost'), \Config::get('smtpPort'));
 
 				// Encryption
-				if ($GLOBALS['TL_CONFIG']['smtpEnc'] == 'ssl' || $GLOBALS['TL_CONFIG']['smtpEnc'] == 'tls')
+				if (\Config::get('smtpEnc') == 'ssl' || \Config::get('smtpEnc') == 'tls')
 				{
-					$objTransport->setEncryption($GLOBALS['TL_CONFIG']['smtpEnc']);
+					$objTransport->setEncryption(\Config::get('smtpEnc'));
 				}
 
 				// Authentication
-				if ($GLOBALS['TL_CONFIG']['smtpUser'] != '')
+				if (\Config::get('smtpUser') != '')
 				{
-					$objTransport->setUsername($GLOBALS['TL_CONFIG']['smtpUser'])->setPassword($GLOBALS['TL_CONFIG']['smtpPass']);
+					$objTransport->setUsername(\Config::get('smtpUser'))->setPassword(\Config::get('smtpPass'));
 				}
 			}
 
@@ -152,19 +164,6 @@ class Email
 
 	/**
 	 * Set an object property
-	 *
-	 * Supported keys:
-	 *
-	 * * subject:     the e-mail subject
-	 * * text:        the text part of the mail
-	 * * html:        the HTML part of the mail
-	 * * from:        the sender's e-mail address
-	 * * fromName:    the sender's name
-	 * * priority:    the e-mail priority
-	 * * charset:     the e-mail character set
-	 * * imageDir:    the base directory to look for internal images
-	 * * embedImages: whether to embed images inline
-	 * * logFile:     the log file path
 	 *
 	 * @param string $strKey   The property name
 	 * @param mixed  $varValue The property value
@@ -246,20 +245,6 @@ class Email
 
 	/**
 	 * Return an object property
-	 *
-	 * Supported keys:
-	 *
-	 * * subject:     the e-mail subject
-	 * * text:        the text part of the mail
-	 * * html:        the HTML part of the mail
-	 * * from:        the sender's e-mail address
-	 * * fromName:    the sender's name
-	 * * priority:    the e-mail priority
-	 * * charset:     the e-mail character set
-	 * * imageDir:    the base directory to look for internal images
-	 * * embedImages: whether to embed images inline
-	 * * logFile:     the log file path
-	 * * failures:    an array of rejected e-mail addresses
 	 *
 	 * @param string $strKey The property name
 	 *
@@ -493,7 +478,7 @@ class Email
 		// Add the administrator e-mail as default sender
 		if ($this->strSender == '')
 		{
-			list($this->strSenderName, $this->strSender) = \String::splitFriendlyEmail($GLOBALS['TL_CONFIG']['adminEmail']);
+			list($this->strSenderName, $this->strSender) = \String::splitFriendlyEmail(\Config::get('adminEmail'));
 		}
 
 		// Sender
@@ -541,6 +526,7 @@ class Email
 		}
 
 		log_message($strMessage, $this->strLogFile);
+
 		return true;
 	}
 

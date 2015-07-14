@@ -12,10 +12,10 @@
 /**
  * Add palettes to tl_module
  */
-$GLOBALS['TL_DCA']['tl_module']['palettes']['calendar']    = '{title_legend},name,headline,type;{config_legend},cal_calendar,cal_noSpan,cal_startDay;{redirect_legend},jumpTo;{template_legend:hide},cal_ctemplate;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['eventlist']   = '{title_legend},name,headline,type;{config_legend},cal_calendar,cal_noSpan,cal_format,cal_ignoreDynamic,cal_order,cal_readerModule,cal_limit,perPage;{template_legend:hide},cal_template,imgSize;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['eventreader'] = '{title_legend},name,headline,type;{config_legend},cal_calendar;{template_legend:hide},cal_template,imgSize;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['eventmenu']   = '{title_legend},name,headline,type;{config_legend},cal_calendar,cal_noSpan,cal_showQuantity,cal_format,cal_startDay,cal_order;{redirect_legend},jumpTo;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['calendar']    = '{title_legend},name,headline,type;{config_legend},cal_calendar,cal_noSpan,cal_startDay;{redirect_legend},jumpTo;{template_legend:hide},cal_ctemplate,customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['eventlist']   = '{title_legend},name,headline,type;{config_legend},cal_calendar,cal_noSpan,cal_format,cal_ignoreDynamic,cal_order,cal_readerModule,cal_limit,perPage;{template_legend:hide},cal_template,customTpl;{image_legend:hide},imgSize;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['eventreader'] = '{title_legend},name,headline,type;{config_legend},cal_calendar;{template_legend:hide},cal_template,customTpl;{image_legend},imgSize;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['eventmenu']   = '{title_legend},name,headline,type;{config_legend},cal_calendar,cal_noSpan,cal_showQuantity,cal_format,cal_startDay,cal_order;{redirect_legend},jumpTo;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space';
 
 
 /**
@@ -104,7 +104,7 @@ $GLOBALS['TL_DCA']['tl_module']['fields']['cal_limit'] = array
 	'label'                   => &$GLOBALS['TL_LANG']['tl_module']['cal_limit'],
 	'exclude'                 => true,
 	'inputType'               => 'text',
-	'eval'                    => array('rgxp'=>'digit', 'tl_class'=>'w50'),
+	'eval'                    => array('rgxp'=>'natural', 'tl_class'=>'w50'),
 	'sql'                     => "smallint(5) unsigned NOT NULL default '0'"
 );
 
@@ -168,6 +168,7 @@ class tl_module_calendar extends Backend
 
 	/**
 	 * Get all calendars and return them as array
+	 *
 	 * @return array
 	 */
 	public function getCalendars()
@@ -182,7 +183,7 @@ class tl_module_calendar extends Backend
 
 		while ($objCalendars->next())
 		{
-			if ($this->User->isAdmin || $this->User->hasAccess($objCalendars->id, 'calendars'))
+			if ($this->User->hasAccess($objCalendars->id, 'calendars'))
 			{
 				$arrCalendars[$objCalendars->id] = $objCalendars->title;
 			}
@@ -194,6 +195,7 @@ class tl_module_calendar extends Backend
 
 	/**
 	 * Get all event reader modules and return them as array
+	 *
 	 * @return array
 	 */
 	public function getReaderModules()
@@ -212,7 +214,9 @@ class tl_module_calendar extends Backend
 
 	/**
 	 * Return the calendar formats depending on the module type
-	 * @param \DataContainer
+	 *
+	 * @param DataContainer $dc
+	 *
 	 * @return array
 	 */
 	public function getFormats(DataContainer $dc)
@@ -233,6 +237,7 @@ class tl_module_calendar extends Backend
 
 	/**
 	 * Hide the start day drop-down if not applicable
+	 *
 	 * @return string
 	 */
 	public function hideStartDay()
@@ -262,6 +267,7 @@ class tl_module_calendar extends Backend
 
 	/**
 	 * Return all event templates as array
+	 *
 	 * @return array
 	 */
 	public function getEventTemplates()
@@ -272,6 +278,7 @@ class tl_module_calendar extends Backend
 
 	/**
 	 * Return all calendar templates as array
+	 *
 	 * @return array
 	 */
 	public function getCalendarTemplates()

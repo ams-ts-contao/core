@@ -21,16 +21,22 @@ class PageError404 extends \Frontend
 
 	/**
 	 * Generate an error 404 page
-	 * @param integer
-	 * @param string
-	 * @param string
+	 *
+	 * @param integer $pageId
+	 * @param string  $strDomain
+	 * @param string  $strHost
+	 * @param boolean $blnUnusedGet
 	 */
-	public function generate($pageId, $strDomain=null, $strHost=null)
+	public function generate($pageId, $strDomain=null, $strHost=null, $blnUnusedGet=false)
 	{
 		// Add a log entry
-		if ($strDomain !== null || $strHost !== null)
+		if ($blnUnusedGet)
 		{
-			$this->log('Page ID "' . $pageId . '" can only be accessed via domain "' . $strDomain . '" (current request via "' . $strHost . '")', __METHOD__, TL_ERROR);
+			$this->log('The request for page ID "' . $pageId . '" contained unused GET parameters: "' . implode('", "', \Input::getUnusedGet()) . '" (' . \Environment::get('base') . \Environment::get('request') . ')', __METHOD__, TL_ERROR);
+		}
+		elseif ($strDomain !== null || $strHost !== null)
+		{
+			$this->log('Page ID "' . $pageId . '" was requested via "' . $strHost . '" but can only be accessed via "' . $strDomain . '" (' . \Environment::get('base') . \Environment::get('request') . ')', __METHOD__, TL_ERROR);
 		}
 		elseif ($pageId != 'favicon.ico' && $pageId != 'robots.txt')
 		{
@@ -44,7 +50,7 @@ class PageError404 extends \Frontend
 		$objRootPage = $this->getRootPageFromUrl();
 
 		// Forward if the language should be but is not set (see #4028)
-		if ($GLOBALS['TL_CONFIG']['addLanguageToUrl'])
+		if (\Config::get('addLanguageToUrl'))
 		{
 			// Get the request string without the index.php fragment
 			if (\Environment::get('request') == 'index.php')
@@ -71,11 +77,11 @@ class PageError404 extends \Frontend
 			}
 		}
 
-		// Look for an 404 page
+		// Look for a 404 page
 		$obj404 = \PageModel::find404ByPid($objRootPage->id);
 
 		// Die if there is no page at all
-		if ($obj404 === null)
+		if (null === $obj404)
 		{
 			header('HTTP/1.1 404 Not Found');
 			die_nicely('be_no_page', 'Page not found');
@@ -84,9 +90,12 @@ class PageError404 extends \Frontend
 		// Generate the error page
 		if (!$obj404->autoforward || !$obj404->jumpTo)
 		{
+			/** @var \PageModel $objPage */
 			global $objPage;
 
 			$objPage = $obj404->loadDetails();
+
+			/** @var \PageRegular $objHandler */
 			$objHandler = new $GLOBALS['TL_PTY']['regular']();
 
 			header('HTTP/1.1 404 Not Found');
@@ -98,7 +107,7 @@ class PageError404 extends \Frontend
 		// Forward to another page
 		$objNextPage = \PageModel::findPublishedById($obj404->jumpTo);
 
-		if ($objNextPage === null)
+		if (null === $objNextPage)
 		{
 			header('HTTP/1.1 404 Not Found');
 			$this->log('Forward page ID "' . $obj404->jumpTo . '" does not exist', __METHOD__, TL_ERROR);

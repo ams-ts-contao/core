@@ -12,7 +12,12 @@ namespace Contao;
 
 
 /**
- * Form field "password".
+ * Class FormPassword
+ *
+ * @property boolean $mandatory
+ * @property integer $maxlength
+ * @property string  $placeholder
+ * @property string  $confirmLabel
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -21,26 +26,37 @@ class FormPassword extends \Widget
 
 	/**
 	 * Submit user input
+	 *
 	 * @var boolean
 	 */
 	protected $blnSubmitInput = true;
 
 	/**
 	 * Add a for attribute
+	 *
 	 * @var boolean
 	 */
 	protected $blnForAttribute = true;
 
 	/**
 	 * Template
+	 *
 	 * @var string
 	 */
 	protected $strTemplate = 'form_password';
 
+	/**
+	 * The CSS class prefix
+	 *
+	 * @var string
+	 */
+	protected $strPrefix = 'widget widget-password';
+
 
 	/**
 	 * Always decode entities
-	 * @param array
+	 *
+	 * @param array $arrAttributes An optional attributes array
 	 */
 	public function __construct($arrAttributes=null)
 	{
@@ -51,8 +67,9 @@ class FormPassword extends \Widget
 
 	/**
 	 * Add specific attributes
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey   The attribute name
+	 * @param mixed  $varValue The attribute value
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -66,8 +83,14 @@ class FormPassword extends \Widget
 				break;
 
 			case 'mandatory':
-				// Do not set the "required" attribute here, because password
-				// fields can remain empty if a password has been set already
+				if ($varValue)
+				{
+					$this->arrAttributes['required'] = 'required';
+				}
+				else
+				{
+					unset($this->arrAttributes['required']);
+				}
 				parent::__set($strKey, $varValue);
 				break;
 
@@ -84,8 +107,10 @@ class FormPassword extends \Widget
 
 	/**
 	 * Validate input and set value
-	 * @param mixed
-	 * @return mixed
+	 *
+	 * @param mixed $varInput The user input
+	 *
+	 * @return mixed The validated user input
 	 */
 	protected function validator($varInput)
 	{
@@ -96,9 +121,9 @@ class FormPassword extends \Widget
 			return '';
 		}
 
-		if (utf8_strlen($varInput) < $GLOBALS['TL_CONFIG']['minPasswordLength'])
+		if (utf8_strlen($varInput) < \Config::get('minPasswordLength'))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['passwordLength'], $GLOBALS['TL_CONFIG']['minPasswordLength']));
+			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['passwordLength'], \Config::get('minPasswordLength')));
 		}
 
 		if ($varInput != $this->getPost($this->strName . '_confirm'))
@@ -111,7 +136,7 @@ class FormPassword extends \Widget
 		if (!$this->hasErrors())
 		{
 			$this->blnSubmitInput = true;
-			\Message::addConfirmation($GLOBALS['TL_LANG']['MSC']['pw_changed']);
+
 			return \Encryption::hash($varInput);
 		}
 
@@ -120,15 +145,31 @@ class FormPassword extends \Widget
 
 
 	/**
+	 * Parse the template file and return it as string
+	 *
+	 * @param array $arrAttributes An optional attributes array
+	 *
+	 * @return string The template markup
+	 */
+	public function parse($arrAttributes=null)
+	{
+		$this->confirmLabel = sprintf($GLOBALS['TL_LANG']['MSC']['confirmation'], $this->strLabel);
+
+		return parent::parse($arrAttributes);
+	}
+
+
+	/**
 	 * Generate the widget and return it as string
-	 * @return string
+	 *
+	 * @return string The widget markup
 	 */
 	public function generate()
 	{
 		return sprintf('<input type="password" name="%s" id="ctrl_%s" class="text password%s" value=""%s%s',
 						$this->strName,
 						$this->strId,
-						(strlen($this->strClass) ? ' ' . $this->strClass : ''),
+						(($this->strClass != '') ? ' ' . $this->strClass : ''),
 						$this->getAttributes(),
 						$this->strTagEnding) . $this->addSubmit();
 	}
@@ -136,13 +177,14 @@ class FormPassword extends \Widget
 
 	/**
 	 * Generate the label of the confirmation field and return it as string
-	 * @return string
+	 *
+	 * @return string The confirmation label markup
 	 */
 	public function generateConfirmationLabel()
 	{
 		return sprintf('<label for="ctrl_%s_confirm" class="confirm%s">%s%s%s</label>',
 						$this->strId,
-						(strlen($this->strClass) ? ' ' . $this->strClass : ''),
+						(($this->strClass != '') ? ' ' . $this->strClass : ''),
 						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
 						sprintf($GLOBALS['TL_LANG']['MSC']['confirmation'], $this->strLabel),
 						($this->mandatory ? '<span class="mandatory">*</span>' : ''));
@@ -151,14 +193,15 @@ class FormPassword extends \Widget
 
 	/**
 	 * Generate the widget and return it as string
-	 * @return string
+	 *
+	 * @return string The confirmation field markup
 	 */
 	public function generateConfirmation()
 	{
 		return sprintf('<input type="password" name="%s_confirm" id="ctrl_%s_confirm" class="text password confirm%s" value=""%s%s',
 						$this->strName,
 						$this->strId,
-						(strlen($this->strClass) ? ' ' . $this->strClass : ''),
+						(($this->strClass != '') ? ' ' . $this->strClass : ''),
 						$this->getAttributes(),
 						$this->strTagEnding);
 	}

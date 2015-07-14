@@ -57,7 +57,7 @@ function Swipe(container, options) {
     // set continuous to false if only one slide
     if (slides.length < 2) options.continuous = false;
 
-    //special case if two slides
+    // special case if two slides
     if (browser.transitions && options.continuous && slides.length < 3) {
       element.appendChild(slides[0].cloneNode(true));
       element.appendChild(element.children[1].cloneNode(true));
@@ -415,7 +415,7 @@ function Swipe(container, options) {
     move: function(event) {
 
       // ensure swiping with one touch and not pinching
-      if (event.touches.length > 1 || event.scale && event.scale !== 1) return
+      if (event.touches.length > 1 || event.scale && event.scale !== 1) return;
 
       if (options.disableScroll) event.preventDefault();
 
@@ -425,7 +425,7 @@ function Swipe(container, options) {
       delta = {
         x: touches.pageX - start.x,
         y: touches.pageY - start.y
-      }
+      };
 
       // determine if scrolling test has run - one time test
       if (typeof isScrolling == 'undefined') {
@@ -552,8 +552,8 @@ function Swipe(container, options) {
       }
 
       // kill touchmove and touchend event listeners until touchstart called again
-      element.removeEventListener('touchmove', events, false)
-      element.removeEventListener('touchend', events, false)
+      element.removeEventListener('touchmove', events, false);
+      element.removeEventListener('touchend', events, false);
 
     },
     transitionEnd: function(event) {

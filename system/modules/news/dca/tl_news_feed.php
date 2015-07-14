@@ -182,7 +182,7 @@ $GLOBALS['TL_DCA']['tl_news_feed'] = array
 			'default'                 => 25,
 			'exclude'                 => true,
 			'inputType'               => 'text',
-			'eval'                    => array('mandatory'=>true, 'rgxp'=>'digit', 'tl_class'=>'w50'),
+			'eval'                    => array('mandatory'=>true, 'rgxp'=>'natural', 'tl_class'=>'w50'),
 			'sql'                     => "smallint(5) unsigned NOT NULL default '0'"
 		),
 		'feedBase' => array
@@ -382,7 +382,8 @@ class tl_news_feed extends Backend
 	 *
 	 * This method is triggered when a single news archive or multiple news
 	 * archives are modified (edit/editAll).
-	 * @param \DataContainer
+	 *
+	 * @param DataContainer $dc
 	 */
 	public function scheduleUpdate(DataContainer $dc)
 	{
@@ -401,6 +402,7 @@ class tl_news_feed extends Backend
 
 	/**
 	 * Return the IDs of the allowed news archives as array
+	 *
 	 * @return array
 	 */
 	public function getAllowedArchives()
@@ -430,10 +432,13 @@ class tl_news_feed extends Backend
 
 	/**
 	 * Check the RSS-feed alias
-	 * @param mixed
-	 * @param \DataContainer
+	 *
+	 * @param mixed         $varValue
+	 * @param DataContainer $dc
+	 *
 	 * @return mixed
-	 * @throws \Exception
+	 *
+	 * @throws Exception
 	 */
 	public function checkFeedAlias($varValue, DataContainer $dc)
 	{

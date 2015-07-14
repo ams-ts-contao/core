@@ -114,7 +114,7 @@ class String
 		$arrEmptyTags = array('area', 'base', 'br', 'col', 'hr', 'img', 'input', 'frame', 'link', 'meta', 'param');
 
 		$strString = preg_replace('/[\t\n\r]+/', ' ', $strString);
-		$strString = strip_tags($strString, $GLOBALS['TL_CONFIG']['allowedTags']);
+		$strString = strip_tags($strString, \Config::get('allowedTags'));
 		$strString = preg_replace('/ +/', ' ', $strString);
 
 		// Seperate tags and text
@@ -238,7 +238,7 @@ class String
 
 		if ($strCharset === null)
 		{
-			$strCharset = $GLOBALS['TL_CONFIG']['characterSet'];
+			$strCharset = \Config::get('characterSet');
 		}
 
 		$strString = preg_replace('/(&#*\w+)[\x00-\x20]+;/i', '$1;', $strString);
@@ -482,7 +482,7 @@ class String
 		$strReturn = '';
 
 		// Remove any unwanted tags (especially PHP tags)
-		$strString = strip_tags($strString, $GLOBALS['TL_CONFIG']['allowedTags']);
+		$strString = strip_tags($strString, \Config::get('allowedTags'));
 		$arrTags = preg_split('/(\{[^\}]+\})/', $strString, -1, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
 
 		// Replace the tags
@@ -541,7 +541,7 @@ class String
 	 */
 	public static function uuidToBin($uuid)
 	{
-		return pack('H*', str_replace('-', '', $uuid));
+		return hex2bin(str_replace('-', '', $uuid));
 	}
 
 
@@ -555,6 +555,157 @@ class String
 	public static function binToUuid($data)
 	{
 		return implode('-', unpack('H8time_low/H4time_mid/H4time_high/H4clock_seq/H12node', $data));
+	}
+
+
+	/**
+	 * Convert file paths inside "src" attributes to insert tags
+	 *
+	 * @param string $data The markup string
+	 *
+	 * @return string The markup with file paths converted to insert tags
+	 */
+	public static function srcToInsertTag($data)
+	{
+		$return = '';
+		$paths = preg_split('/((src|href)="([^"]+)")/i', $data, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+		for ($i=0, $c=count($paths); $i<$c; $i=$i+4)
+		{
+			$return .= $paths[$i];
+
+			if (!isset($paths[$i+1]))
+			{
+				continue;
+			}
+
+			$file = \FilesModel::findByPath($paths[$i+3]);
+
+			if ($file !== null)
+			{
+				$return .= $paths[$i+2] . '="{{file::' . static::binToUuid($file->uuid) . '}}"';
+			}
+			else
+			{
+				$return .= $paths[$i+2] . '="' . $paths[$i+3] . '"';
+			}
+		}
+
+		return $return;
+	}
+
+
+	/**
+	 * Convert insert tags inside "src" attributes to file paths
+	 *
+	 * @param string $data The markup string
+	 *
+	 * @return string The markup with insert tags converted to file paths
+	 */
+	public static function insertTagToSrc($data)
+	{
+		$return = '';
+		$paths = preg_split('/((src|href)="([^"]*)\{\{file::([^"\}]+)\}\}")/i', $data, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+		for ($i=0, $c=count($paths); $i<$c; $i=$i+5)
+		{
+			$return .= $paths[$i];
+
+			if (!isset($paths[$i+1]))
+			{
+				continue;
+			}
+
+			$file = \FilesModel::findByUuid($paths[$i+4]);
+
+			if ($file !== null)
+			{
+				$return .= $paths[$i+2] . '="' . $paths[$i+3] . $file->path . '"';
+			}
+			else
+			{
+				$return .= $paths[$i+2] . '="' . $paths[$i+3] . $paths[$i+4] . '"';
+			}
+		}
+
+		return $return;
+	}
+
+
+	/**
+	 * Sanitize a file name
+	 *
+	 * @param string $strName The file name
+	 *
+	 * @return string The sanitized file name
+	 */
+	public static function sanitizeFileName($strName)
+	{
+		// Remove invisible control characters and unused code points
+		$strName = preg_replace('/[\pC]/u', '', $strName);
+
+		if ($strName === null)
+		{
+			throw new \InvalidArgumentException('The file name could not be sanitzied');
+		}
+
+		// Remove special characters not supported on e.g. Windows
+		$strName = str_replace(array('\\', '/', ':', '*', '?', '"', '<', '>', '|'), '-', $strName);
+
+		return $strName;
+	}
+
+
+	/**
+	 * Resolve a flagged URL such as assets/js/core.js|static|10184084
+	 *
+	 * @param string $url The URL
+	 *
+	 * @return \stdClass The options object
+	 */
+	public static function resolveFlaggedUrl(&$url)
+	{
+		$options = new \stdClass();
+
+		// Defaults
+		$options->static = false;
+		$options->media  = null;
+		$options->mtime  = null;
+		$options->async  = false;
+
+		$chunks = explode('|', $url);
+
+		// Remove the flags from the URL
+		$url = $chunks[0];
+
+		for ($i=1; $i<count($chunks); $i++)
+		{
+			if (empty($chunks[$i]))
+			{
+				continue;
+			}
+
+			switch ($chunks[$i])
+			{
+				case 'static':
+					$options->static = true;
+					break;
+
+				case 'async':
+					$options->async = true;
+					break;
+
+				case is_numeric($chunks[$i]):
+					$options->mtime = $chunks[$i];
+					break;
+
+				default:
+					$options->media = $chunks[$i];
+					break;
+			}
+		}
+
+		return $options;
 	}
 
 

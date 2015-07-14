@@ -34,12 +34,14 @@ class ModuleListing extends \Module
 
 	/**
 	 * Display a wildcard in the back end
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
 		if (TL_MODE == 'BE')
 		{
+			/** @var \BackendTemplate|object $objTemplate */
 			$objTemplate = new \BackendTemplate('be_wildcard');
 
 			$objTemplate->wildcard = '### ' . utf8_strtoupper($GLOBALS['TL_LANG']['FMD']['listing'][0]) . ' ###';
@@ -90,6 +92,7 @@ class ModuleListing extends \Module
 		if (\Input::get('show'))
 		{
 			$this->listSingleRecord(\Input::get('show'));
+
 			return;
 		}
 
@@ -141,32 +144,32 @@ class ModuleListing extends \Module
 		 * Validate the page count
 		 */
 		$id = 'page_l' . $this->id;
-		$page = \Input::get($id) ?: 1;
+		$page = (\Input::get($id) !== null) ? \Input::get($id) : 1;
 		$per_page = \Input::get('per_page') ?: $this->perPage;
 
 		// Thanks to Hagen Klemp (see #4485)
-		if ($per_page > 0)
+		if ($per_page > 0 && ($page < 1 || $page > max(ceil($objTotal->count/$per_page), 1)))
 		{
-			if ($page < 1 || $page > max(ceil($objTotal->count/$per_page), 1))
-			{
-				global $objPage;
-				$objPage->noSearch = 1;
-				$objPage->cache = 0;
+			/** @var \PageModel $objPage */
+			global $objPage;
 
-				$this->Template->thead = array();
-				$this->Template->tbody = array();
-
-				// Send a 404 header
-				header('HTTP/1.1 404 Not Found');
-				return;
-			}
+			/** @var \PageError404 $objHandler */
+			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
+			$objHandler->generate($objPage->id);
 		}
 
 
 		/**
 		 * Get the selected records
 		 */
-		$strQuery = "SELECT " . $this->strPk . "," . $this->list_fields . " FROM " . $this->list_table;
+		$strQuery = "SELECT " . $this->strPk . "," . $this->list_fields;
+
+		if ($this->list_info_where)
+		{
+			$strQuery .= ", (SELECT COUNT(*) FROM " . $this->list_table . " t2 WHERE t2." . $this->strPk . "=t1." . $this->strPk . " AND " . $this->list_info_where . ") AS _details";
+		}
+
+		$strQuery .= " FROM " . $this->list_table . " t1";
 
 		if ($this->list_where)
 		{
@@ -175,12 +178,9 @@ class ModuleListing extends \Module
 
 		$strQuery .= $strWhere;
 
-		// Do not use $this in anonymous functions in PHP 5.3 (see #7078)
-		$table = $this->list_table;
-
 		// Cast date fields to int (see #5609)
-		$isInt = function($field) use($table) {
-			return $GLOBALS['TL_DCA'][$table]['fields'][$field]['eval']['rgxp'] == 'date' || $GLOBALS['TL_DCA'][$table]['fields'][$field]['eval']['rgxp'] == 'time' || $GLOBALS['TL_DCA'][$table]['fields'][$field]['eval']['rgxp'] == 'datim';
+		$isInt = function ($field) {
+			return $GLOBALS['TL_DCA'][$this->list_table]['fields'][$field]['eval']['rgxp'] == 'date' || $GLOBALS['TL_DCA'][$this->list_table]['fields'][$field]['eval']['rgxp'] == 'time' || $GLOBALS['TL_DCA'][$this->list_table]['fields'][$field]['eval']['rgxp'] == 'datim';
 		};
 
 		// Order by
@@ -232,13 +232,13 @@ class ModuleListing extends \Module
 		{
 			if ($fragment != '' && strncasecmp($fragment, 'order_by', 8) !== 0 && strncasecmp($fragment, 'sort', 4) !== 0 && strncasecmp($fragment, $id, strlen($id)) !== 0)
 			{
-				$strUrl .= ((!$blnQuery && !$GLOBALS['TL_CONFIG']['disableAlias']) ? '?' : '&amp;') . $fragment;
+				$strUrl .= ((!$blnQuery && !\Config::get('disableAlias')) ? '?' : '&amp;') . $fragment;
 				$blnQuery = true;
 			}
 		}
 
 		$this->Template->url = $strUrl;
-		$strVarConnector = ($blnQuery || $GLOBALS['TL_CONFIG']['disableAlias']) ? '&amp;' : '?';
+		$strVarConnector = ($blnQuery || \Config::get('disableAlias')) ? '&amp;' : '?';
 
 
 		/**
@@ -294,6 +294,11 @@ class ModuleListing extends \Module
 					continue;
 				}
 
+				if ($k == '_details')
+				{
+					continue;
+				}
+
 				// Never show passwords
 				if ($GLOBALS['TL_DCA'][$this->list_table]['fields'][$k]['inputType'] == 'password')
 				{
@@ -309,7 +314,8 @@ class ModuleListing extends \Module
 					'class' => 'col_' . $j . (($j++ == 0) ? ' col_first' : '') . ($this->list_info ? '' : (($j >= (count($arrRows[$i]) - 1)) ? ' col_last' : '')),
 					'id' => $arrRows[$i][$this->strPk],
 					'field' => $k,
-					'url' => $strUrl . $strVarConnector . 'show=' . $arrRows[$i][$this->strPk]
+					'url' => $strUrl . $strVarConnector . 'show=' . $arrRows[$i][$this->strPk],
+					'details' => (isset($arrRows[$i]['_details']) ? $arrRows[$i]['_details'] : 1)
 				);
 			}
 		}
@@ -321,7 +327,7 @@ class ModuleListing extends \Module
 		/**
 		 * Pagination
 		 */
-		$objPagination = new \Pagination($objTotal->count, $per_page, $GLOBALS['TL_CONFIG']['maxPaginationLinks'], $id);
+		$objPagination = new \Pagination($objTotal->count, $per_page, \Config::get('maxPaginationLinks'), $id);
 		$this->Template->pagination = $objPagination->generate("\n  ");
 		$this->Template->per_page = $per_page;
 		$this->Template->total = $objTotal->count;
@@ -346,7 +352,8 @@ class ModuleListing extends \Module
 
 	/**
 	 * List a single record
-	 * @param integer
+	 *
+	 * @param integer $id
 	 */
 	protected function listSingleRecord($id)
 	{
@@ -356,8 +363,10 @@ class ModuleListing extends \Module
 			$this->list_info_layout = 'info_default';
 		}
 
-		$this->Template = new \FrontendTemplate($this->list_info_layout);
+		/** @var \FrontendTemplate|object $objTemplate */
+		$objTemplate = new \FrontendTemplate($this->list_info_layout);
 
+		$this->Template = $objTemplate;
 		$this->Template->record = array();
 		$this->Template->referer = 'javascript:history.go(-1)';
 		$this->Template->back = $GLOBALS['TL_LANG']['MSC']['goBack'];
@@ -375,7 +384,7 @@ class ModuleListing extends \Module
 		}
 
 		$arrFields = array();
-		$arrRow = $objRecord->fetchAssoc();
+		$arrRow = $objRecord->row();
 		$limit = count($arrRow);
 		$count = -1;
 
@@ -405,9 +414,11 @@ class ModuleListing extends \Module
 
 	/**
 	 * Format a value
-	 * @param string
-	 * @param mixed
-	 * @param boolean
+	 *
+	 * @param string  $k
+	 * @param mixed   $value
+	 * @param boolean $blnListSingle
+	 *
 	 * @return mixed
 	 */
 	protected function formatValue($k, $value, $blnListSingle=false)
@@ -420,6 +431,7 @@ class ModuleListing extends \Module
 			return '';
 		}
 
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		// Array
@@ -449,7 +461,6 @@ class ModuleListing extends \Module
 		// URLs
 		elseif ($GLOBALS['TL_DCA'][$this->list_table]['fields'][$k]['eval']['rgxp'] == 'url' && preg_match('@^(https?://|ftp://)@i', $value))
 		{
-			global $objPage;
 			$value = \Idna::decode($value); // see #5946
 			$value = '<a href="' . $value . '"' . (($objPage->outputFormat == 'xhtml') ? ' onclick="return !window.open(this.href)"' : ' target="_blank"') . '>' . $value . '</a>';
 		}

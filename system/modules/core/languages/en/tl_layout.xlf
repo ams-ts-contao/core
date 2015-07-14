@@ -111,10 +111,10 @@
         <source>Please select the position of the custom layout sections.</source>
       </trans-unit>
       <trans-unit id="tl_layout.stylesheet.0">
-        <source>Style sheets</source>
+        <source>Internal style sheets</source>
       </trans-unit>
       <trans-unit id="tl_layout.stylesheet.1">
-        <source>Please select the style sheets you want to add to the layout.</source>
+        <source>Here you can add internal style sheets to the layout.</source>
       </trans-unit>
       <trans-unit id="tl_layout.framework.0">
         <source>CSS framework</source>
@@ -126,7 +126,13 @@
         <source>Layout builder</source>
       </trans-unit>
       <trans-unit id="tl_layout.layout.css.1">
-        <source>Generates a responsive CSS layout based on the page layout settings. This component is required for the page layout generator to work!</source>
+        <source>Generates a CSS layout based on the page layout settings. This component is required for the page layout generator to work!</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.responsive.css.0">
+        <source>Responsive layout</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.responsive.css.1">
+        <source>Adds a meta viewport tag to the page header and scales the CSS layout based on the device width.</source>
       </trans-unit>
       <trans-unit id="tl_layout.grid.css.0">
         <source>12-column grid</source>
@@ -153,16 +159,28 @@
         <source>Includes the &lt;em&gt;tinymce.css&lt;/em&gt; style sheet from your upload directory.</source>
       </trans-unit>
       <trans-unit id="tl_layout.external.0">
-        <source>Additional style sheets</source>
+        <source>External style sheets</source>
       </trans-unit>
       <trans-unit id="tl_layout.external.1">
-        <source>Here you can add additional CSS files from the file system.</source>
+        <source>Here you can add external CSS, SCSS or LESS files from the file system.</source>
       </trans-unit>
       <trans-unit id="tl_layout.orderExt.0">
         <source>Sort order</source>
       </trans-unit>
       <trans-unit id="tl_layout.orderExt.1">
         <source>The sort order of the style sheets.</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.loadingOrder.0">
+        <source>Loading order</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.loadingOrder.1">
+        <source>Here you can select the loading order of the style sheets.</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.external_first">
+        <source>Load external style sheets first</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.internal_first">
+        <source>Load internal style sheets first</source>
       </trans-unit>
       <trans-unit id="tl_layout.webfonts.0">
         <source>Google web fonts</source>
@@ -205,6 +223,18 @@
       </trans-unit>
       <trans-unit id="tl_layout.cssClass.1">
         <source>Here you can add custom classes to the &amp;lt;body&amp;gt; tag.</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.viewport.0">
+        <source>Viewport</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.viewport.1">
+        <source>Here you can overwrite the viewport content (defaults to &lt;em&gt;width=device-width,initial-scale=1.0&lt;/em&gt;).</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.titleTag.0">
+        <source>Title tag</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.titleTag.1">
+        <source>Here you can overwrite the title tag (defaults to &lt;em&gt;{{page::pageTitle}} - {{page::rootPageTitle}}&lt;/em&gt;).</source>
       </trans-unit>
       <trans-unit id="tl_layout.onload.0">
         <source>Body onload</source>
@@ -254,6 +284,12 @@
       <trans-unit id="tl_layout.mootools.1">
         <source>Here you can select one or more MooTools templates.</source>
       </trans-unit>
+      <trans-unit id="tl_layout.picturefill.0">
+        <source>Load the image polyfill</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.picturefill.1">
+        <source>Include the image polyfill (&lt;em&gt;respimage.js&lt;/em&gt;) in the layout.</source>
+      </trans-unit>
       <trans-unit id="tl_layout.analytics.0">
         <source>Analytics templates</source>
       </trans-unit>
@@ -296,8 +332,14 @@
       <trans-unit id="tl_layout.sections_legend">
         <source>Custom sections</source>
       </trans-unit>
+      <trans-unit id="tl_layout.webfonts_legend">
+        <source>Web fonts</source>
+      </trans-unit>
       <trans-unit id="tl_layout.style_legend">
         <source>Style sheets</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.picturefill_legend">
+        <source>Responsive images</source>
       </trans-unit>
       <trans-unit id="tl_layout.feed_legend">
         <source>RSS/Atom feeds</source>
@@ -309,7 +351,7 @@
         <source>Expert settings</source>
       </trans-unit>
       <trans-unit id="tl_layout.script_legend">
-        <source>Script settings</source>
+        <source>JavaScript</source>
       </trans-unit>
       <trans-unit id="tl_layout.static_legend">
         <source>Static layout</source>
@@ -317,26 +359,26 @@
       <trans-unit id="tl_layout.jquery_legend">
         <source>jQuery</source>
       </trans-unit>
+      <trans-unit id="tl_layout.j_local">
+        <source>Local file</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.j_googleapis">
+        <source>CDN (code.jquery.com)</source>
+      </trans-unit>
+      <trans-unit id="tl_layout.j_fallback">
+        <source>CDN with local fallback</source>
+      </trans-unit>
       <trans-unit id="tl_layout.mootools_legend">
         <source>MooTools</source>
       </trans-unit>
-      <trans-unit id="tl_layout.j_local">
-        <source>jQuery - local file</source>
-      </trans-unit>
-      <trans-unit id="tl_layout.j_googleapis">
-        <source>jQuery - googleapis.com</source>
-      </trans-unit>
-      <trans-unit id="tl_layout.j_fallback">
-        <source>jQuery - googleapis.com with local fallback</source>
-      </trans-unit>
       <trans-unit id="tl_layout.moo_local">
-        <source>MooTools - local file</source>
+        <source>Local file</source>
       </trans-unit>
       <trans-unit id="tl_layout.moo_googleapis">
-        <source>MooTools - googleapis.com</source>
+        <source>CDN (googleapis.com)</source>
       </trans-unit>
       <trans-unit id="tl_layout.moo_fallback">
-        <source>MooTools - googleapis.com with local fallback</source>
+        <source>CDN with local fallback</source>
       </trans-unit>
       <trans-unit id="tl_layout.html5">
         <source>HTML</source>

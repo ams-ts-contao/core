@@ -1,9 +1,14 @@
-<?php if (!$this->tableless): ?>
-  <tr class="<?php echo $this->rowClass; ?>">
-    <td colspan="2" class="colspan headline"><?php echo $this->generate(); ?></td>
-  </tr>
-<?php else: ?>
-  <div class="headline">
-    <?php echo $this->generate(); ?>
+
+<?php if ($this->tableless): ?>
+
+  <div class="<?= $this->prefix ?> headline">
+    <?= $this->generate() ?>
   </div>
+
+<?php else: ?>
+
+  <tr class="<?= $this->rowClass ?>">
+    <td colspan="2" class="colspan headline"><?= $this->generate() ?></td>
+  </tr>
+
 <?php endif; ?>

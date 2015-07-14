@@ -21,13 +21,14 @@ class Messages extends \Backend
 
 	/**
 	 * Check for the latest Contao version
+	 *
 	 * @return string
 	 */
 	public function versionCheck()
 	{
-		if (!empty($GLOBALS['TL_CONFIG']['latestVersion']) && version_compare(VERSION . '.' . BUILD, $GLOBALS['TL_CONFIG']['latestVersion'], '<'))
+		if (\Config::get('latestVersion') && version_compare(VERSION . '.' . BUILD, \Config::get('latestVersion'), '<'))
 		{
-			return '<p class="tl_info"><a href="contao/main.php?do=maintenance">' . sprintf($GLOBALS['TL_LANG']['MSC']['updateVersion'], $GLOBALS['TL_CONFIG']['latestVersion']) . '</a></p>';
+			return '<p class="tl_info"><a href="contao/main.php?do=maintenance">' . sprintf($GLOBALS['TL_LANG']['MSC']['updateVersion'], \Config::get('latestVersion')) . '</a></p>';
 		}
 
 		return '';
@@ -36,6 +37,7 @@ class Messages extends \Backend
 
 	/**
 	 * Return the date of the last login
+	 *
 	 * @return string
 	 */
 	public function lastLogin()
@@ -44,7 +46,7 @@ class Messages extends \Backend
 
 		if ($this->User->lastLogin > 0)
 		{
-			return '<p class="tl_info">' . sprintf($GLOBALS['TL_LANG']['MSC']['lastLogin'][1], \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $this->User->lastLogin)) . '</p>';
+			return '<p class="tl_info">' . sprintf($GLOBALS['TL_LANG']['MSC']['lastLogin'][1], \Date::parse(\Config::get('datimFormat'), $this->User->lastLogin)) . '</p>';
 		}
 
 		return '';
@@ -53,13 +55,14 @@ class Messages extends \Backend
 
 	/**
 	 * Show a warning if there is no language fallback page
+	 *
 	 * @return string
 	 */
 	public function languageFallback()
 	{
 		$arrRoots = array();
-		$time = time();
-		$objRoots = $this->Database->execute("SELECT fallback, dns FROM tl_page WHERE type='root' AND (start='' OR start<$time) AND (stop='' OR stop>$time) AND published=1 ORDER BY dns");
+		$time = \Date::floorToMinute();
+		$objRoots = $this->Database->execute("SELECT fallback, dns FROM tl_page WHERE type='root' AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "') AND published='1' ORDER BY dns");
 
 		while ($objRoots->next())
 		{
@@ -98,6 +101,7 @@ class Messages extends \Backend
 
 	/**
 	 * Show a warning if there are non-root pages on the top-level
+	 *
 	 * @return string
 	 */
 	public function topLevelRoot()

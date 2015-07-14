@@ -40,6 +40,7 @@ class ContentTeaser extends \ContentElement
 
 	/**
 	 * Check whether the target page and the article are published
+	 *
 	 * @return string
 	 */
 	public function generate()
@@ -71,6 +72,7 @@ class ContentTeaser extends \ContentElement
 	 */
 	protected function compile()
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		$link = '/articles/';
@@ -81,7 +83,7 @@ class ContentTeaser extends \ContentElement
 			$link .= $objArticle->inColumn . ':';
 		}
 
-		$link .= ($objArticle->alias != '' && !$GLOBALS['TL_CONFIG']['disableAlias']) ? $objArticle->alias : $objArticle->id;
+		$link .= ($objArticle->alias != '' && !\Config::get('disableAlias')) ? $objArticle->alias : $objArticle->id;
 		$this->Template->href = $this->generateFrontendUrl($this->objParent->row(), $link);
 
 		// Clean the RTE output

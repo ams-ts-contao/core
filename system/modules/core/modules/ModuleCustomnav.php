@@ -28,12 +28,14 @@ class ModuleCustomnav extends \Module
 
 	/**
 	 * Redirect to the selected page
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
 		if (TL_MODE == 'BE')
 		{
+			/** @var \BackendTemplate|object $objTemplate */
 			$objTemplate = new \BackendTemplate('be_wildcard');
 
 			$objTemplate->wildcard = '### ' . utf8_strtoupper($GLOBALS['TL_LANG']['FMD']['customnav'][0]) . ' ###';
@@ -54,6 +56,7 @@ class ModuleCustomnav extends \Module
 		}
 
 		$strBuffer = parent::generate();
+
 		return ($this->Template->items != '') ? $strBuffer : '';
 	}
 
@@ -63,6 +66,7 @@ class ModuleCustomnav extends \Module
 	 */
 	protected function compile()
 	{
+		/** @var \PageModel $objPage */
 		global $objPage;
 
 		$items = array();
@@ -100,7 +104,10 @@ class ModuleCustomnav extends \Module
 		// Add the items to the pre-sorted array
 		while ($objPages->next())
 		{
-			$arrPages[$objPages->id] = $objPages->current()->loadDetails()->row(); // see #3765
+			/** @var \PageModel $objPages */
+			$objModel = $objPages->current();
+
+			$arrPages[$objPages->id] = $objModel->loadDetails()->row(); // see #3765
 		}
 
 		// Set default template
@@ -109,6 +116,7 @@ class ModuleCustomnav extends \Module
 			$this->navigationTpl = 'nav_default';
 		}
 
+		/** @var \FrontendTemplate|object $objTemplate */
 		$objTemplate = new \FrontendTemplate($this->navigationTpl);
 
 		$objTemplate->type = get_class($this);
@@ -142,40 +150,31 @@ class ModuleCustomnav extends \Module
 							$objNext->loadDetails();
 
 							// Check the target page language (see #4706)
-							if ($GLOBALS['TL_CONFIG']['addLanguageToUrl'])
+							if (\Config::get('addLanguageToUrl'))
 							{
 								$strForceLang = $objNext->language;
 							}
 
-							$href = $this->generateFrontendUrl($objNext->row(), null, $strForceLang);
-
-							// Add the domain if it differs from the current one (see #3765)
-							if ($objNext->domain != '' && $objNext->domain != \Environment::get('host'))
-							{
-								$href = ($objNext->rootUseSSL ? 'https://' : 'http://') . $objNext->domain . TL_PATH . '/' . $href;
-							}
+							$href = $this->generateFrontendUrl($objNext->row(), null, $strForceLang, true);
 							break;
 						}
 						// DO NOT ADD A break; STATEMENT
 
 					default:
-						$href = $this->generateFrontendUrl($arrPage, null, $arrPage['rootLanguage']);
-
-						// Add the domain if it differs from the current one (see #3765)
-						if ($arrPage['domain'] != '' && $arrPage['domain'] != \Environment::get('host'))
-						{
-							$href = ($arrPage['rootUseSSL'] ? 'https://' : 'http://') . $arrPage['domain'] . TL_PATH . '/' . $href;
-						}
+						$href = $this->generateFrontendUrl($arrPage, null, $arrPage['rootLanguage'], true);
 						break;
 				}
 
+				$trail = in_array($arrPage['id'], $objPage->trail);
+
 				// Active page
-				if ($objPage->id == $arrPage['id'])
+				if ($objPage->id == $arrPage['id'] && $href == \Environment::get('request'))
 				{
 					$strClass = trim($arrPage['cssClass']);
 					$row = $arrPage;
 
 					$row['isActive'] = true;
+					$row['isTrail'] = false;
 					$row['class'] = trim('active ' . $strClass);
 					$row['title'] = specialchars($arrPage['title'], true);
 					$row['pageTitle'] = specialchars($arrPage['pageTitle'], true);
@@ -197,10 +196,11 @@ class ModuleCustomnav extends \Module
 				// Regular page
 				else
 				{
-					$strClass = trim($arrPage['cssClass'] . (in_array($arrPage['id'], $objPage->trail) ? ' trail' : ''));
+					$strClass = trim($arrPage['cssClass'] . ($trail ? ' trail' : ''));
 					$row = $arrPage;
 
 					$row['isActive'] = false;
+					$row['isTrail'] = $trail;
 					$row['class'] = $strClass;
 					$row['title'] = specialchars($arrPage['title'], true);
 					$row['pageTitle'] = specialchars($arrPage['pageTitle'], true);

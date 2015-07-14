@@ -21,6 +21,7 @@ class LiveUpdate extends \Backend implements \executable
 
 	/**
 	 * Return true if the module is active
+	 *
 	 * @return boolean
 	 */
 	public function isActive()
@@ -31,10 +32,12 @@ class LiveUpdate extends \Backend implements \executable
 
 	/**
 	 * Generate the module
+	 *
 	 * @return string
 	 */
 	public function run()
 	{
+		/** @var \BackendTemplate|object $objTemplate */
 		$objTemplate = new \BackendTemplate('be_live_update');
 
 		$objTemplate->updateClass = 'tl_confirm';
@@ -43,10 +46,10 @@ class LiveUpdate extends \Backend implements \executable
 		$strMessage = ' <a href="contao/changelog.php" onclick="Backend.openModalIframe({\'width\':860,\'title\':\'CHANGELOG\',\'url\':this.href});return false" title="' . specialchars($GLOBALS['TL_LANG']['tl_maintenance']['changelog']) . '"><img src="' . TL_FILES_URL . 'system/themes/' . \Backend::getTheme() . '/images/changelog.gif" width="14" height="14" alt="" style="vertical-align:text-bottom;padding-left:3px"></a>';
 
 		// Newer version available
-		if (isset($GLOBALS['TL_CONFIG']['latestVersion']) && version_compare(VERSION . '.' . BUILD, $GLOBALS['TL_CONFIG']['latestVersion'], '<'))
+		if (\Config::get('latestVersion') && version_compare(VERSION . '.' . BUILD, \Config::get('latestVersion'), '<'))
 		{
 			$objTemplate->updateClass = 'tl_info';
-			$objTemplate->updateMessage = sprintf($GLOBALS['TL_LANG']['tl_maintenance']['newVersion'], $GLOBALS['TL_CONFIG']['latestVersion']) . $strMessage;
+			$objTemplate->updateMessage = sprintf($GLOBALS['TL_LANG']['tl_maintenance']['newVersion'], \Config::get('latestVersion')) . $strMessage;
 		}
 		// Current version up to date
 		else
@@ -58,11 +61,11 @@ class LiveUpdate extends \Backend implements \executable
 		// Automatically switch to SSL
 		if (\Environment::get('ssl'))
 		{
-			$GLOBALS['TL_CONFIG']['liveUpdateBase'] = str_replace('http://', 'https://', $GLOBALS['TL_CONFIG']['liveUpdateBase']);
+			\Config::set('liveUpdateBase', str_replace('http://', 'https://', \Config::get('liveUpdateBase')));
 		}
 
-		$objTemplate->uid = $GLOBALS['TL_CONFIG']['liveUpdateId'];
-		$objTemplate->updateServer = $GLOBALS['TL_CONFIG']['liveUpdateBase'] . 'index.php';
+		$objTemplate->uid = \Config::get('liveUpdateId');
+		$objTemplate->updateServer = \Config::get('liveUpdateBase') . 'index.php';
 
 		// Run the update
 		if (\Input::get('token') != '')
@@ -84,7 +87,8 @@ class LiveUpdate extends \Backend implements \executable
 
 	/**
 	 * Run the Live Update
-	 * @param \BackendTemplate
+	 *
+	 * @param \BackendTemplate|object $objTemplate
 	 */
 	protected function runLiveUpdate(\BackendTemplate $objTemplate)
 	{
@@ -93,13 +97,20 @@ class LiveUpdate extends \Backend implements \executable
 		// Download the archive
 		if (!file_exists(TL_ROOT . '/' . $archive))
 		{
-			$objRequest = new \Request();
-			$objRequest->send($GLOBALS['TL_CONFIG']['liveUpdateBase'] . 'request.php?token=' . \Input::get('token'));
+			// HOOK: proxy module
+			if (Config::get('useProxy')) {
+				$objRequest = new \ProxyRequest();
+			} else {
+				$objRequest = new \Request();
+			}
+
+			$objRequest->send(\Config::get('liveUpdateBase') . 'request.php?token=' . \Input::get('token'));
 
 			if ($objRequest->hasError())
 			{
 				$objTemplate->updateClass = 'tl_error';
 				$objTemplate->updateMessage = $objRequest->response;
+
 				return;
 			}
 
@@ -119,8 +130,10 @@ class LiveUpdate extends \Backend implements \executable
 				}
 				catch (\Exception $e)
 				{
+					/** @var \BackendTemplate|object $objTemplate */
 					$objTemplate->updateClass = 'tl_error';
 					$objTemplate->updateMessage = 'Error updating ' . $objArchive->file_name . ': ' . $e->getMessage();
+
 					return;
 				}
 			}

@@ -28,12 +28,14 @@ class ModuleCloseAccount extends \Module
 
 	/**
 	 * Display a wildcard in the back end
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
 		if (TL_MODE == 'BE')
 		{
+			/** @var \BackendTemplate|object $objTemplate */
 			$objTemplate = new \BackendTemplate('be_wildcard');
 
 			$objTemplate->wildcard = '### ' . utf8_strtoupper($GLOBALS['TL_LANG']['FMD']['closeAccount'][0]) . ' ###';
@@ -85,7 +87,7 @@ class ModuleCloseAccount extends \Module
 				// The password has been generated with crypt()
 				if (\Encryption::test($this->User->password))
 				{
-					$blnAuthenticated = (crypt($objWidget->value, $this->User->password) === $this->User->password);
+					$blnAuthenticated = \Encryption::verify($objWidget->value, $this->User->password);
 				}
 				else
 				{
@@ -125,6 +127,7 @@ class ModuleCloseAccount extends \Module
 				else
 				{
 					$objMember->disable = 1;
+					$objMember->tstamp = time();
 					$objMember->save();
 					$this->log('User account ID ' . $this->User->id . ' (' . $this->User->email . ') has been deactivated', __METHOD__, TL_ACCESS);
 				}

@@ -28,6 +28,22 @@ namespace Contao;
  *         }
  *     }
  *
+ * @property \Automator                                $Automator   The automator object
+ * @property \Calendar                                 $Calendar    The calendar object
+ * @property \Comments                                 $Comments    The comments object
+ * @property \Config                                   $Config      The config object
+ * @property \Database                                 $Database    The database object
+ * @property \Files                                    $Files       The files object
+ * @property \Input                                    $Input       The input object
+ * @property \Database\Installer                       $Installer   The database installer object
+ * @property \Database\Updater                         $Updater     The database updater object
+ * @property \Messages                                 $Messages    The messages object
+ * @property \News                                     $News        The news object
+ * @property \Session                                  $Session     The session object
+ * @property \StyleSheets                              $StyleSheets The style sheets object
+ * @property \BackendTemplate|\FrontendTemplate|object $Template    The template object
+ * @property \BackendUser|\FrontendUser                $User        The user object
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class System
@@ -50,6 +66,24 @@ abstract class System
 	 * @var array
 	 */
 	protected static $arrStaticObjects = array();
+
+	/**
+	 * Available languages
+	 * @var array
+	 */
+	protected static $arrLanguages = array();
+
+	/**
+	 * Loaded language files
+	 * @var array
+	 */
+	protected static $arrLanguageFiles = array();
+
+	/**
+	 * Available image sizes
+	 * @var array
+	 */
+	protected static $arrImageSizes = array();
 
 
 	/**
@@ -239,7 +273,7 @@ abstract class System
 		}
 
 		// Return if the language file has been loaded already
-		if (isset($GLOBALS['loadLanguageFile'][$strName][$strLanguage]) && !$blnNoCache)
+		if (isset(static::$arrLanguageFiles[$strName][$strLanguage]) && !$blnNoCache)
 		{
 			return;
 		}
@@ -247,12 +281,12 @@ abstract class System
 		$strCacheKey = $strLanguage;
 
 		// Make sure the language exists
-		if (!is_dir(TL_ROOT . '/system/modules/core/languages/' . $strLanguage))
+		if (!static::isInstalledLanguage($strLanguage))
 		{
 			$strShortLang = substr($strLanguage, 0, 2);
 
 			// Fall back to "de" if "de_DE" does not exist
-			if ($strShortLang != $strLanguage && is_dir(TL_ROOT . '/system/modules/core/languages/' . $strShortLang))
+			if ($strShortLang != $strLanguage && static::isInstalledLanguage($strShortLang))
 			{
 				$strLanguage = $strShortLang;
 			}
@@ -264,6 +298,10 @@ abstract class System
 			}
 		}
 
+		// Use a global cache variable to support nested calls
+		static::$arrLanguageFiles[$strName][$strCacheKey] = $strLanguage;
+
+		// Fall back to English
 		$arrCreateLangs = ($strLanguage == 'en') ? array('en') : array('en', $strLanguage);
 
 		// Load the language(s)
@@ -272,7 +310,7 @@ abstract class System
 			$strCacheFile = 'system/cache/language/' . $strCreateLang . '/' . $strName . '.php';
 
 			// Try to load from cache
-			if (!$GLOBALS['TL_CONFIG']['bypassCache'] && file_exists(TL_ROOT . '/' . $strCacheFile))
+			if (!\Config::get('bypassCache') && file_exists(TL_ROOT . '/' . $strCacheFile))
 			{
 				include TL_ROOT . '/' . $strCacheFile;
 			}
@@ -284,7 +322,7 @@ abstract class System
 
 					if (file_exists(TL_ROOT . '/' . $strFile . '.xlf'))
 					{
-						eval(static::convertXlfToPhp($strFile . '.xlf', $strCreateLang));
+						static::convertXlfToPhp($strFile . '.xlf', $strCreateLang, true);
 					}
 					elseif (file_exists(TL_ROOT . '/' . $strFile . '.php'))
 					{
@@ -314,9 +352,24 @@ abstract class System
 		{
 			include TL_ROOT . '/system/config/langconfig.php';
 		}
+	}
 
-		// Use a global cache variable to support nested calls
-		$GLOBALS['loadLanguageFile'][$strName][$strCacheKey] = true;
+
+	/**
+	 * Check whether a language is installed
+	 *
+	 * @param boolean $strLanguage The language code
+	 *
+	 * @return boolean True if the language is installed
+	 */
+	public static function isInstalledLanguage($strLanguage)
+	{
+		if (!isset(static::$arrLanguages[$strLanguage]))
+		{
+			static::$arrLanguages[$strLanguage] = (is_dir(TL_ROOT . '/system/modules/core/languages/' . $strLanguage) || is_dir(TL_ROOT . '/system/cache/language/' . $strLanguage) || in_array($strLanguage, array_unique(array_map('basename', glob(TL_ROOT . '/system/modules/*/languages/*')))));
+		}
+
+		return static::$arrLanguages[$strLanguage];
 	}
 
 
@@ -399,6 +452,15 @@ abstract class System
 			}
 		}
 
+		// HOOK: add custom logic
+		if (isset($GLOBALS['TL_HOOKS']['getLanguages']) && is_array($GLOBALS['TL_HOOKS']['getLanguages']))
+		{
+			foreach ($GLOBALS['TL_HOOKS']['getLanguages'] as $callback)
+			{
+				static::importStatic($callback[0])->$callback[1]($return, $languages, $langsNative, $blnInstalledOnly);
+			}
+		}
+
 		return $return;
 	}
 
@@ -424,6 +486,38 @@ abstract class System
 		}
 
 		return $arrReturn;
+	}
+
+
+	/**
+	 * Return all image sizes as array
+	 *
+	 * @return array The available image sizes
+	 */
+	public static function getImageSizes()
+	{
+		if (empty(static::$arrImageSizes))
+		{
+			try
+			{
+				$sizes = array();
+				$imageSize = \Database::getInstance()->query("SELECT id, name, width, height FROM tl_image_size ORDER BY pid, name");
+
+				while ($imageSize->next())
+				{
+					$sizes[$imageSize->id] = $imageSize->name;
+					$sizes[$imageSize->id] .= ' (' . $imageSize->width . 'x' . $imageSize->height . ')';
+				}
+
+				static::$arrImageSizes = array_merge(array('image_sizes' => $sizes), $GLOBALS['TL_CROP']);
+			}
+			catch (\Exception $e)
+			{
+				static::$arrImageSizes = $GLOBALS['TL_CROP'];
+			}
+		}
+
+		return static::$arrImageSizes;
 	}
 
 
@@ -524,7 +618,7 @@ abstract class System
 	public static function anonymizeIp($strIp)
 	{
 		// The feature has been disabled
-		if (!$GLOBALS['TL_CONFIG']['privacyAnonymizeIp'])
+		if (!\Config::get('privacyAnonymizeIp'))
 		{
 			return $strIp;
 		}
@@ -584,12 +678,13 @@ abstract class System
 	/**
 	 * Convert an .xlf file into a PHP language file
 	 *
-	 * @param string $strName     The name of the .xlf file
-	 * @param string $strLanguage The language code
+	 * @param string  $strName     The name of the .xlf file
+	 * @param string  $strLanguage The language code
+	 * @param boolean $blnLoad     Add the labels to the global language array
 	 *
 	 * @return string The PHP code
 	 */
-	protected static function convertXlfToPhp($strName, $strLanguage)
+	protected static function convertXlfToPhp($strName, $strLanguage, $blnLoad=false)
 	{
 		// Read the .xlf file
 		$xml = new \DOMDocument();
@@ -618,7 +713,22 @@ abstract class System
 			}
 		};
 
-		// Add the labels
+		// Set up the quotevalue function
+		$quotevalue = function($value)
+		{
+			$value = str_replace("\n", '\n', $value);
+
+			if (strpos($value, '\n') !== false)
+			{
+				return '"' . str_replace(array('$', '"'), array('\\$', '\\"'), $value) . '"';
+			}
+			else
+			{
+				return "'" . str_replace("'", "\\'", $value) . "'";
+			}
+		};
+
+		/** @var \DOMElement[] $units */
 		foreach ($units as $unit)
 		{
 			$node = ($strLanguage == 'en') ? $unit->getElementsByTagName('source') : $unit->getElementsByTagName('target');
@@ -628,22 +738,12 @@ abstract class System
 				continue;
 			}
 
-			$value = str_replace("\n", '\n', $node->item(0)->nodeValue);
+			$value = $node->item(0)->nodeValue;
 
 			// Some closing </em> tags oddly have an extra space in
 			if (strpos($value, '</ em>') !== false)
 			{
 				$value = str_replace('</ em>', '</em>', $value);
-			}
-
-			// Quote the value
-			if (strpos($value, '\n') !== false)
-			{
-				$value = '"' . str_replace(array('$', '"'), array('\\$', '\\"'), $value) . '"';
-			}
-			else
-			{
-				$value = "'" . str_replace("'", "\\'", $value) . "'";
 			}
 
 			$chunks = explode('.', $unit->getAttribute('id'));
@@ -658,15 +758,30 @@ abstract class System
 			switch (count($chunks))
 			{
 				case 2:
-					$return .= "\$GLOBALS['TL_LANG']['" . $chunks[0] . "'][" . $quotekey($chunks[1]) . "] = " . $value . ";\n";
+					$return .= "\$GLOBALS['TL_LANG']['" . $chunks[0] . "'][" . $quotekey($chunks[1]) . "] = " . $quotevalue($value) . ";\n";
+
+					if ($blnLoad)
+					{
+						$GLOBALS['TL_LANG'][$chunks[0]][$chunks[1]] = $value;
+					}
 					break;
 
 				case 3:
-					$return .= "\$GLOBALS['TL_LANG']['" . $chunks[0] . "'][" . $quotekey($chunks[1]) . "][" . $quotekey($chunks[2]) . "] = " . $value . ";\n";
+					$return .= "\$GLOBALS['TL_LANG']['" . $chunks[0] . "'][" . $quotekey($chunks[1]) . "][" . $quotekey($chunks[2]) . "] = " . $quotevalue($value) . ";\n";
+
+					if ($blnLoad)
+					{
+						$GLOBALS['TL_LANG'][$chunks[0]][$chunks[1]][$chunks[2]] = $value;
+					}
 					break;
 
 				case 4:
-					$return .= "\$GLOBALS['TL_LANG']['" . $chunks[0] . "'][" . $quotekey($chunks[1]) . "][" . $quotekey($chunks[2]) . "][" . $quotekey($chunks[3]) . "] = " . $value . ";\n";
+					$return .= "\$GLOBALS['TL_LANG']['" . $chunks[0] . "'][" . $quotekey($chunks[1]) . "][" . $quotekey($chunks[2]) . "][" . $quotekey($chunks[3]) . "] = " . $quotevalue($value) . ";\n";
+
+					if ($blnLoad)
+					{
+						$GLOBALS['TL_LANG'][$chunks[0]][$chunks[1]][$chunks[2]][$chunks[3]] = $value;
+					}
 					break;
 			}
 		}
@@ -692,6 +807,7 @@ abstract class System
 		}
 
 		$objFile->delete();
+
 		return true;
 	}
 

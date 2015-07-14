@@ -12,7 +12,7 @@
 /**
  * Add palette to tl_content
  */
-$GLOBALS['TL_DCA']['tl_content']['palettes']['comments'] = '{type_legend},type,headline;{comment_legend},com_order,com_perPage,com_moderate,com_bbcode,com_requireLogin,com_disableCaptcha;{template_legend:hide},com_template;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space;{invisible_legend:hide},invisible,start,stop';
+$GLOBALS['TL_DCA']['tl_content']['palettes']['comments'] = '{type_legend},type,headline;{comment_legend},com_order,com_perPage,com_moderate,com_bbcode,com_requireLogin,com_disableCaptcha;{template_legend:hide},com_template,customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space;{invisible_legend:hide},invisible,start,stop';
 
 
 /**
@@ -35,7 +35,7 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['com_perPage'] = array
 	'label'                   => &$GLOBALS['TL_LANG']['tl_content']['com_perPage'],
 	'exclude'                 => true,
 	'inputType'               => 'text',
-	'eval'                    => array('rgxp'=>'digit', 'tl_class'=>'w50'),
+	'eval'                    => array('rgxp'=>'natural', 'tl_class'=>'w50'),
 	'sql'                     => "smallint(5) unsigned NOT NULL default '0'"
 );
 
@@ -82,6 +82,7 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['com_template'] = array
 	'exclude'                 => true,
 	'inputType'               => 'select',
 	'options_callback'        => array('tl_content_comments', 'getCommentsTemplates'),
+	'eval'                    => array('tl_class'=>'w50'),
 	'sql'                     => "varchar(32) NOT NULL default ''"
 );
 
@@ -96,6 +97,7 @@ class tl_content_comments extends Backend
 
 	/**
 	 * Return all comments templates as array
+	 *
 	 * @return array
 	 */
 	public function getCommentsTemplates()

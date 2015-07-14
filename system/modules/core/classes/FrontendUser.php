@@ -14,6 +14,10 @@ namespace Contao;
 /**
  * Provide methods to manage front end users.
  *
+ * @property array   $allGroups
+ * @property string  $loginPage
+ * @property boolean $blnRecordExists
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class FrontendUser extends \User
@@ -36,18 +40,6 @@ class FrontendUser extends \User
 	 * @var string
 	 */
 	protected $strCookie = 'FE_USER_AUTH';
-
-	/**
-	 * Path to the login script
-	 * @var string
-	 */
-	protected $strLoginScript = 'index.php';
-
-	/**
-	 * Path to the protected file
-	 * @var string
-	 */
-	protected $strRedirect = 'index.php';
 
 	/**
 	 * Group login page
@@ -99,8 +91,9 @@ class FrontendUser extends \User
 
 	/**
 	 * Extend parent setter class and modify some parameters
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey
+	 * @param mixed  $varValue
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -119,7 +112,9 @@ class FrontendUser extends \User
 
 	/**
 	 * Extend parent getter class and modify some parameters
-	 * @param string
+	 *
+	 * @param string $strKey
+	 *
 	 * @return mixed
 	 */
 	public function __get($strKey)
@@ -141,6 +136,7 @@ class FrontendUser extends \User
 
 	/**
 	 * Authenticate a user
+	 *
 	 * @return boolean
 	 */
 	public function authenticate()
@@ -152,13 +148,13 @@ class FrontendUser extends \User
 		}
 
 		// Check whether auto login is enabled
-		if ($GLOBALS['TL_CONFIG']['autologin'] > 0 && ($strCookie = \Input::cookie('FE_AUTO_LOGIN')) != '')
+		if (\Config::get('autologin') > 0 && ($strCookie = \Input::cookie('FE_AUTO_LOGIN')) != '')
 		{
 			// Try to find the user by his auto login cookie
 			if ($this->findBy('autologin', $strCookie) !== false)
 			{
 				// Check the auto login period
-				if ($this->createdOn >= (time() - $GLOBALS['TL_CONFIG']['autologin']))
+				if ($this->createdOn >= (time() - \Config::get('autologin')))
 				{
 					// Validate the account status
 					if ($this->checkAccountStatus() !== false)
@@ -176,6 +172,7 @@ class FrontendUser extends \User
 
 						// Reload the page
 						\Controller::reload();
+
 						return true;
 					}
 				}
@@ -191,6 +188,7 @@ class FrontendUser extends \User
 
 	/**
 	 * Add the auto login resources
+	 *
 	 * @return boolean
 	 */
 	public function login()
@@ -202,7 +200,7 @@ class FrontendUser extends \User
 		}
 
 		// Set the auto login data
-		if ($GLOBALS['TL_CONFIG']['autologin'] > 0 && \Input::post('autologin'))
+		if (\Config::get('autologin') > 0 && \Input::post('autologin'))
 		{
 			$time = time();
 			$strToken = md5(uniqid(mt_rand(), true));
@@ -211,7 +209,7 @@ class FrontendUser extends \User
 			$this->autologin = $strToken;
 			$this->save();
 
-			$this->setCookie('FE_AUTO_LOGIN', $strToken, ($time + $GLOBALS['TL_CONFIG']['autologin']), null, null, false, true);
+			$this->setCookie('FE_AUTO_LOGIN', $strToken, ($time + \Config::get('autologin')), null, null, false, true);
 		}
 
 		return true;
@@ -220,6 +218,7 @@ class FrontendUser extends \User
 
 	/**
 	 * Remove the auto login resources
+	 *
 	 * @return boolean
 	 */
 	public function logout()
@@ -240,14 +239,17 @@ class FrontendUser extends \User
 
 		// Remove the auto login cookie
 		$this->setCookie('FE_AUTO_LOGIN', $this->autologin, (time() - 86400), null, null, false, true);
+
 		return true;
 	}
 
 
 	/**
 	 * Save the original group membership
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strColumn
+	 * @param mixed  $varValue
+	 *
 	 * @return boolean
 	 */
 	public function findBy($strColumn, $varValue)
@@ -258,6 +260,7 @@ class FrontendUser extends \User
 		}
 
 		$this->arrGroups = $this->groups;
+
 		return true;
 	}
 

@@ -39,7 +39,7 @@ class Dbafs
 	 */
 	public static function addResource($strResource, $blnUpdateFolders=true)
 	{
-		$strUploadPath = $GLOBALS['TL_CONFIG']['uploadPath'] . '/';
+		$strUploadPath = \Config::get('uploadPath') . '/';
 
 		// Remove trailing slashes (see #5707)
 		if (substr($strResource, -1) == '/')
@@ -105,9 +105,9 @@ class Dbafs
 		// If the resource is a folder, also add its contents
 		if (is_dir(TL_ROOT . '/' . $strResource))
 		{
-			// Get a filtered list of all files
+			/** @var \SplFileInfo[] $objFiles */
 			$objFiles = new \RecursiveIteratorIterator(
-				new \Dbafs\Filter(
+				new \Filter\SyncExclude(
 					new \RecursiveDirectoryIterator(
 						TL_ROOT . '/' . $strResource,
 						\FilesystemIterator::UNIX_PATHS|\FilesystemIterator::FOLLOW_SYMLINKS|\FilesystemIterator::SKIP_DOTS
@@ -221,7 +221,7 @@ class Dbafs
 		$strFolder = dirname($strDestination);
 
 		// Set the new parent ID
-		if ($strFolder == $GLOBALS['TL_CONFIG']['uploadPath'])
+		if ($strFolder == \Config::get('uploadPath'))
 		{
 			$objFile->pid = null;
 		}
@@ -258,11 +258,11 @@ class Dbafs
 		}
 
 		// Update the MD5 hash of the parent folders
-		if (($strPath = dirname($strSource)) != $GLOBALS['TL_CONFIG']['uploadPath'])
+		if (($strPath = dirname($strSource)) != \Config::get('uploadPath'))
 		{
 			static::updateFolderHashes($strPath);
 		}
-		if (($strPath = dirname($strDestination)) != $GLOBALS['TL_CONFIG']['uploadPath'])
+		if (($strPath = dirname($strDestination)) != \Config::get('uploadPath'))
 		{
 			static::updateFolderHashes($strPath);
 		}
@@ -291,10 +291,12 @@ class Dbafs
 		}
 
 		$strFolder = dirname($strDestination);
+
+		/** @var \FilesModel $objNewFile */
 		$objNewFile = clone $objFile->current();
 
 		// Set the new parent ID
-		if ($strFolder == $GLOBALS['TL_CONFIG']['uploadPath'])
+		if ($strFolder == \Config::get('uploadPath'))
 		{
 			$objNewFile->pid = null;
 		}
@@ -326,6 +328,7 @@ class Dbafs
 			{
 				while ($objFiles->next())
 				{
+					/**@var \FilesModel $objNew */
 					$objNew = clone $objFiles->current();
 
 					$objNew->pid    = $objNewFile->uuid;
@@ -338,11 +341,11 @@ class Dbafs
 		}
 
 		// Update the MD5 hash of the parent folders
-		if (($strPath = dirname($strSource)) != $GLOBALS['TL_CONFIG']['uploadPath'])
+		if (($strPath = dirname($strSource)) != \Config::get('uploadPath'))
 		{
 			static::updateFolderHashes($strPath);
 		}
-		if (($strPath = dirname($strDestination)) != $GLOBALS['TL_CONFIG']['uploadPath'])
+		if (($strPath = dirname($strDestination)) != \Config::get('uploadPath'))
 		{
 			static::updateFolderHashes($strPath);
 		}
@@ -451,7 +454,7 @@ class Dbafs
 		// Consider the suhosin.memory_limit (see #7035)
 		if (extension_loaded('suhosin'))
 		{
-			if (($limit = ini_get('suhosin.memory_limit')) !== '0')
+			if ($limit = ini_get('suhosin.memory_limit'))
 			{
 				@ini_set('memory_limit', $limit);
 			}
@@ -464,16 +467,16 @@ class Dbafs
 		$objDatabase = \Database::getInstance();
 
 		// Lock the files table
-		$objDatabase->lockTables(array('tl_files'));
+		$objDatabase->lockTables(array('tl_files'=>'WRITE'));
 
 		// Reset the "found" flag
 		$objDatabase->query("UPDATE tl_files SET found=''");
 
-		// Get a filtered list of all files
+		/** @var \SplFileInfo[] $objFiles */
 		$objFiles = new \RecursiveIteratorIterator(
-			new \Dbafs\Filter(
+			new \Filter\SyncExclude(
 				new \RecursiveDirectoryIterator(
-					TL_ROOT . '/' . $GLOBALS['TL_CONFIG']['uploadPath'],
+					TL_ROOT . '/' . \Config::get('uploadPath'),
 					\FilesystemIterator::UNIX_PATHS|\FilesystemIterator::FOLLOW_SYMLINKS|\FilesystemIterator::SKIP_DOTS
 				)
 			), \RecursiveIteratorIterator::SELF_FIRST
@@ -525,7 +528,7 @@ class Dbafs
 				$strParent = dirname($strRelpath);
 
 				// Get the parent ID
-				if ($strParent == $GLOBALS['TL_CONFIG']['uploadPath'])
+				if ($strParent == \Config::get('uploadPath'))
 				{
 					$strPid = null;
 				}
@@ -578,7 +581,7 @@ class Dbafs
 			else
 			{
 				// Check whether the MD5 hash has changed
-				$objResource = $objFile->isDir() ? new \Folder($strRelpath) : new \File($strRelpath);
+				$objResource = $objFile->isDir() ? new \Folder($strRelpath) : new \File($strRelpath, true);
 				$strType = ($objModel->hash != $objResource->hash) ? 'Changed' : 'Unchanged';
 
 				// Add a log entry
@@ -599,6 +602,7 @@ class Dbafs
 			$arrMapped = array();
 			$arrPidUpdate = array();
 
+			/** @var \Model\Collection|\FilesModel $objFiles */
 			while ($objFiles->next())
 			{
 				$objFound = \FilesModel::findBy(array('hash=?', 'found=2'), $objFiles->hash);

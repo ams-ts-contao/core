@@ -14,6 +14,8 @@ namespace Contao;
 /**
  * Parent class for objects that can be modules or content elements.
  *
+ * @property string $hl
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class Hybrid extends \Frontend
@@ -45,13 +47,13 @@ abstract class Hybrid extends \Frontend
 
 	/**
 	 * Model
-	 * @var Model
+	 * @var \Model
 	 */
 	protected $objModel;
 
 	/**
 	 * Parent element
-	 * @var Model
+	 * @var \Model|object
 	 */
 	protected $objParent;
 
@@ -70,8 +72,9 @@ abstract class Hybrid extends \Frontend
 
 	/**
 	 * Initialize the object
-	 * @param object
-	 * @param string
+	 *
+	 * @param \ContentModel|\ModuleModel|\FormModel $objElement
+	 * @param string                                $strColumn
 	 */
 	public function __construct($objElement, $strColumn='main')
 	{
@@ -92,6 +95,7 @@ abstract class Hybrid extends \Frontend
 			return;
 		}
 
+		/** @var \Model $strModelClass */
 		$strModelClass = \Model::getClassFromTable($this->strTable);
 
 		// Load the model
@@ -136,8 +140,9 @@ abstract class Hybrid extends \Frontend
 
 	/**
 	 * Set an object property
-	 * @param string
-	 * @param mixed
+	 *
+	 * @param string $strKey
+	 * @param mixed  $varValue
 	 */
 	public function __set($strKey, $varValue)
 	{
@@ -147,7 +152,9 @@ abstract class Hybrid extends \Frontend
 
 	/**
 	 * Return an object property
-	 * @param string
+	 *
+	 * @param string $strKey
+	 *
 	 * @return mixed
 	 */
 	public function __get($strKey)
@@ -163,7 +170,9 @@ abstract class Hybrid extends \Frontend
 
 	/**
 	 * Check whether a property is set
-	 * @param string
+	 *
+	 * @param string $strKey
+	 *
 	 * @return boolean
 	 */
 	public function __isset($strKey)
@@ -173,7 +182,19 @@ abstract class Hybrid extends \Frontend
 
 
 	/**
+	 * Return the model
+	 *
+	 * @return \Model
+	 */
+	public function getModel()
+	{
+		return $this->objModel;
+	}
+
+
+	/**
 	 * Return the parent object
+	 *
 	 * @return object
 	 */
 	public function getParent()
@@ -184,11 +205,12 @@ abstract class Hybrid extends \Frontend
 
 	/**
 	 * Parse the template
+	 *
 	 * @return string
 	 */
 	public function generate()
 	{
-		if ($this->objParent instanceof \ContentModel && TL_MODE == 'FE' && !BE_USER_LOGGED_IN && ($this->objParent->invisible || ($this->objParent->start > 0 && $this->objParent->start > time()) || ($this->objParent->stop > 0 && $this->objParent->stop < time())))
+		if ($this->objParent instanceof \ContentModel && TL_MODE == 'FE' && !BE_USER_LOGGED_IN && ($this->objParent->invisible || ($this->objParent->start != '' && $this->objParent->start > time()) || ($this->objParent->stop != '' && $this->objParent->stop < time())))
 		{
 			return '';
 		}

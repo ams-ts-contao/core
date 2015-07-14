@@ -12,7 +12,10 @@ namespace Contao;
 
 
 /**
- * Form field "fieldset".
+ * Class FormFieldset
+ *
+ * @property string  $fsType
+ * @property boolean $tableless
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -21,9 +24,10 @@ class FormFieldset extends \Widget
 
 	/**
 	 * Template
+	 *
 	 * @var string
 	 */
-	protected $strTemplate = 'form_html';
+	protected $strTemplate = 'form_fieldset';
 
 
 	/**
@@ -36,14 +40,18 @@ class FormFieldset extends \Widget
 
 
 	/**
-	 * Generate the widget and return it as string
-	 * @return string
+	 * Parse the template file and return it as string
+	 *
+	 * @param array $arrAttributes An optional attributes array
+	 *
+	 * @return string The template markup
 	 */
-	public function generate()
+	public function parse($arrAttributes=null)
 	{
 		// Return a wildcard in the back end
 		if (TL_MODE == 'BE')
 		{
+			/** @var \BackendTemplate|object $objTemplate */
 			$objTemplate = new \BackendTemplate('be_wildcard');
 
 			if ($this->fsType == 'fsStart')
@@ -64,7 +72,23 @@ class FormFieldset extends \Widget
 			return '';
 		}
 
-		// Return the HTML code in the front end
+		return parent::parse($arrAttributes);
+	}
+
+
+	/**
+	 * Generate the widget and return it as string
+	 *
+	 * @return string The widget markup
+	 */
+	public function generate()
+	{
+		// Only tableless forms are supported
+		if (!$this->tableless)
+		{
+			return '';
+		}
+
 		if ($this->fsType == 'fsStart')
 		{
 			return "  <fieldset" . ($this->strClass ? ' class="' . $this->strClass . '"' : '') . ">\n" . (($this->label != '') ? "  <legend>" . $this->label . "</legend>\n" : '');

@@ -21,7 +21,8 @@ class News extends \Frontend
 
 	/**
 	 * Update a particular RSS feed
-	 * @param integer
+	 *
+	 * @param integer $intId
 	 */
 	public function generateFeed($intId)
 	{
@@ -74,7 +75,8 @@ class News extends \Frontend
 
 	/**
 	 * Generate all feeds including a certain archive
-	 * @param integer
+	 * #
+	 * @param integer $intId
 	 */
 	public function generateFeedsByArchive($intId)
 	{
@@ -96,7 +98,8 @@ class News extends \Frontend
 
 	/**
 	 * Generate an XML files and save them to the root directory
-	 * @param array
+	 *
+	 * @param array $arrFeed
 	 */
 	protected function generateFiles($arrFeed)
 	{
@@ -135,7 +138,9 @@ class News extends \Frontend
 
 			while ($objArticle->next())
 			{
-				$jumpTo = $objArticle->getRelated('pid')->jumpTo;
+				/** @var \PageModel $objPage */
+				$objPage = $objArticle->getRelated('pid');
+				$jumpTo = $objPage->jumpTo;
 
 				// No jumpTo page set (see #4784)
 				if (!$jumpTo)
@@ -155,7 +160,7 @@ class News extends \Frontend
 					}
 					else
 					{
-						$arrUrls[$jumpTo] = $this->generateFrontendUrl($objParent->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/%s' : '/items/%s'), $objParent->language);
+						$arrUrls[$jumpTo] = $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/items/%s'), $objParent->language);
 					}
 				}
 
@@ -183,7 +188,7 @@ class News extends \Frontend
 					{
 						while ($objElement->next())
 						{
-							$strDescription .= $this->getContentElement($objElement->id);
+							$strDescription .= $this->getContentElement($objElement->current());
 						}
 					}
 				}
@@ -236,9 +241,11 @@ class News extends \Frontend
 
 	/**
 	 * Add news items to the indexer
-	 * @param array
-	 * @param integer
-	 * @param boolean
+	 *
+	 * @param array   $arrPages
+	 * @param integer $intRoot
+	 * @param boolean $blnIsSitemap
+	 *
 	 * @return array
 	 */
 	public function getSearchablePages($arrPages, $intRoot=0, $blnIsSitemap=false)
@@ -250,8 +257,8 @@ class News extends \Frontend
 			$arrRoot = $this->Database->getChildRecords($intRoot, 'tl_page');
 		}
 
-		$time = time();
 		$arrProcessed = array();
+		$time = \Date::floorToMinute();
 
 		// Get all news archives
 		$objArchive = \NewsArchiveModel::findByProtected('');
@@ -285,7 +292,7 @@ class News extends \Frontend
 					}
 
 					// The target page has not been published (see #5520)
-					if (!$objParent->published || ($objParent->start != '' && $objParent->start > $time) || ($objParent->stop != '' && $objParent->stop < $time))
+					if (!$objParent->published || ($objParent->start != '' && $objParent->start > $time) || ($objParent->stop != '' && $objParent->stop <= ($time + 60)))
 					{
 						continue;
 					}
@@ -300,7 +307,7 @@ class News extends \Frontend
 					$domain = ($objParent->rootUseSSL ? 'https://' : 'http://') . ($objParent->domain ?: \Environment::get('host')) . TL_PATH . '/';
 
 					// Generate the URL
-					$arrProcessed[$objArchive->jumpTo] = $domain . $this->generateFrontendUrl($objParent->row(), (($GLOBALS['TL_CONFIG']['useAutoItem'] && !$GLOBALS['TL_CONFIG']['disableAlias']) ?  '/%s' : '/items/%s'), $objParent->language);
+					$arrProcessed[$objArchive->jumpTo] = $domain . $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/items/%s'), $objParent->language);
 				}
 
 				$strUrl = $arrProcessed[$objArchive->jumpTo];
@@ -324,9 +331,11 @@ class News extends \Frontend
 
 	/**
 	 * Return the link of a news article
-	 * @param object
-	 * @param string
-	 * @param string
+	 *
+	 * @param \NewsModel $objItem
+	 * @param string     $strUrl
+	 * @param string     $strBase
+	 *
 	 * @return string
 	 */
 	protected function getLink($objItem, $strUrl, $strBase='')
@@ -350,18 +359,19 @@ class News extends \Frontend
 			case 'article':
 				if (($objArticle = \ArticleModel::findByPk($objItem->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 				{
-					return $strBase . ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!$GLOBALS['TL_CONFIG']['disableAlias'] && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
+					return $strBase . ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
 				}
 				break;
 		}
 
 		// Link to the default page
-		return $strBase . sprintf($strUrl, (($objItem->alias != '' && !$GLOBALS['TL_CONFIG']['disableAlias']) ? $objItem->alias : $objItem->id));
+		return $strBase . sprintf($strUrl, (($objItem->alias != '' && !\Config::get('disableAlias')) ? $objItem->alias : $objItem->id));
 	}
 
 
 	/**
 	 * Return the names of the existing feeds so they are not removed
+	 *
 	 * @return array
 	 */
 	public function purgeOldFeeds()

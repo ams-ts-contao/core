@@ -31,16 +31,14 @@ class ContentAccordionStart extends \ContentElement
 	 */
 	protected function compile()
 	{
-		if (TL_MODE == 'FE')
-		{
-			$this->strTemplate = 'ce_accordion_start';
-			$this->Template = new \FrontendTemplate($this->strTemplate);
-			$this->Template->setData($this->arrData);
-		}
-		else
+		if (TL_MODE == 'BE')
 		{
 			$this->strTemplate = 'be_wildcard';
-			$this->Template = new \BackendTemplate($this->strTemplate);
+
+			/** @var \BackendTemplate|object $objTemplate */
+			$objTemplate = new \BackendTemplate($this->strTemplate);
+
+			$this->Template = $objTemplate;
 			$this->Template->title = $this->mooHeadline;
 		}
 

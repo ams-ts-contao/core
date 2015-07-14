@@ -21,6 +21,7 @@ class ContentAlias extends \ContentElement
 
 	/**
 	 * Parse the template
+	 *
 	 * @return string
 	 */
 	public function generate()
@@ -39,13 +40,17 @@ class ContentAlias extends \ContentElement
 			return '';
 		}
 
+		$objElement->origId = $objElement->id;
 		$objElement->id = $this->id;
 		$objElement->typePrefix = 'ce_';
 
+		/** @var \ContentElement $objElement */
 		$objElement = new $strClass($objElement);
 
 		// Overwrite spacing and CSS ID
+		$objElement->origSpace = $objElement->space;
 		$objElement->space = $this->space;
+		$objElement->origCssID = $objElement->cssID;
 		$objElement->cssID = $this->cssID;
 
 		return $objElement->generate();

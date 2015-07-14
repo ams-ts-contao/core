@@ -24,6 +24,8 @@ namespace Contao;
  *     $stmt = $db->prepare("SELECT * FROM tl_user WHERE id=?");
  *     $res  = $stmt->execute(4);
  *
+ * @property string $error The last error message
+ *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class Database
@@ -58,6 +60,12 @@ abstract class Database
 	 * @var array
 	 */
 	protected $arrCache = array();
+
+	/**
+	 * List tables query
+	 * @var string
+	 */
+	protected $strListTables = "SHOW TABLES FROM `%s`";
 
 
 	/**
@@ -130,15 +138,16 @@ abstract class Database
 	{
 		$arrConfig = array
 		(
-			'dbDriver'   => $GLOBALS['TL_CONFIG']['dbDriver'],
-			'dbHost'     => $GLOBALS['TL_CONFIG']['dbHost'],
-			'dbUser'     => $GLOBALS['TL_CONFIG']['dbUser'],
-			'dbPass'     => $GLOBALS['TL_CONFIG']['dbPass'],
-			'dbDatabase' => $GLOBALS['TL_CONFIG']['dbDatabase'],
-			'dbPconnect' => $GLOBALS['TL_CONFIG']['dbPconnect'],
-			'dbCharset'  => $GLOBALS['TL_CONFIG']['dbCharset'],
-			'dbPort'     => $GLOBALS['TL_CONFIG']['dbPort'],
-			'dbSocket'   => $GLOBALS['TL_CONFIG']['dbSocket']
+			'dbDriver'   => \Config::get('dbDriver'),
+			'dbHost'     => \Config::get('dbHost'),
+			'dbUser'     => \Config::get('dbUser'),
+			'dbPass'     => \Config::get('dbPass'),
+			'dbDatabase' => \Config::get('dbDatabase'),
+			'dbPconnect' => \Config::get('dbPconnect'),
+			'dbCharset'  => \Config::get('dbCharset'),
+			'dbPort'     => \Config::get('dbPort'),
+			'dbSocket'   => \Config::get('dbSocket'),
+			'dbSqlMode'  => \Config::get('dbSqlMode')
 		);
 
 		if (is_array($arrCustom))
@@ -178,7 +187,7 @@ abstract class Database
 	 *
 	 * @param string $strQuery The query string
 	 *
-	 * @return \Database\Result The Database\Result object
+	 * @return \Database\Result|object The Database\Result object
 	 */
 	public function execute($strQuery)
 	{
@@ -191,7 +200,7 @@ abstract class Database
 	 *
 	 * @param string $strQuery The query string
 	 *
-	 * @return \Database\Result The Database\Result object
+	 * @return \Database\Result|object The Database\Result object
 	 */
 	public function query($strQuery)
 	{
@@ -248,6 +257,7 @@ abstract class Database
 		}
 
 		$this->arrCache[$strDatabase] = $arrReturn;
+
 		return $this->arrCache[$strDatabase];
 	}
 
@@ -288,6 +298,7 @@ abstract class Database
 		}
 
 		$this->arrCache[$strTable] = $this->list_fields($strTable);
+
 		return $this->arrCache[$strTable];
 	}
 
@@ -719,7 +730,7 @@ abstract class Database
 	 *
 	 * @param string $strQuery The query string
 	 *
-	 * @return \Database\Result The Database\Result object
+	 * @return \Database\Result|object The Database\Result object
 	 *
 	 * @deprecated Use \Database::execute() instead
 	 */
@@ -734,7 +745,7 @@ abstract class Database
 	 *
 	 * @param string $strQuery The query string
 	 *
-	 * @return \Database\Result The Database\Result object
+	 * @return \Database\Result|object The Database\Result object
 	 *
 	 * @deprecated Use \Database::execute() instead
 	 */

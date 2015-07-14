@@ -20,6 +20,15 @@ class Automator extends \System
 {
 
 	/**
+	 * Make the constuctor public
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+	}
+
+
+	/**
 	 * Check for new \Contao versions
 	 */
 	public function checkForUpdates()
@@ -29,13 +38,19 @@ class Automator extends \System
 			return;
 		}
 
-		$objRequest = new \Request();
-		$objRequest->send($GLOBALS['TL_CONFIG']['liveUpdateBase'] . (LONG_TERM_SUPPORT ? 'lts-version.txt' : 'version.txt'));
+		// HOOK: proxy module
+		if (Config::get('useProxy')) {
+			$objRequest = new \ProxyRequest();
+		} else {
+			$objRequest = new \Request();
+		}
+
+		$objRequest->send(\Config::get('liveUpdateBase') . (LONG_TERM_SUPPORT ? 'lts-version.txt' : 'version.txt'));
 
 		if (!$objRequest->hasError())
 		{
-			$this->Config->update("\$GLOBALS['TL_CONFIG']['latestVersion']", $objRequest->response);
-			$GLOBALS['TL_CONFIG']['latestVersion'] = $objRequest->response;
+			\Config::set('latestVersion', $objRequest->response);
+			\Config::persist('latestVersion', $objRequest->response);
 		}
 
 		// Add a log entry
@@ -89,7 +104,7 @@ class Automator extends \System
 		$objDatabase->execute("TRUNCATE TABLE tl_version");
 
 		// Add a log entry
-		$this->log('Purged the undo table', __METHOD__, TL_CRON);
+		$this->log('Purged the version table', __METHOD__, TL_CRON);
 	}
 
 
@@ -318,7 +333,7 @@ class Automator extends \System
 	 */
 	public function generateSitemap($intId=0)
 	{
-		$time = time();
+		$time = \Date::floorToMinute();
 		$objDatabase = \Database::getInstance();
 
 		$this->purgeXmlFiles();
@@ -345,7 +360,7 @@ class Automator extends \System
 			while ($objRoot->type != 'root' && $intId > 0);
 
 			// Make sure the page is published
-			if (!$objRoot->published || ($objRoot->start != '' && $objRoot->start > $time) || ($objRoot->stop != '' && $objRoot->stop < $time))
+			if (!$objRoot->published || ($objRoot->start != '' && $objRoot->start > $time) || ($objRoot->stop != '' && $objRoot->stop <= ($time + 60)))
 			{
 				return;
 			}
@@ -362,7 +377,7 @@ class Automator extends \System
 		// Get all published root pages
 		else
 		{
-			$objRoot = $objDatabase->execute("SELECT id, dns, language, useSSL, sitemapName FROM tl_page WHERE type='root' AND createSitemap=1 AND sitemapName!='' AND (start='' OR start<$time) AND (stop='' OR stop>$time) AND published=1");
+			$objRoot = $objDatabase->execute("SELECT id, dns, language, useSSL, sitemapName FROM tl_page WHERE type='root' AND createSitemap='1' AND sitemapName!='' AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "') AND published='1'");
 		}
 
 		// Return if there are no pages
@@ -491,30 +506,10 @@ class Automator extends \System
 
 		// Generate the module loader cache file
 		$objCacheFile = new \File('system/cache/config/modules.php', true);
-		$objCacheFile->write('<?php '); // add one space to prevent the "unexpected $end" error
+		$objCacheFile->write("<?php\n\n");
 
-		$strContent = "\n\n";
-		$strContent .= "/**\n * Active modules\n */\n";
-		$strContent .= "static::\$active = array\n";
-		$strContent .= "(\n";
-
-		foreach (\ModuleLoader::getActive() as $strModule)
-		{
-			$strContent .= "\t'$strModule',\n";
-		}
-
-		$strContent .= ");\n\n";
-		$strContent .= "/**\n * Disabled modules\n */\n";
-		$strContent .= "static::\$disabled = array\n";
-		$strContent .= "(\n";
-
-		foreach (\ModuleLoader::getDisabled() as $strModule)
-		{
-			$strContent .= "\t'$strModule',\n";
-		}
-
-		$strContent .= ");";
-		$objCacheFile->append($strContent);
+		$objCacheFile->append(sprintf("static::\$active = %s;\n", var_export(\ModuleLoader::getActive(), true)));
+		$objCacheFile->append(sprintf("static::\$disabled = %s;", var_export(\ModuleLoader::getDisabled(), true)));
 
 		// Close the file (moves it to its final destination)
 		$objCacheFile->close();
@@ -534,6 +529,30 @@ class Automator extends \System
 		}
 
 		// Close the file (moves it to its final destination)
+		$objCacheFile->close();
+
+		// Generate the page mapping array
+		$arrMapper = array();
+		$objPages = \PageModel::findPublishedRootPages();
+
+		if ($objPages !== null)
+		{
+			while ($objPages->next())
+			{
+				$strBase = ($objPages->dns ?: '*');
+
+				if ($objPages->fallback)
+				{
+					$arrMapper[$strBase . '/empty.fallback'] = $strBase . '/empty.' . $objPages->language;
+				}
+
+				$arrMapper[$strBase . '/empty.' . $objPages->language] = $strBase . '/empty.' . $objPages->language;
+			}
+		}
+
+		// Generate the page mapper file
+		$objCacheFile = new \File('system/cache/config/mapping.php', true);
+		$objCacheFile->write(sprintf("<?php\n\nreturn %s;\n", var_export($arrMapper, true)));
 		$objCacheFile->close();
 
 		// Add a log entry
@@ -725,7 +744,7 @@ class Automator extends \System
 				}
 
 				$strTable = substr($strFile, 0, -4);
-				$objExtract = new \DcaExtractor($strTable);
+				$objExtract = \DcaExtractor::getInstance($strTable);
 
 				if ($objExtract->isDbTable())
 				{
@@ -736,72 +755,18 @@ class Automator extends \System
 			}
 		}
 
-		// Create one file per table
+		/** @var \DcaExtractor[] $arrExtracts */
 		foreach ($arrExtracts as $strTable=>$objExtract)
 		{
 			// Create the file
 			$objFile = new \File('system/cache/sql/' . $strTable . '.php', true);
 			$objFile->write("<?php\n\n");
 
-			// Meta
-			$arrMeta = $objExtract->getMeta();
-
-			$objFile->append("\$this->arrMeta = array\n(");
-			$objFile->append("\t'engine' => '{$arrMeta['engine']}',");
-			$objFile->append("\t'charset' => '{$arrMeta['charset']}',");
-			$objFile->append(');', "\n\n");
-
-			// Fields
-			$arrFields = $objExtract->getFields();
-			$objFile->append("\$this->arrFields = array\n(");
-
-			foreach ($arrFields as $field=>$sql)
-			{
-				$sql = str_replace('"', '\"', $sql);
-				$objFile->append("\t'$field' => \"$sql\",");
-			}
-
-			$objFile->append(');', "\n\n");
-
-			// Order fields
-			$arrFields = $objExtract->getOrderFields();
-			$objFile->append("\$this->arrOrderFields = array\n(");
-
-			foreach ($arrFields as $field)
-			{
-				$objFile->append("\t'$field',");
-			}
-
-			$objFile->append(');', "\n\n");
-
-			// Keys
-			$arrKeys = $objExtract->getKeys();
-			$objFile->append("\$this->arrKeys = array\n(");
-
-			foreach ($arrKeys as $field=>$type)
-			{
-				$objFile->append("\t'$field' => '$type',");
-			}
-
-			$objFile->append(');', "\n\n");
-
-			// Relations
-			$arrRelations = $objExtract->getRelations();
-			$objFile->append("\$this->arrRelations = array\n(");
-
-			foreach ($arrRelations as $field=>$config)
-			{
-				$objFile->append("\t'$field' => array\n\t(");
-
-				foreach ($config as $k=>$v)
-				{
-					$objFile->append("\t\t'$k' => '$v',");
-				}
-
-				$objFile->append("\t),");
-			}
-
-			$objFile->append(');', "\n\n");
+			$objFile->append(sprintf("\$this->arrMeta = %s;\n", var_export($objExtract->getMeta(), true)));
+			$objFile->append(sprintf("\$this->arrFields = %s;\n", var_export($objExtract->getFields(), true)));
+			$objFile->append(sprintf("\$this->arrOrderFields = %s;\n", var_export($objExtract->getOrderFields(), true)));
+			$objFile->append(sprintf("\$this->arrKeys = %s;\n", var_export($objExtract->getKeys(), true)));
+			$objFile->append(sprintf("\$this->arrRelations = %s;\n", var_export($objExtract->getRelations(), true)));
 
 			// Set the database table flag
 			$objFile->append("\$this->blnIsDbTable = true;", "\n");

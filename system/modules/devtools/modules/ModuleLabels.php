@@ -35,7 +35,7 @@ class ModuleLabels extends \BackendModule
 
 		$this->Template->label = $GLOBALS['TL_LANG']['tl_labels']['label'][0];
 		$this->Template->headline = sprintf($GLOBALS['TL_LANG']['tl_labels']['headline'], \Input::get('id'));
-		$this->Template->help = ($GLOBALS['TL_CONFIG']['showHelp'] && strlen($GLOBALS['TL_LANG']['tl_labels']['label'][1])) ? $GLOBALS['TL_LANG']['tl_labels']['label'][1] : '';
+		$this->Template->help = (\Config::get('showHelp') && strlen($GLOBALS['TL_LANG']['tl_labels']['label'][1])) ? $GLOBALS['TL_LANG']['tl_labels']['label'][1] : '';
 		$this->Template->submit = specialchars($GLOBALS['TL_LANG']['tl_labels']['submitBT']);
 
 		$strOptions = '';
@@ -44,7 +44,7 @@ class ModuleLabels extends \BackendModule
 		// Get languages
 		foreach (scan(TL_ROOT . '/system/modules/core/languages') as $strLanguage)
 		{
-			if ($strLanguage != 'en' && substr($strLanguage, 0, 1) != '.')
+			if ($strLanguage != 'en' && strncmp($strLanguage, '.', 1) !== 0)
 			{
 				$strOptions .= sprintf('<option value="%s"%s>%s</option>', $strLanguage, (($strLanguage == \Input::post('language') || $strLanguage == $GLOBALS['TL_LANGUAGE']) ? ' selected="selected"' : ''), $arrLanguages[$strLanguage]);
 			}
@@ -101,12 +101,12 @@ class ModuleLabels extends \BackendModule
 
 					// Include English file
 					$GLOBALS['TL_LANG'] = array();
-					eval(\System::convertXlfToPhp($strPath . '/' . $strFile, 'en'));
+					\System::convertXlfToPhp($strPath . '/' . $strFile, 'en', true);
 					$arrOld = $GLOBALS['TL_LANG'];
 
 					// Include foreign file
 					$GLOBALS['TL_LANG'] = array();
-					eval(\System::convertXlfToPhp($strLang . '/' . $strFile, $lng));
+					\System::convertXlfToPhp($strLang . '/' . $strFile, $lng, true);
 					$arrNew = $GLOBALS['TL_LANG'];
 
 					// Restore the former labels
