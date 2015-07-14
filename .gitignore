@@ -36,10 +36,10 @@ nbproject/
 
 # AMS
 .svn
+.transifexrc
 assets/html5shiv
 contao-check*
 system/modules/*
 templates/*
 tl_files
 googlefabb*.html
-
