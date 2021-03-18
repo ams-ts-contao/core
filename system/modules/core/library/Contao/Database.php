@@ -606,6 +606,10 @@ abstract class Database
 		{
 			$strName = '`'.$strName.'`';
 		}
+		if (strtolower($strName) == 'groups')
+		{
+			$strName = '`'.$strName.'`';
+		}
 
 		return $strName;
 	}
