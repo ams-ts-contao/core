@@ -17,7 +17,7 @@ nbproject/
 /contao/update.phar.php
 /files/*
 /assets/css/*
-/assets/images/*/*
+/assets/images/*
 /assets/js/*
 /share/*.xml
 /system/cache/*
@@ -34,7 +34,19 @@ nbproject/
 /templates/*
 /vendor/
 
-# See contao/core#7576
-!/assets/css/index.html
-!/assets/images/*/index.html
-!/assets/js/index.html
+# AMS
+.svn/
+.transifexrc
+assets/html5shiv
+contao-check*
+statistik/
+system/modules/*
+templates/*
+tl_files
+virtwelt/
+wartung/
+xml-schemata/
+AM-SoFT2.crt
+AM-Soft.crt
+googlefabb*.html
+fernwartung.exe
