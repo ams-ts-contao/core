@@ -1,6 +1,27 @@
 Contao Open Source CMS changelog
 ================================
 
+Version 3.5.40 (2019-04-10)
+---------------------------
+
+### Fixed
+Fix the save callback in the back end password module (see #429).
+
+
+Version 3.5.39 (2019-04-09)
+---------------------------
+
+### Fixed
+Invalidate the user sessions if a password changes (see CVE-2019-10641).
+
+
+Version 3.5.38 (2018-12-21)
+---------------------------
+
+### Fixed
+Correctly check the permission to move child records as non-admin user.
+
+
 Version 3.5.37 (2018-12-13)
 ---------------------------
 
