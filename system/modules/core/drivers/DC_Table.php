@@ -5459,7 +5459,7 @@ class DC_Table extends \DataContainer implements \listable, \editable
 				$arrProcedure[] = "id IN(" . implode(',', array_map('\intval', $GLOBALS['TL_DCA'][$table]['list']['sorting']['root'])) . ")";
 			}
 
-			$objFields = $this->Database->prepare("SELECT DISTINCT " . $what . " FROM " . $this->strTable . ((is_array($arrProcedure) && strlen($arrProcedure[0])) ? ' WHERE ' . implode(' AND ', $arrProcedure) : ''))
+			$objFields = $this->Database->prepare("SELECT DISTINCT `" . $what . "` FROM " . $this->strTable . ((is_array($arrProcedure) && strlen($arrProcedure[0])) ? ' WHERE ' . implode(' AND ', $arrProcedure) : ''))
 										->execute($arrValues);
 
 			// Begin select menu
