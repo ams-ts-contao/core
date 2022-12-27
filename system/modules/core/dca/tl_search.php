@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -23,8 +23,8 @@ $GLOBALS['TL_DCA']['tl_search'] = array
 			'keys' => array
 			(
 				'id' => 'primary',
-				'pid' => 'index',
-				'url' => 'index',
+				'url' => 'unique',
+				'checksum,pid' => 'unique',
 				'text' => 'fulltext'
 			)
 		)

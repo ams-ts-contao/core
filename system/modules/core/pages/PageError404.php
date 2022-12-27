@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -44,7 +44,7 @@ class PageError404 extends \Frontend
 		}
 
 		// Check the search index (see #3761)
-		\Search::removeEntry(\Environment::get('request'));
+		\Search::removeEntry(\Environment::get('base') . \Environment::get('request'));
 
 		// Find the matching root page
 		$objRootPage = $this->getRootPageFromUrl();
@@ -63,16 +63,16 @@ class PageError404 extends \Frontend
 			}
 
 			// Only redirect if there is no language fragment (see #4669)
-			if ($strRequest != '' && !preg_match('@^[a-z]{2}(\-[A-Z]{2})?/@', $strRequest))
+			if ($strRequest != '' && !preg_match('@^[a-z]{2}(-[A-Z]{2})?/@', $strRequest))
 			{
 				// Handle language fragments without trailing slash (see #7666)
-				if (preg_match('@^[a-z]{2}(\-[A-Z]{2})?$@', $strRequest))
+				if (preg_match('@^[a-z]{2}(-[A-Z]{2})?$@', $strRequest))
 				{
-					$this->redirect(($GLOBALS['TL_CONFIG']['rewriteURL'] ? '' : 'index.php/') . $strRequest . '/', 301);
+					$this->redirect((\Config::get('rewriteURL') ? '' : 'index.php/') . $strRequest . '/', 301);
 				}
 				else
 				{
-					$this->redirect(($GLOBALS['TL_CONFIG']['rewriteURL'] ? '' : 'index.php/') . $objRootPage->language . '/' . $strRequest, 301);
+					$this->redirect((\Config::get('rewriteURL') ? '' : 'index.php/') . $objRootPage->language . '/' . $strRequest, 301);
 				}
 			}
 		}
@@ -92,6 +92,13 @@ class PageError404 extends \Frontend
 		{
 			/** @var \PageModel $objPage */
 			global $objPage;
+
+			// Die nicely if the page is a 404 page already (see #8060)
+			if ($objPage && $objPage->type == 'error_404')
+			{
+				header('HTTP/1.1 404 Not Found');
+				die_nicely('be_no_page', 'Page not found');
+			}
 
 			$objPage = $obj404->loadDetails();
 
@@ -114,6 +121,6 @@ class PageError404 extends \Frontend
 			die_nicely('be_no_forward', 'Forward page not found');
 		}
 
-		$this->redirect($this->generateFrontendUrl($objNextPage->row(), null, $objRootPage->language), (($obj404->redirect == 'temporary') ? 302 : 301));
+		$this->redirect($objNextPage->getFrontendUrl(), (($obj404->redirect == 'temporary') ? 302 : 301));
 	}
 }

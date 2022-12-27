@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -75,7 +75,7 @@ class RebuildIndex extends \Backend implements \executable
 				foreach ($GLOBALS['TL_HOOKS']['getSearchablePages'] as $callback)
 				{
 					$this->import($callback[0]);
-					$arrPages = $this->$callback[0]->$callback[1]($arrPages);
+					$arrPages = $this->{$callback[0]}->{$callback[1]}($arrPages);
 				}
 			}
 
@@ -125,7 +125,7 @@ class RebuildIndex extends \Backend implements \executable
 			// Display the pages
 			for ($i=0, $c=count($arrPages); $i<$c; $i++)
 			{
-				$strBuffer .= '<span class="page_url" data-url="' . $arrPages[$i] . '#' . $rand . $i . '">' . \String::substr($arrPages[$i], 100) . '</span><br>';
+				$strBuffer .= '<span class="page_url" data-url="' . $arrPages[$i] . '#' . $rand . $i . '">' . \StringUtil::substr($arrPages[$i], 100) . '</span><br>';
 				unset($arrPages[$i]); // see #5681
 			}
 

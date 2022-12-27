@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -21,9 +21,6 @@ namespace Contao;
  * @property string  $inputName
  * @property string  $palette
  * @property object  $activeRecord
- * @property boolean $blnUploadable
- * @property array   $root
- * @property array   $rootIds
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -95,6 +92,12 @@ abstract class DataContainer extends \Backend
 	 * @var \Model|\FilesModel
 	 */
 	protected $objActiveRecord;
+
+	/**
+	 * True if one of the form fields is uploadable
+	 * @var boolean
+	 */
+	protected $blnUploadable = false;
 
 
 	/**
@@ -193,7 +196,7 @@ abstract class DataContainer extends \Backend
 		// Add the help wizard
 		if ($arrData['eval']['helpwizard'])
 		{
-			$xlabel .= ' <a href="contao/help.php?table='.$this->strTable.'&amp;field='.$this->strField.'" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['helpWizard']) . '" onclick="Backend.openModalIframe({\'width\':735,\'height\':405,\'title\':\''.specialchars(str_replace("'", "\\'", $arrData['label'][0])).'\',\'url\':this.href});return false">'.\Image::getHtml('about.gif', $GLOBALS['TL_LANG']['MSC']['helpWizard'], 'style="vertical-align:text-bottom"').'</a>';
+			$xlabel .= ' <a href="contao/help.php?table='.$this->strTable.'&amp;field='.$this->strField.'" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['helpWizard']) . '" onclick="Backend.openModalIframe({\'width\':735,\'title\':\''.specialchars(str_replace("'", "\\'", $arrData['label'][0])).'\',\'url\':this.href});return false">'.\Image::getHtml('about.gif', $GLOBALS['TL_LANG']['MSC']['helpWizard'], 'style="vertical-align:text-bottom"').'</a>';
 		}
 
 		// Add a custom xlabel
@@ -204,7 +207,7 @@ abstract class DataContainer extends \Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$xlabel .= $this->$callback[0]->$callback[1]($this);
+					$xlabel .= $this->{$callback[0]}->{$callback[1]}($this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -218,7 +221,7 @@ abstract class DataContainer extends \Backend
 		{
 			$this->import($arrData['input_field_callback'][0]);
 
-			return $this->$arrData['input_field_callback'][0]->$arrData['input_field_callback'][1]($this, $xlabel);
+			return $this->{$arrData['input_field_callback'][0]}->{$arrData['input_field_callback'][1]}($this, $xlabel);
 		}
 		elseif (is_callable($arrData['input_field_callback']))
 		{
@@ -258,7 +261,7 @@ abstract class DataContainer extends \Backend
 		// Convert insert tags in src attributes (see #5965)
 		if (isset($arrData['eval']['rte']) && strncmp($arrData['eval']['rte'], 'tiny', 4) === 0)
 		{
-			$this->varValue = \String::insertTagToSrc($this->varValue);
+			$this->varValue = \StringUtil::insertTagToSrc($this->varValue);
 		}
 
 		/** @var \Widget $objWidget */
@@ -341,7 +344,7 @@ abstract class DataContainer extends \Backend
 					// Convert file paths in src attributes (see #5965)
 					if ($varValue && isset($arrData['eval']['rte']) && strncmp($arrData['eval']['rte'], 'tiny', 4) === 0)
 					{
-						$varValue = \String::srcToInsertTag($varValue);
+						$varValue = \StringUtil::srcToInsertTag($varValue);
 					}
 
 					// Save the current value
@@ -370,11 +373,11 @@ abstract class DataContainer extends \Backend
 			switch ($rgxp)
 			{
 				case 'datim':
-					$time = ",\n      timePicker:true";
+					$time = ",\n        timePicker: true";
 					break;
 
 				case 'time':
-					$time = ",\n      pickOnly:\"time\"";
+					$time = ",\n        pickOnly: \"time\"";
 					break;
 
 				default:
@@ -382,7 +385,15 @@ abstract class DataContainer extends \Backend
 					break;
 			}
 
-			$wizard .= ' <img src="assets/mootools/datepicker/' . $GLOBALS['TL_ASSETS']['DATEPICKER'] . '/icon.gif" width="20" height="20" alt="" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['datepicker']).'" id="toggle_' . $objWidget->id . '" style="vertical-align:-6px;cursor:pointer">
+			$strOnSelect = '';
+
+			// Trigger the auto-submit function (see #8603)
+			if ($arrData['eval']['submitOnChange'])
+			{
+				$strOnSelect = ",\n        onSelect: function() { Backend.autoSubmit(\"" . $this->strTable . "\"); }";
+			}
+
+			$wizard .= ' ' . \Image::getHtml('assets/mootools/datepicker/' . $GLOBALS['TL_ASSETS']['DATEPICKER'] . '/icon.gif', '', 'title="'.specialchars($GLOBALS['TL_LANG']['MSC']['datepicker']).'" id="toggle_' . $objWidget->id . '" style="vertical-align:-6px;cursor:pointer"') . '
   <script>
     window.addEvent("domready", function() {
       new Picker.Date($("ctrl_' . $objWidget->id . '"), {
@@ -391,7 +402,7 @@ abstract class DataContainer extends \Backend
         format: "' . $format . '",
         positionOffset: {x:-211,y:-209}' . $time . ',
         pickerClass: "datepicker_bootstrap",
-        useFadeInOut: !Browser.ie,
+        useFadeInOut: !Browser.ie' . $strOnSelect . ',
         startDay: ' . $GLOBALS['TL_LANG']['MSC']['weekOffset'] . ',
         titleFormat: "' . $GLOBALS['TL_LANG']['MSC']['titleFormat'] . '"
       });
@@ -428,7 +439,7 @@ abstract class DataContainer extends \Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$wizard .= $this->$callback[0]->$callback[1]($this);
+					$wizard .= $this->{$callback[0]}->{$callback[1]}($this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -511,7 +522,7 @@ abstract class DataContainer extends \Backend
 
 				if ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth'))
 				{
-					if ($objFile->width > 699 || $objFile->height > 524)
+					if ($objFile->width > 699 || $objFile->height > 524 || !$objFile->width || !$objFile->height)
 					{
 						$image = \Image::get($objFile->path, 699, 524, 'box');
 					}
@@ -525,7 +536,7 @@ abstract class DataContainer extends \Backend
 
 				$strPreview = '
 
-<div id="' . $ctrl . '" class="tl_edit_preview" data-original-width="' . $objFile->width . '" data-original-height="' . $objFile->height . '">
+<div id="' . $ctrl . '" class="tl_edit_preview" data-original-width="' . $objFile->viewWidth . '" data-original-height="' . $objFile->viewHeight . '">
 ' . \Image::getHtml($image) . '
 </div>';
 
@@ -669,7 +680,7 @@ abstract class DataContainer extends \Backend
 			if (is_array($v['button_callback']))
 			{
 				$this->import($v['button_callback'][0]);
-				$return .= $this->$v['button_callback'][0]->$v['button_callback'][1]($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
+				$return .= $this->{$v['button_callback'][0]}->{$v['button_callback'][1]}($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
 				continue;
 			}
 			elseif (is_callable($v['button_callback']))
@@ -734,6 +745,11 @@ abstract class DataContainer extends \Backend
 
 		foreach ($GLOBALS['TL_DCA'][$this->strTable]['list']['global_operations'] as $k=>$v)
 		{
+			if (\Input::get('act') == 'select' && !$v['showOnSelect'])
+			{
+				continue;
+			}
+
 			$v = is_array($v) ? $v : array($v);
 			$label = is_array($v['label']) ? $v['label'][0] : $v['label'];
 			$title = is_array($v['label']) ? $v['label'][1] : $v['label'];
@@ -766,7 +782,7 @@ abstract class DataContainer extends \Backend
 			if (is_array($v['button_callback']))
 			{
 				$this->import($v['button_callback'][0]);
-				$return .= $this->$v['button_callback'][0]->$v['button_callback'][1]($v['href'], $label, $title, $v['class'], $attributes, $this->strTable, $this->root);
+				$return .= $this->{$v['button_callback'][0]}->{$v['button_callback'][1]}($v['href'], $label, $title, $v['class'], $attributes, $this->strTable, $this->root);
 				continue;
 			}
 			elseif (is_callable($v['button_callback']))

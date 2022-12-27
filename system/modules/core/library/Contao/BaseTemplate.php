@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -259,6 +259,7 @@ abstract class BaseTemplate extends \Controller
 	 */
 	public function insert($name, array $data=null)
 	{
+		/** @var \Template $tpl */
 		if ($this instanceof \Template)
 		{
 			$tpl = new static($name);

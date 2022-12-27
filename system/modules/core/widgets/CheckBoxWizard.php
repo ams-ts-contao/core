@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -66,7 +66,7 @@ class CheckBoxWizard extends \Widget
 
 		if (!empty($varValue) && !$this->isValidOption($varValue))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalid'], (is_array($varValue) ? implode(', ', $varValue) : $varValue)));
+			$this->addError($GLOBALS['TL_LANG']['ERR']['invalid']);
 		}
 
 		parent::validate();
@@ -156,7 +156,7 @@ class CheckBoxWizard extends \Widget
 		return sprintf('<fieldset id="ctrl_%s" class="tl_checkbox_container tl_checkbox_wizard%s"><legend>%s%s%s%s</legend><input type="hidden" name="%s" value="">%s<div class="sortable">%s</div></fieldset>%s',
 						$this->strId,
 						(($this->strClass != '') ? ' ' . $this->strClass : ''),
-						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
+						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].' </span>' : ''),
 						$this->strLabel,
 						($this->mandatory ? '<span class="mandatory">*</span>' : ''),
 						$this->xlabel,

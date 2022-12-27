@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -34,55 +34,55 @@ namespace Contao;
  * @property integer $importantPartHeight
  * @property string  $meta
  *
- * @method static $this findByIdOrAlias()
- * @method static $this findByPath()
- * @method static $this findOneBy()
- * @method static $this findOneByPid()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByType()
- * @method static $this findOneByExtension()
- * @method static $this findOneByHash()
- * @method static $this findOneByFound()
- * @method static $this findOneByName()
- * @method static $this findOneByProtected()
- * @method static $this findOneByImportantPartX()
- * @method static $this findOneByImportantPartY()
- * @method static $this findOneByImportantPartWidth()
- * @method static $this findOneByImportantPartHeight()
- * @method static $this findOneByMeta()
+ * @method static \FilesModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \FilesModel|null findByPath($val, $opt=array())
+ * @method static \FilesModel|null findOneBy($col, $val, $opt=array())
+ * @method static \FilesModel|null findOneByPid($val, $opt=array())
+ * @method static \FilesModel|null findOneByTstamp($val, $opt=array())
+ * @method static \FilesModel|null findOneByType($val, $opt=array())
+ * @method static \FilesModel|null findOneByExtension($val, $opt=array())
+ * @method static \FilesModel|null findOneByHash($val, $opt=array())
+ * @method static \FilesModel|null findOneByFound($val, $opt=array())
+ * @method static \FilesModel|null findOneByName($val, $opt=array())
+ * @method static \FilesModel|null findOneByProtected($val, $opt=array())
+ * @method static \FilesModel|null findOneByImportantPartX($val, $opt=array())
+ * @method static \FilesModel|null findOneByImportantPartY($val, $opt=array())
+ * @method static \FilesModel|null findOneByImportantPartWidth($val, $opt=array())
+ * @method static \FilesModel|null findOneByImportantPartHeight($val, $opt=array())
+ * @method static \FilesModel|null findOneByMeta($val, $opt=array())
  *
- * @method static \Model\Collection|\FilesModel findByPid()
- * @method static \Model\Collection|\FilesModel findByTstamp()
- * @method static \Model\Collection|\FilesModel findByType()
- * @method static \Model\Collection|\FilesModel findByExtension()
- * @method static \Model\Collection|\FilesModel findByHash()
- * @method static \Model\Collection|\FilesModel findByFound()
- * @method static \Model\Collection|\FilesModel findByName()
- * @method static \Model\Collection|\FilesModel findByProtected()
- * @method static \Model\Collection|\FilesModel findByImportantPartX()
- * @method static \Model\Collection|\FilesModel findByImportantPartY()
- * @method static \Model\Collection|\FilesModel findByImportantPartWidth()
- * @method static \Model\Collection|\FilesModel findByImportantPartHeight()
- * @method static \Model\Collection|\FilesModel findByMeta()
- * @method static \Model\Collection|\FilesModel findBy()
- * @method static \Model\Collection|\FilesModel findAll()
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByPid($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByType($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByExtension($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByHash($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByFound($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByName($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByProtected($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByImportantPartX($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByImportantPartY($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByImportantPartWidth($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByImportantPartHeight($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findByMeta($val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\FilesModel[]|\FilesModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByPid()
- * @method static integer countByTstamp()
- * @method static integer countByUuid()
- * @method static integer countByType()
- * @method static integer countByPath()
- * @method static integer countByExtension()
- * @method static integer countByHash()
- * @method static integer countByFound()
- * @method static integer countByName()
- * @method static integer countByProtected()
- * @method static integer countByImportantPartX()
- * @method static integer countByImportantPartY()
- * @method static integer countByImportantPartWidth()
- * @method static integer countByImportantPartHeight()
- * @method static integer countByMeta()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByPid($val, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByUuid($val, $opt=array())
+ * @method static integer countByType($val, $opt=array())
+ * @method static integer countByPath($val, $opt=array())
+ * @method static integer countByExtension($val, $opt=array())
+ * @method static integer countByHash($val, $opt=array())
+ * @method static integer countByFound($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countByProtected($val, $opt=array())
+ * @method static integer countByImportantPartX($val, $opt=array())
+ * @method static integer countByImportantPartY($val, $opt=array())
+ * @method static integer countByImportantPartWidth($val, $opt=array())
+ * @method static integer countByImportantPartHeight($val, $opt=array())
+ * @method static integer countByMeta($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -102,7 +102,7 @@ class FilesModel extends \Model
 	 * @param mixed $varValue   The value
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return static A model or null if there is no file
+	 * @return \FilesModel|null The model or null if there is no file
 	 */
 	public static function findByPk($varValue, array $arrOptions=array())
 	{
@@ -121,7 +121,7 @@ class FilesModel extends \Model
 	 * @param mixed $intId      The ID or UUID
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return static A model or null if there is no file
+	 * @return \FilesModel|null The model or null if there is no file
 	 */
 	public static function findById($intId, array $arrOptions=array())
 	{
@@ -140,7 +140,7 @@ class FilesModel extends \Model
 	 * @param array $arrIds     An array of IDs or UUIDs
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\FilesModel|null A collection of models or null if there are no files
+	 * @return \Model\Collection|\FilesModel[]|\FilesModel|null A collection of models or null if there are no files
 	 */
 	public static function findMultipleByIds($arrIds, array $arrOptions=array())
 	{
@@ -164,7 +164,7 @@ class FilesModel extends \Model
 	 * @param string $strUuid    The UUID string
 	 * @param array  $arrOptions An optional options array
 	 *
-	 * @return static A model or null if there is no file
+	 * @return \FilesModel|null The model or null if there is no file
 	 */
 	public static function findByUuid($strUuid, array $arrOptions=array())
 	{
@@ -173,7 +173,19 @@ class FilesModel extends \Model
 		// Convert UUIDs to binary
 		if (\Validator::isStringUuid($strUuid))
 		{
-			$strUuid = \String::uuidToBin($strUuid);
+			$strUuid = \StringUtil::uuidToBin($strUuid);
+		}
+
+		// Check the model registry (does not work by default due to UNHEX())
+		if (empty($arrOptions))
+		{
+			/** @var \FilesModel $objModel */
+			$objModel = \Model\Registry::getInstance()->fetch(static::$strTable, $strUuid, 'uuid');
+
+			if ($objModel !== null)
+			{
+				return $objModel;
+			}
 		}
 
 		return static::findOneBy(array("$t.uuid=UNHEX(?)"), bin2hex($strUuid), $arrOptions);
@@ -186,7 +198,7 @@ class FilesModel extends \Model
 	 * @param array $arrUuids   An array of UUIDs
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\FilesModel|null A collection of models or null if there are no files
+	 * @return \Model\Collection|\FilesModel[]|\FilesModel|null A collection of models or null if there are no files
 	 */
 	public static function findMultipleByUuids($arrUuids, array $arrOptions=array())
 	{
@@ -202,7 +214,7 @@ class FilesModel extends \Model
 			// Convert UUIDs to binary
 			if (\Validator::isStringUuid($v))
 			{
-				$v = \String::uuidToBin($v);
+				$v = \StringUtil::uuidToBin($v);
 			}
 
 			$arrUuids[$k] = "UNHEX('" . bin2hex($v) . "')";
@@ -223,7 +235,7 @@ class FilesModel extends \Model
 	 * @param array $arrPaths   An array of file paths
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\FilesModel|null A collection of models or null if there are no files
+	 * @return \Model\Collection|\FilesModel[]|\FilesModel|null A collection of models or null if there are no files
 	 */
 	public static function findMultipleByPaths($arrPaths, array $arrOptions=array())
 	{
@@ -249,7 +261,7 @@ class FilesModel extends \Model
 	 * @param string $strPath    The base path
 	 * @param array  $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\FilesModel|null A collection of models or null if there are no matching files
+	 * @return \Model\Collection|\FilesModel[]|\FilesModel|null A collection of models or null if there are no matching files
 	 */
 	public static function findMultipleByBasepath($strPath, array $arrOptions=array())
 	{
@@ -266,7 +278,7 @@ class FilesModel extends \Model
 	 * @param array $arrExtensions An array of file extensions
 	 * @param array $arrOptions    An optional options array
 	 *
-	 * @return \Model\Collection|\FilesModel|null A collection of models or null of there are no matching files
+	 * @return \Model\Collection|\FilesModel[]|\FilesModel|null A collection of models or null of there are no matching files
 	 */
 	public static function findMultipleByUuidsAndExtensions($arrUuids, $arrExtensions, array $arrOptions=array())
 	{
@@ -290,7 +302,7 @@ class FilesModel extends \Model
 			// Convert UUIDs to binary
 			if (\Validator::isStringUuid($v))
 			{
-				$v = \String::uuidToBin($v);
+				$v = \StringUtil::uuidToBin($v);
 			}
 
 			$arrUuids[$k] = "UNHEX('" . bin2hex($v) . "')";
@@ -311,12 +323,12 @@ class FilesModel extends \Model
 	 * @param string $strPath    The folder path
 	 * @param array  $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\FilesModel|null A collection of models or null if there are no matching files
+	 * @return \Model\Collection|\FilesModel[]|\FilesModel|null A collection of models or null if there are no matching files
 	 */
 	public static function findMultipleFilesByFolder($strPath, array $arrOptions=array())
 	{
 		$t = static::$strTable;
-		$strPath = str_replace(array('%', '_'), array('\\%', '\\_'), $strPath);
+		$strPath = str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $strPath);
 
 		return static::findBy(array("$t.type='file' AND $t.path LIKE ? AND $t.path NOT LIKE ?"), array($strPath.'/%', $strPath.'/%/%'), $arrOptions);
 	}

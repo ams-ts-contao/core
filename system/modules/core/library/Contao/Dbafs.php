@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -25,6 +25,13 @@ namespace Contao;
  */
 class Dbafs
 {
+
+	/**
+	 * Synchronize the database
+	 * @var array
+	 */
+	protected static $arrShouldBeSynchronized = array();
+
 
 	/**
 	 * Adds a file or folder with its parent folders
@@ -48,7 +55,7 @@ class Dbafs
 		}
 
 		// Normalize the path (see #6034)
-		$strResource = str_replace('//', '/', $strResource);
+		$strResource = str_replace(array('\\', '//'), '/', $strResource);
 
 		// The resource does not exist or lies outside the upload directory
 		if ($strResource == '' || strncmp($strResource,  $strUploadPath, strlen($strUploadPath)) !== 0 || !file_exists(TL_ROOT . '/' . $strResource))
@@ -176,7 +183,6 @@ class Dbafs
 				$objModel->type      = 'folder';
 				$objModel->path      = $objFolder->path;
 				$objModel->extension = '';
-				$objModel->hash      = $objFolder->hash;
 				$objModel->uuid      = $objDatabase->getUuid();
 				$objModel->save();
 
@@ -187,6 +193,17 @@ class Dbafs
 			if ($objModel->path == $strResource)
 			{
 				$objReturn = $objModel;
+			}
+		}
+
+		// Update the folder hashes from bottom up after all file hashes are set
+		foreach (array_reverse($arrPaths) as $strPath)
+		{
+			if (is_dir(TL_ROOT . '/' . $strPath))
+			{
+				$objModel = \FilesModel::findByPath($strPath);
+				$objModel->hash = static::getFolderHash($strPath);
+				$objModel->save();
 			}
 		}
 
@@ -251,7 +268,7 @@ class Dbafs
 			{
 				while ($objFiles->next())
 				{
-					$objFiles->path = preg_replace('@^' . $strSource . '/@', $strDestination . '/', $objFiles->path);
+					$objFiles->path = preg_replace('@^' . preg_quote($strSource, '@') . '/@', $strDestination . '/', $objFiles->path);
 					$objFiles->save();
 				}
 			}
@@ -358,6 +375,8 @@ class Dbafs
 	 * Removes a file or folder
 	 *
 	 * @param string $strResource The path to the file or folder
+	 *
+	 * @return null Explicitly return null
 	 */
 	public static function deleteResource($strResource)
 	{
@@ -382,6 +401,8 @@ class Dbafs
 		}
 
 		static::updateFolderHashes(dirname($strResource));
+
+		return null;
 	}
 
 
@@ -434,7 +455,7 @@ class Dbafs
 				$objModel = static::addResource($strPath, false);
 			}
 
-			$objModel->hash = $objFolder->hash;
+			$objModel->hash = static::getFolderHash($strPath);
 			$objModel->save();
 		}
 	}
@@ -489,6 +510,8 @@ class Dbafs
 		$objLog->truncate();
 
 		$arrModels = array();
+		$arrFoldersToHash = array();
+		$arrFoldersToCompare = array();
 
 		// Create or update the database entries
 		foreach ($objFiles as $objFile)
@@ -573,25 +596,57 @@ class Dbafs
 					$objModel->path      = $objFolder->path;
 					$objModel->extension = '';
 					$objModel->found     = 2;
-					$objModel->hash      = $objFolder->hash;
 					$objModel->uuid      = $objDatabase->getUuid();
 					$objModel->save();
+
+					$arrFoldersToHash[] = $strRelpath;
 				}
 			}
 			else
 			{
-				// Check whether the MD5 hash has changed
-				$objResource = $objFile->isDir() ? new \Folder($strRelpath) : new \File($strRelpath, true);
-				$strType = ($objModel->hash != $objResource->hash) ? 'Changed' : 'Unchanged';
+				if ($objFile->isDir())
+				{
+					$arrFoldersToCompare[] = $objModel;
+				}
+				else
+				{
+					// Check whether the MD5 hash has changed
+					$strHash = (new \File($strRelpath, true))->hash;
+					$strType = ($objModel->hash != $strHash) ? 'Changed' : 'Unchanged';
 
-				// Add a log entry
-				$objLog->append("[$strType] $strRelpath");
+					// Add a log entry
+					$objLog->append("[$strType] $strRelpath");
 
-				// Update the record
-				$objModel->found = 1;
-				$objModel->hash  = $objResource->hash;
-				$objModel->save();
+					// Update the record
+					$objModel->found = 1;
+					$objModel->hash  = $strHash;
+					$objModel->save();
+				}
 			}
+		}
+
+		// Update the folder hashes from bottom up after all file hashes are set
+		foreach (array_reverse($arrFoldersToHash) as $strPath)
+		{
+			$objModel = \FilesModel::findByPath($strPath);
+			$objModel->hash = static::getFolderHash($strPath);
+			$objModel->save();
+		}
+
+		// Compare the folders after all hashes are set
+		foreach (array_reverse($arrFoldersToCompare) as $objModel)
+		{
+			// Check whether the MD5 hash has changed
+			$strHash = static::getFolderHash($objModel->path);
+			$strType = ($objModel->hash != $strHash) ? 'Changed' : 'Unchanged';
+
+			// Add a log entry
+			$objLog->append("[$strType] {$objModel->path}");
+
+			// Update the record
+			$objModel->found = 1;
+			$objModel->hash  = $strHash;
+			$objModel->save();
 		}
 
 		// Check for left-over entries in the DB
@@ -695,5 +750,95 @@ class Dbafs
 
 		// Return the path to the log file
 		return $strLog;
+	}
+
+
+	/**
+	 * Get the folder hash from the databse by combining the hashes of all children
+	 *
+	 * @param string $strPath The relative path
+	 *
+	 * @return string MD5 hash
+	 */
+	public static function getFolderHash($strPath)
+	{
+		$strPath = str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $strPath);
+		$arrHash = array();
+
+		$objChildren = \Database::getInstance()
+			->prepare("SELECT hash, name FROM tl_files WHERE path LIKE ? AND path NOT LIKE ? ORDER BY name")
+			->execute($strPath.'/%', $strPath.'/%/%')
+		;
+
+		if ($objChildren !== null)
+		{
+			while ($objChildren->next())
+			{
+				$arrHash[] = $objChildren->hash . $objChildren->name;
+			}
+		}
+
+		return md5(implode("\0", $arrHash));
+	}
+
+
+	/**
+	 * Check if the current resource should be synchronized with the database
+	 *
+	 * @param string $strPath The relative path
+	 *
+	 * @return bool True if the current resource needs to be synchronized with the database
+	 */
+	public static function shouldBeSynchronized($strPath)
+	{
+		if (!isset(static::$arrShouldBeSynchronized[$strPath]) || !is_bool(static::$arrShouldBeSynchronized[$strPath]))
+		{
+			static::$arrShouldBeSynchronized[$strPath] = !static::isFileSyncExclude($strPath);
+		}
+
+		return static::$arrShouldBeSynchronized[$strPath];
+	}
+
+
+	/**
+	 * Check if a file or folder is excluded from synchronization
+	 *
+	 * @param string $strPath The relative path
+	 *
+	 * @return bool True if the file or folder is excluded from synchronization
+	 */
+	protected static function isFileSyncExclude($strPath)
+	{
+		if (\Config::get('uploadPath') == 'templates')
+		{
+			return true;
+		}
+
+		if (is_file(TL_ROOT . '/' . $strPath))
+		{
+			$strPath = dirname($strPath);
+		}
+
+		// Outside the files directory
+		if (strncmp($strPath . '/', \Config::get('uploadPath') . '/', strlen(\Config::get('uploadPath')) + 1) !== 0)
+		{
+			return true;
+		}
+
+		// Check the excluded folders
+		if (\Config::get('fileSyncExclude') != '')
+		{
+			$arrExempt = array_map(function ($e) { return \Config::get('uploadPath') . '/' . $e; }, trimsplit(',', \Config::get('fileSyncExclude')));
+
+			foreach ($arrExempt as $strExempt)
+			{
+				if (strncmp($strExempt . '/', $strPath . '/', strlen($strExempt) + 1) === 0)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 }

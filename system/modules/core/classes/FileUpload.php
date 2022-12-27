@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -106,7 +106,7 @@ class FileUpload extends \Backend
 			// Sanitize the filename
 			try
 			{
-				$file['name'] = \String::sanitizeFileName($file['name']);
+				$file['name'] = \StringUtil::sanitizeFileName($file['name']);
 			}
 			catch (\InvalidArgumentException $e)
 			{
@@ -129,19 +129,16 @@ class FileUpload extends \Backend
 				if ($file['error'] == 1 || $file['error'] == 2)
 				{
 					\Message::addError(sprintf($GLOBALS['TL_LANG']['ERR']['filesize'], $maxlength_kb_readable));
-					$this->log('File "'.$file['name'].'" exceeds the maximum file size of '.$maxlength_kb_readable, __METHOD__, TL_ERROR);
 					$this->blnHasError = true;
 				}
 				elseif ($file['error'] == 3)
 				{
 					\Message::addError(sprintf($GLOBALS['TL_LANG']['ERR']['filepartial'], $file['name']));
-					$this->log('File "'.$file['name'].'" was only partially uploaded' , __METHOD__, TL_ERROR);
 					$this->blnHasError = true;
 				}
 				elseif ($file['error'] > 0)
 				{
 					\Message::addError(sprintf($GLOBALS['TL_LANG']['ERR']['fileerror'], $file['error'], $file['name']));
-					$this->log('File "'.$file['name'].'" could not be uploaded (error '.$file['error'].')' , __METHOD__, TL_ERROR);
 					$this->blnHasError = true;
 				}
 			}
@@ -150,21 +147,18 @@ class FileUpload extends \Backend
 			elseif ($file['size'] > $maxlength_kb)
 			{
 				\Message::addError(sprintf($GLOBALS['TL_LANG']['ERR']['filesize'], $maxlength_kb_readable));
-				$this->log('File "'.$file['name'].'" exceeds the maximum file size of '.$maxlength_kb_readable, __METHOD__, TL_ERROR);
 				$this->blnHasError = true;
 			}
 
 			// Move the file to its destination
 			else
 			{
-				$strExtension = pathinfo($file['name'], PATHINFO_EXTENSION);
-				$arrAllowedTypes = trimsplit(',', strtolower(\Config::get('uploadTypes')));
+				$strExtension = strtolower(substr($file['name'], strrpos($file['name'], '.') + 1));
 
 				// File type not allowed
-				if (!in_array(strtolower($strExtension), $arrAllowedTypes))
+				if (!in_array($strExtension, trimsplit(',', strtolower(\Config::get('uploadTypes')))))
 				{
 					\Message::addError(sprintf($GLOBALS['TL_LANG']['ERR']['filetype'], $strExtension));
-					$this->log('File type "'.$strExtension.'" is not allowed to be uploaded ('.$file['name'].')', __METHOD__, TL_ERROR);
 					$this->blnHasError = true;
 				}
 				else
@@ -176,14 +170,13 @@ class FileUpload extends \Backend
 					if ($this->Files->move_uploaded_file($file['tmp_name'], $strNewFile))
 					{
 						$this->Files->chmod($strNewFile, \Config::get('defaultFileChmod'));
-						$blnResized = $this->resizeUploadedImage($strNewFile, $file);
 
 						// Notify the user
-						if (!$blnResized)
-						{
-							\Message::addConfirmation(sprintf($GLOBALS['TL_LANG']['MSC']['fileUploaded'], $file['name']));
-							$this->log('File "'.$file['name'].'" uploaded successfully', __METHOD__, TL_FILES);
-						}
+						\Message::addConfirmation(sprintf($GLOBALS['TL_LANG']['MSC']['fileUploaded'], $file['name']));
+						$this->log('File "' . $strNewFile . '" has been uploaded', __METHOD__, TL_FILES);
+
+						// Resize the uploaded image if necessary
+						$this->resizeUploadedImage($strNewFile);
 
 						$arrUploaded[] = $strNewFile;
 					}
@@ -316,7 +309,7 @@ class FileUpload extends \Backend
 		if ($objFile->isGdImage && ($arrImageSize[0] > \Config::get('gdMaxImgWidth') || $arrImageSize[1] > \Config::get('gdMaxImgHeight')))
 		{
 			\Message::addInfo(sprintf($GLOBALS['TL_LANG']['MSC']['fileExceeds'], $objFile->basename));
-			$this->log('File "' . $objFile->basename . '" uploaded successfully but was too big to be resized automatically', __METHOD__, TL_FILES);
+			$this->log('File "' . $strImage . '" is too big to be resized automatically', __METHOD__, TL_FILES);
 
 			return false;
 		}
@@ -346,7 +339,7 @@ class FileUpload extends \Backend
 		{
 			\Image::resize($strImage, $arrImageSize[0], $arrImageSize[1]);
 			\Message::addInfo(sprintf($GLOBALS['TL_LANG']['MSC']['fileResized'], $objFile->basename));
-			$this->log('File "' . $objFile->basename . '" uploaded successfully and was scaled down to the maximum dimensions', __METHOD__, TL_FILES);
+			$this->log('File "' . $strImage . '" was scaled down to the maximum dimensions', __METHOD__, TL_FILES);
 			$this->blnHasResized = true;
 
 			return true;

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -28,7 +28,7 @@ class Newsletter extends \Backend
 	 */
 	public function send(\DataContainer $dc)
 	{
-		$objNewsletter = $this->Database->prepare("SELECT n.*, c.useSMTP, c.smtpHost, c.smtpPort, c.smtpUser, c.smtpPass FROM tl_newsletter n LEFT JOIN tl_newsletter_channel c ON n.pid=c.id WHERE n.id=?")
+		$objNewsletter = $this->Database->prepare("SELECT n.*, c.useSMTP, c.smtpHost, c.smtpUser, c.smtpPass, c.smtpEnc, c.smtpPort FROM tl_newsletter n LEFT JOIN tl_newsletter_channel c ON n.pid=c.id WHERE n.id=?")
 										->limit(1)
 										->execute($dc->id);
 
@@ -52,7 +52,7 @@ class Newsletter extends \Backend
 		// Add default sender address
 		if ($objNewsletter->sender == '')
 		{
-			list($objNewsletter->senderName, $objNewsletter->sender) = \String::splitFriendlyEmail(\Config::get('adminEmail'));
+			list($objNewsletter->senderName, $objNewsletter->sender) = \StringUtil::splitFriendlyEmail(\Config::get('adminEmail'));
 		}
 
 		$arrAttachments = array();
@@ -167,7 +167,7 @@ class Newsletter extends \Backend
 					$objEmail = $this->generateEmailObject($objNewsletter, $arrAttachments);
 					$this->sendNewsletter($objEmail, $objNewsletter, $objRecipients->row(), $text, $html);
 
-					echo 'Sending newsletter to <strong>' . $objRecipients->email . '</strong><br>';
+					echo 'Sending newsletter to <strong>' . \Idna::decodeEmail($objRecipients->email) . '</strong><br>';
 				}
 			}
 
@@ -190,7 +190,7 @@ class Newsletter extends \Backend
 						$this->Database->prepare("UPDATE tl_newsletter_recipients SET active='' WHERE email=?")
 									   ->execute($strRecipient);
 
-						$this->log('Recipient address "' . $strRecipient . '" was rejected and has been deactivated', __METHOD__, TL_ERROR);
+						$this->log('Recipient address "' . \Idna::decodeEmail($strRecipient) . '" was rejected and has been deactivated', __METHOD__, TL_ERROR);
 					}
 				}
 
@@ -234,7 +234,7 @@ class Newsletter extends \Backend
 <table class="prev_header">
   <tr class="row_0">
     <td class="col_0">' . $GLOBALS['TL_LANG']['tl_newsletter']['from'] . '</td>
-    <td class="col_1">' . sprintf($sprintf, $objNewsletter->sender) . '</td>
+    <td class="col_1">' . sprintf($sprintf, \Idna::decodeEmail($objNewsletter->sender)) . '</td>
   </tr>
   <tr class="row_1">
     <td class="col_0">' . $GLOBALS['TL_LANG']['tl_newsletter']['subject'][0] . '</td>
@@ -274,7 +274,7 @@ class Newsletter extends \Backend
 </div>
 <div class="w50">
   <h3><label for="ctrl_recipient">' . $GLOBALS['TL_LANG']['tl_newsletter']['sendPreviewTo'][0] . '</label></h3>
-  <input type="text" name="recipient" id="ctrl_recipient" value="'.$this->User->email.'" class="tl_text" onfocus="Backend.getScrollOffset()">' . (isset($_SESSION['TL_PREVIEW_MAIL_ERROR']) ? '
+  <input type="text" name="recipient" id="ctrl_recipient" value="'.\Idna::decodeEmail($this->User->email).'" class="tl_text" onfocus="Backend.getScrollOffset()">' . (isset($_SESSION['TL_PREVIEW_MAIL_ERROR']) ? '
   <div class="tl_error">' . $GLOBALS['TL_LANG']['ERR']['email'] . '</div>' : (($GLOBALS['TL_LANG']['tl_newsletter']['sendPreviewTo'][1] && \Config::get('showHelp')) ? '
   <p class="tl_help tl_tip">' . $GLOBALS['TL_LANG']['tl_newsletter']['sendPreviewTo'][1] . '</p>' : '')) . '
 </div>
@@ -351,13 +351,11 @@ class Newsletter extends \Backend
 	 * @param string                  $text
 	 * @param string                  $html
 	 * @param string                  $css
-	 *
-	 * @return string
 	 */
 	protected function sendNewsletter(\Email $objEmail, \Database\Result $objNewsletter, $arrRecipient, $text, $html, $css=null)
 	{
 		// Prepare the text content
-		$objEmail->text = \String::parseSimpleTokens($text, $arrRecipient);
+		$objEmail->text = \StringUtil::parseSimpleTokens($text, $arrRecipient);
 
 		if (!$objNewsletter->sendText)
 		{
@@ -372,7 +370,7 @@ class Newsletter extends \Backend
 			$objTemplate->setData($objNewsletter->row());
 
 			$objTemplate->title = $objNewsletter->subject;
-			$objTemplate->body = \String::parseSimpleTokens($html, $arrRecipient);
+			$objTemplate->body = \StringUtil::parseSimpleTokens($html, $arrRecipient);
 			$objTemplate->charset = \Config::get('characterSet');
 			$objTemplate->css = $css; // Backwards compatibility
 			$objTemplate->recipient = $arrRecipient['email'];
@@ -404,7 +402,7 @@ class Newsletter extends \Backend
 			foreach ($GLOBALS['TL_HOOKS']['sendNewsletter'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objEmail, $objNewsletter, $arrRecipient, $text, $html);
+				$this->{$callback[0]}->{$callback[1]}($objEmail, $objNewsletter, $arrRecipient, $text, $html);
 			}
 		}
 	}
@@ -879,6 +877,8 @@ class Newsletter extends \Backend
 			}
 		}
 
+		natsort($arrNewsletters); // see #7864
+
 		return $arrNewsletters;
 	}
 
@@ -940,17 +940,23 @@ class Newsletter extends \Backend
 						continue;
 					}
 
-					// The target page is exempt from the sitemap (see #6418)
-					if ($blnIsSitemap && $objParent->sitemap == 'map_never')
+					if ($blnIsSitemap)
 					{
-						continue;
+						// The target page is protected (see #8416)
+						if ($objParent->protected)
+						{
+							continue;
+						}
+
+						// The target page is exempt from the sitemap (see #6418)
+						if ($objParent->sitemap == 'map_never')
+						{
+							continue;
+						}
 					}
 
-					// Set the domain (see #6421)
-					$domain = ($objParent->rootUseSSL ? 'https://' : 'http://') . ($objParent->domain ?: \Environment::get('host')) . TL_PATH . '/';
-
 					// Generate the URL
-					$arrProcessed[$objNewsletter->jumpTo] = $domain . $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/items/%s'), $objParent->language);
+					$arrProcessed[$objNewsletter->jumpTo] = $objParent->getAbsoluteUrl((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/%s' : '/items/%s');
 				}
 
 				$strUrl = $arrProcessed[$objNewsletter->jumpTo];

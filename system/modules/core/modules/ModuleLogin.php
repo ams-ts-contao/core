@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -47,10 +47,10 @@ class ModuleLogin extends \Module
 			return $objTemplate->parse();
 		}
 
-		// Set the last page visited
-		if (!$_POST && $this->redirectBack)
+		// Set the last page visited (see #8632)
+		if (!$_POST && $this->redirectBack && ($strReferer = $this->getReferer()) != \Environment::get('request'))
 		{
-			$_SESSION['LAST_PAGE_VISITED'] = $this->getReferer();
+			$_SESSION['LAST_PAGE_VISITED'] = $strReferer;
 		}
 
 		// Login
@@ -76,7 +76,8 @@ class ModuleLogin extends \Module
 				// Redirect to the jumpTo page
 				if ($this->jumpTo && ($objTarget = $this->objModel->getRelated('jumpTo')) !== null)
 				{
-					$strRedirect = $this->generateFrontendUrl($objTarget->row());
+					/** @var \PageModel $objTarget */
+					$strRedirect = $objTarget->getFrontendUrl();
 				}
 
 				// Overwrite the jumpTo page with an individual group setting
@@ -92,7 +93,7 @@ class ModuleLogin extends \Module
 
 						if ($objGroupPage !== null)
 						{
-							$strRedirect = $this->generateFrontendUrl($objGroupPage->row());
+							$strRedirect = $this->generateFrontendUrl($objGroupPage->row(), null, null, true);
 						}
 					}
 				}

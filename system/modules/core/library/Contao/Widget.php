@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -635,7 +635,7 @@ abstract class Widget extends \BaseTemplate
 			foreach ($GLOBALS['TL_HOOKS']['parseWidget'] as $callback)
 			{
 				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]($strBuffer, $this);
+				$strBuffer = $this->{$callback[0]}->{$callback[1]}($strBuffer, $this);
 			}
 		}
 
@@ -658,7 +658,7 @@ abstract class Widget extends \BaseTemplate
 		return sprintf('<label%s%s>%s%s%s</label>',
 						($this->blnForAttribute ? ' for="ctrl_' . $this->strId . '"' : ''),
 						(($this->strClass != '') ? ' class="' . $this->strClass . '"' : ''),
-						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
+						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].' </span>' : ''),
 						$this->strLabel,
 						($this->mandatory ? '<span class="mandatory">*</span>' : ''));
 	}
@@ -748,13 +748,19 @@ abstract class Widget extends \BaseTemplate
 
 		$varValue = $this->arrAttributes[$strKey];
 
+		// Prevent the autofocus attribute from being added multiple times (see #8281)
+		if ($strKey == 'autofocus')
+		{
+			unset($this->arrAttributes[$strKey]);
+		}
+
 		if ($strKey == 'disabled' || $strKey == 'readonly' || $strKey == 'required' || $strKey == 'autofocus' || $strKey == 'multiple')
 		{
 			if (TL_MODE == 'FE') // see #3878
 			{
-				return $blnIsXhtml ? ' ' . $strKey . '="' . $varValue . '"' : ' ' . $strKey;
+				return $blnIsXhtml ? ' ' . $strKey . '="' . specialchars($varValue) . '"' : ' ' . $strKey;
 			}
-			elseif ($strKey == 'disabled' || $strKey == 'readonly' || $strKey == 'multiple') // see #4131
+			else
 			{
 				return ' ' . $strKey;
 			}
@@ -763,7 +769,7 @@ abstract class Widget extends \BaseTemplate
 		{
 			if ($varValue != '')
 			{
-				return ' ' . $strKey . '="' . $varValue . '"';
+				return ' ' . $strKey . '="' . specialchars($varValue) . '"';
 			}
 		}
 
@@ -961,7 +967,7 @@ abstract class Widget extends \BaseTemplate
 					}
 					break;
 
-				// Do not allow any characters that are usually encoded by class Input [=<>()#/])
+				// Do not allow any characters that are usually encoded by class Input ([#<>()\=])
 				case 'extnd':
 					if (!\Validator::isExtendedAlphanumeric(html_entity_decode($varInput)))
 					{
@@ -1019,7 +1025,7 @@ abstract class Widget extends \BaseTemplate
 
 				// Check whether the current value is a valid friendly name e-mail address
 				case 'friendly':
-					list ($strName, $varInput) = \String::splitFriendlyEmail($varInput);
+					list ($strName, $varInput) = \StringUtil::splitFriendlyEmail($varInput);
 					// no break;
 
 				// Check whether the current value is a valid e-mail address
@@ -1114,6 +1120,14 @@ abstract class Widget extends \BaseTemplate
 					}
 					break;
 
+				// Check whether the current value is a field name
+				case 'fieldname':
+					if (!\Validator::isFieldName($varInput))
+					{
+						$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalidFieldName'], $this->strLabel));
+					}
+					break;
+
 				// HOOK: pass unknown tags to callback functions
 				default:
 					if (isset($GLOBALS['TL_HOOKS']['addCustomRegexp']) && is_array($GLOBALS['TL_HOOKS']['addCustomRegexp']))
@@ -1121,7 +1135,7 @@ abstract class Widget extends \BaseTemplate
 						foreach ($GLOBALS['TL_HOOKS']['addCustomRegexp'] as $callback)
 						{
 							$this->import($callback[0]);
-							$break = $this->$callback[0]->$callback[1]($this->rgxp, $varInput, $this);
+							$break = $this->{$callback[0]}->{$callback[1]}($this->rgxp, $varInput, $this);
 
 							// Stop the loop if a callback returned true
 							if ($break === true)
@@ -1385,7 +1399,7 @@ abstract class Widget extends \BaseTemplate
 		if (is_array($arrData['options_callback']))
 		{
 			$arrCallback = $arrData['options_callback'];
-			$arrData['options'] = static::importStatic($arrCallback[0])->$arrCallback[1]($objDca);
+			$arrData['options'] = static::importStatic($arrCallback[0])->{$arrCallback[1]}($objDca);
 		}
 		elseif (is_callable($arrData['options_callback']))
 		{
@@ -1468,8 +1482,14 @@ abstract class Widget extends \BaseTemplate
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getAttributesFromDca'] as $callback)
 			{
-				$arrAttributes = static::importStatic($callback[0])->$callback[1]($arrAttributes, $objDca);
+				$arrAttributes = static::importStatic($callback[0])->{$callback[1]}($arrAttributes, $objDca);
 			}
+		}
+
+		// Warn if someone uses the "encrypt" flag (see #8589)
+		if (isset($arrAttributes['encrypt']))
+		{
+			@trigger_error('Using the "encrypt" flag' . (!empty($strTable) && !empty($strField) ? ' on ' . $strTable . '.' . $strField : '') . ' has been deprecated and will no longer work in Contao 5.0. Use the load and save callbacks with a third-party library such as OpenSSL or phpseclib instead.', E_USER_DEPRECATED);
 		}
 
 		return $arrAttributes;
@@ -1506,19 +1526,18 @@ abstract class Widget extends \BaseTemplate
 			return '';
 		}
 
-		$type = preg_replace('/^([A-Za-z]+)(\(| ).*$/', '$1', $sql);
-
-		if (in_array($type, array('binary', 'varbinary', 'tinyblob', 'blob', 'mediumblob', 'longblob')))
+		if (stripos($sql, 'NOT NULL') === false)
 		{
 			return null;
 		}
-		elseif (in_array($type, array('int', 'integer', 'tinyint', 'smallint', 'mediumint', 'bigint', 'float', 'double', 'dec', 'decimal')))
+
+		$type = strtolower(preg_replace('/^([A-Za-z]+)(\(| ).*$/', '$1', $sql));
+
+		if (in_array($type, array('int', 'integer', 'tinyint', 'smallint', 'mediumint', 'bigint', 'float', 'double', 'dec', 'decimal')))
 		{
 			return 0;
 		}
-		else
-		{
-			return '';
-		}
+
+		return '';
 	}
 }

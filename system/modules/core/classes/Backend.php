@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -124,15 +124,15 @@ abstract class Backend extends \Controller
 
 
 	/**
-	 * Validate an ACE type
+	 * Get the Ace code editor type from a file extension
 	 *
-	 * @param string $type
+	 * @param string $ext
 	 *
 	 * @return string
 	 */
-	public static function getAceType($type)
+	public static function getAceType($ext)
 	{
-		switch ($type)
+		switch ($ext)
 		{
 			case 'css':
 			case 'diff':
@@ -147,7 +147,7 @@ abstract class Backend extends \Controller
 			case 'sql':
 			case 'xml':
 			case 'yaml':
-				return $type;
+				return $ext;
 				break;
 
 			case 'js':
@@ -427,7 +427,7 @@ abstract class Backend extends \Controller
 		elseif (\Input::get('key') && isset($arrModule[\Input::get('key')]))
 		{
 			$objCallback = new $arrModule[\Input::get('key')][0]();
-			$this->Template->main .= $objCallback->$arrModule[\Input::get('key')][1]($dc);
+			$this->Template->main .= $objCallback->{$arrModule[\Input::get('key')][1]}($dc);
 
 			// Add the name of the parent element
 			if (isset($_GET['table']) && in_array(\Input::get('table'), $arrTables) && \Input::get('table') != $arrTables[0])
@@ -556,7 +556,10 @@ abstract class Backend extends \Controller
 					$this->Template->headline .= ' » ' . $objRow->name;
 				}
 
-				$this->Template->headline .= ' » ' . $GLOBALS['TL_LANG']['MOD'][$strSecond];
+				if (isset($GLOBALS['TL_LANG']['MOD'][$strSecond]))
+				{
+					$this->Template->headline .= ' » ' . $GLOBALS['TL_LANG']['MOD'][$strSecond];
+				}
 
 				// Add the second level name
 				$objRow = $this->Database->prepare("SELECT * FROM $strSecond WHERE id=?")
@@ -616,7 +619,15 @@ abstract class Backend extends \Controller
 				{
 					if (\Input::get('do') == 'files' || \Input::get('do') == 'tpl_editor')
 					{
-						$this->Template->headline .= ' » ' . \Input::get('id');
+						// Handle new folders (see #7980)
+						if (strpos(\Input::get('id'), '__new__') !== false)
+						{
+							$this->Template->headline .= ' » ' . dirname(\Input::get('id')) . ' » ' . $GLOBALS['TL_LANG'][$strTable]['new'][1];
+						}
+						else
+						{
+							$this->Template->headline .= ' » ' . \Input::get('id');
+						}
 					}
 					elseif (is_array($GLOBALS['TL_LANG'][$strTable][$act]))
 					{
@@ -649,11 +660,10 @@ abstract class Backend extends \Controller
 	 * @param integer $pid
 	 * @param string  $domain
 	 * @param boolean $blnIsSitemap
-	 * @param string  $strLanguage
 	 *
 	 * @return array
 	 */
-	public static function findSearchablePages($pid=0, $domain='', $blnIsSitemap=false, $strLanguage='')
+	public static function findSearchablePages($pid=0, $domain='', $blnIsSitemap=false)
 	{
 		$time = \Date::floorToMinute();
 		$objDatabase = \Database::getInstance();
@@ -667,63 +677,155 @@ abstract class Backend extends \Controller
 			return array();
 		}
 
-		// Fallback domain
-		if ($domain == '')
-		{
-			$domain = \Environment::get('base');
-		}
-
 		$arrPages = array();
+		$objRegistry = \Model\Registry::getInstance();
 
 		// Recursively walk through all subpages
 		while ($objPages->next())
 		{
-			// Set domain
-			if ($objPages->type == 'root')
-			{
-				if ($objPages->dns != '')
-				{
-					$domain = ($objPages->useSSL ? 'https://' : 'http://') . $objPages->dns . TL_PATH . '/';
-				}
-				else
-				{
-					$domain = \Environment::get('base');
-				}
+			$objPage = $objRegistry->fetch('tl_page', $objPages->id);
 
-				$strLanguage = $objPages->language;
+			if ($objPage === null)
+			{
+				$objPage = new \PageModel($objPages);
 			}
 
-			// Add regular pages
-			elseif ($objPages->type == 'regular')
+			if ($objPage->type == 'regular')
 			{
 				// Searchable and not protected
-				if ((!$objPages->noSearch || $blnIsSitemap) && (!$objPages->protected || \Config::get('indexProtected') && (!$blnIsSitemap || $objPages->sitemap == 'map_always')) && (!$blnIsSitemap || $objPages->sitemap != 'map_never'))
+				if ((!$objPage->noSearch || $blnIsSitemap) && (!$objPage->protected || \Config::get('indexProtected') && (!$blnIsSitemap || $objPage->sitemap == 'map_always')) && (!$blnIsSitemap || $objPage->sitemap != 'map_never'))
 				{
 					// Published
-					if ($objPages->published && ($objPages->start == '' || $objPages->start <= $time) && ($objPages->stop == '' || $objPages->stop > ($time + 60)))
+					if ($objPage->published && ($objPage->start == '' || $objPage->start <= $time) && ($objPage->stop == '' || $objPage->stop > ($time + 60)))
 					{
-						$arrPages[] = $domain . static::generateFrontendUrl($objPages->row(), null, $strLanguage);
+						$arrPages[] = $objPage->getAbsoluteUrl();
 
 						// Get articles with teaser
-						$objArticle = $objDatabase->prepare("SELECT * FROM tl_article WHERE pid=? AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "') AND published='1' AND showTeaser='1' ORDER BY sorting")
-												  ->execute($objPages->id);
+						$objArticles = $objDatabase->prepare("SELECT * FROM tl_article WHERE pid=? AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "') AND published='1' AND showTeaser='1' ORDER BY sorting")
+												   ->execute($objPages->id);
 
-						while ($objArticle->next())
+						if ($objArticles->numRows)
 						{
-							$arrPages[] = $domain . static::generateFrontendUrl($objPages->row(), '/articles/' . (($objArticle->alias != '' && !\Config::get('disableAlias')) ? $objArticle->alias : $objArticle->id), $strLanguage);
+							$feUrl = $objPage->getAbsoluteUrl('/articles/%s');
+
+							while ($objArticles->next())
+							{
+								$arrPages[] = sprintf($feUrl, (($objArticles->alias != '' && !\Config::get('disableAlias')) ? $objArticles->alias : $objArticles->id));
+							}
 						}
 					}
 				}
 			}
 
 			// Get subpages
-			if ((!$objPages->protected || \Config::get('indexProtected')) && ($arrSubpages = static::findSearchablePages($objPages->id, $domain, $blnIsSitemap, $strLanguage)) != false)
+			if ((!$objPage->protected || \Config::get('indexProtected')) && ($arrSubpages = static::findSearchablePages($objPage->id, $domain, $blnIsSitemap)) != false)
 			{
 				$arrPages = array_merge($arrPages, $arrSubpages);
 			}
 		}
 
 		return $arrPages;
+	}
+
+
+	/**
+	 * Add the file meta information to the request
+	 *
+	 * @param string  $strUuid
+	 * @param string  $strPtable
+	 * @param integer $intPid
+	 */
+	public static function addFileMetaInformationToRequest($strUuid, $strPtable, $intPid)
+	{
+		$objFile = \FilesModel::findByUuid($strUuid);
+
+		if ($objFile === null)
+		{
+			return;
+		}
+
+		$arrMeta = deserialize($objFile->meta);
+
+		if (empty($arrMeta))
+		{
+			return;
+		}
+
+		$objPage = null;
+
+		switch ($strPtable)
+		{
+			case 'tl_article':
+				$objPage = \PageModel::findOneBy(array('tl_page.id=(SELECT pid FROM tl_article WHERE id=?)'), $intPid);
+				break;
+
+			case 'tl_news':
+				$objPage = \PageModel::findOneBy(array('tl_page.id=(SELECT jumpTo FROM tl_news_archive WHERE id=(SELECT pid FROM tl_news WHERE id=?))'), $intPid);
+				break;
+
+			case 'tl_news_archive':
+				$objPage = \PageModel::findOneBy(array('tl_page.id=(SELECT jumpTo FROM tl_news_archive WHERE id=?)'), $intPid);
+				break;
+
+			case 'tl_calendar_events':
+				$objPage = \PageModel::findOneBy(array('tl_page.id=(SELECT jumpTo FROM tl_calendar WHERE id=(SELECT pid FROM tl_calendar_events WHERE id=?))'), $intPid);
+				break;
+
+			case 'tl_calendar':
+				$objPage = \PageModel::findOneBy(array('tl_page.id=(SELECT jumpTo FROM tl_calendar WHERE id=?)'), $intPid);
+				break;
+
+			case 'tl_faq_category':
+				$objPage = \PageModel::findOneBy(array('tl_page.id=(SELECT jumpTo FROM tl_faq_category WHERE id=?)'), $intPid);
+				break;
+
+			default:
+				// HOOK: support custom modules
+				if (isset($GLOBALS['TL_HOOKS']['addFileMetaInformationToRequest']) && is_array($GLOBALS['TL_HOOKS']['addFileMetaInformationToRequest']))
+				{
+					foreach ($GLOBALS['TL_HOOKS']['addFileMetaInformationToRequest'] as $callback)
+					{
+						if (($val = \System::importStatic($callback[0])->{$callback[1]}($strPtable, $intPid)) !== false)
+						{
+							$objPage = $val;
+						}
+					}
+
+					if ($objPage instanceof \Database\Result && $objPage->numRows < 1)
+					{
+						return;
+					}
+
+					if (is_object($objPage) && !($objPage instanceof \PageModel))
+					{
+						$objPage = \PageModel::findByPk($objPage->id);
+					}
+				}
+				break;
+		}
+
+		if ($objPage === null)
+		{
+			return;
+		}
+
+		$objPage->loadDetails();
+
+		// Convert the language to a locale (see #5678)
+		$strLanguage = str_replace('-', '_', $objPage->rootLanguage);
+
+		if (isset($arrMeta[$strLanguage]))
+		{
+			if (\Input::post('alt') == '' && !empty($arrMeta[$strLanguage]['title']))
+			{
+				\Input::setPost('alt', $arrMeta[$strLanguage]['title']);
+			}
+
+			if (\Input::post('caption') == '' && !empty($arrMeta[$strLanguage]['caption']))
+			{
+				\Input::setPost('caption', $arrMeta[$strLanguage]['caption']);
+			}
+		}
 	}
 
 
@@ -739,16 +841,16 @@ abstract class Backend extends \Controller
 		$objSession = \Session::getInstance();
 
 		// Set a new node
-		if (isset($_GET['node']))
+		if (isset($_GET['pn']))
 		{
 			// Check the path (thanks to Arnaud Buchoux)
-			if (\Validator::isInsecurePath(\Input::get('node', true)))
+			if (\Validator::isInsecurePath(\Input::get('pn', true)))
 			{
-				throw new \RuntimeException('Insecure path ' . \Input::get('node', true));
+				throw new \RuntimeException('Insecure path ' . \Input::get('pn', true));
 			}
 
-			$objSession->set($strKey, \Input::get('node', true));
-			\Controller::redirect(preg_replace('/&node=[^&]*/', '', \Environment::get('request')));
+			$objSession->set($strKey, \Input::get('pn', true));
+			\Controller::redirect(preg_replace('/&pn=[^&]*/', '', \Environment::get('request')));
 		}
 
 		$intNode = $objSession->get($strKey);
@@ -802,7 +904,7 @@ abstract class Backend extends \Controller
 				}
 				else
 				{
-					$arrLinks[] = \Backend::addPageIcon($objPage->row(), '', null, '', true) . ' <a href="' . \Controller::addToUrl('node='.$objPage->id) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $objPage->title . '</a>';
+					$arrLinks[] = \Backend::addPageIcon($objPage->row(), '', null, '', true) . ' <a href="' . \Controller::addToUrl('pn='.$objPage->id) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $objPage->title . '</a>';
 				}
 
 				// Do not show the mounted pages
@@ -829,7 +931,7 @@ abstract class Backend extends \Controller
 		$GLOBALS['TL_DCA']['tl_page']['list']['sorting']['root'] = array($intNode);
 
 		// Add root link
-		$arrLinks[] = '<img src="' . TL_FILES_URL . 'system/themes/' . \Backend::getTheme() . '/images/pagemounts.gif" width="18" height="18" alt=""> <a href="' . \Controller::addToUrl('node=0') . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']).'">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
+		$arrLinks[] = \Image::getHtml('pagemounts.gif') . ' <a href="' . \Controller::addToUrl('pn=0') . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']).'">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
 		$arrLinks = array_reverse($arrLinks);
 
 		// Insert breadcrumb menu
@@ -861,6 +963,7 @@ abstract class Backend extends \Controller
 		}
 
 		$image = \Controller::getPageStatusIcon((object) $row);
+		$imageAttribute = trim($imageAttribute . ' data-icon="' . \Controller::getPageStatusIcon((object) array_merge($row, array('published'=>'1'))) . '" data-icon-disabled="' . \Controller::getPageStatusIcon((object) array_merge($row, array('published'=>''))) . '"');
 
 		// Return the image only
 		if ($blnReturnImage)
@@ -875,7 +978,7 @@ abstract class Backend extends \Controller
 		}
 
 		// Add the breadcrumb link
-		$label = '<a href="' . \Controller::addToUrl('node='.$row['id']) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $label . '</a>';
+		$label = '<a href="' . \Controller::addToUrl('pn='.$row['id']) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $label . '</a>';
 
 		// Return the image
 		return '<a href="contao/main.php?do=feRedirect&amp;page='.$row['id'].'" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['view']).'"' . (($dc->table != 'tl_page') ? ' class="tl_gray"' : '') . ' target="_blank">'.\Image::getHtml($image, '', $imageAttribute).'</a> '.$label;
@@ -894,16 +997,16 @@ abstract class Backend extends \Controller
 		$objSession = \Session::getInstance();
 
 		// Set a new node
-		if (isset($_GET['node']))
+		if (isset($_GET['fn']))
 		{
 			// Check the path (thanks to Arnaud Buchoux)
-			if (\Validator::isInsecurePath(\Input::get('node', true)))
+			if (\Validator::isInsecurePath(\Input::get('fn', true)))
 			{
-				throw new \RuntimeException('Insecure path ' . \Input::get('node', true));
+				throw new \RuntimeException('Insecure path ' . \Input::get('fn', true));
 			}
 
-			$objSession->set($strKey, \Input::get('node', true));
-			\Controller::redirect(preg_replace('/(&|\?)node=[^&]*/', '', \Environment::get('request')));
+			$objSession->set($strKey, \Input::get('fn', true));
+			\Controller::redirect(preg_replace('/(&|\?)fn=[^&]*/', '', \Environment::get('request')));
 		}
 
 		$strNode = $objSession->get($strKey);
@@ -933,7 +1036,7 @@ abstract class Backend extends \Controller
 		$arrLinks = array();
 
 		// Add root link
-		$arrLinks[] = '<img src="' . TL_FILES_URL . 'system/themes/' . \Backend::getTheme() . '/images/filemounts.gif" width="18" height="18" alt=""> <a href="' . \Controller::addToUrl('node=') . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']).'">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
+		$arrLinks[] = \Image::getHtml('filemounts.gif') . ' <a href="' . \Controller::addToUrl('fn=') . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']).'">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
 
 		// Generate breadcrumb trail
 		foreach ($arrNodes as $strFolder)
@@ -947,13 +1050,13 @@ abstract class Backend extends \Controller
 			}
 
 			// No link for the active folder
-			if ($strFolder == basename($strNode))
+			if ($strPath == $strNode)
 			{
-				$arrLinks[] = '<img src="' . TL_FILES_URL . 'system/themes/' . \Backend::getTheme() . '/images/folderC.gif" width="18" height="18" alt=""> ' . $strFolder;
+				$arrLinks[] = \Image::getHtml('folderC.gif') . ' ' . $strFolder;
 			}
 			else
 			{
-				$arrLinks[] = '<img src="' . TL_FILES_URL . 'system/themes/' . \Backend::getTheme() . '/images/folderC.gif" width="18" height="18" alt=""> <a href="' . \Controller::addToUrl('node='.$strPath) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $strFolder . '</a>';
+				$arrLinks[] = \Image::getHtml('folderC.gif') . ' <a href="' . \Controller::addToUrl('fn='.$strPath) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $strFolder . '</a>';
 			}
 		}
 

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -48,6 +48,12 @@ $GLOBALS['TL_DCA']['tl_templates'] = array
 	(
 		'global_operations' => array
 		(
+			'new' => array
+			(
+				'label'               => &$GLOBALS['TL_LANG']['tl_templates']['new'],
+				'href'                => 'act=paste&amp;mode=create',
+				'class'               => 'header_new_folder'
+			),
 			'new_tpl' => array
 			(
 				'label'               => &$GLOBALS['TL_LANG']['tl_templates']['new_tpl'],
@@ -58,7 +64,8 @@ $GLOBALS['TL_DCA']['tl_templates'] = array
 			(
 				'label'               => &$GLOBALS['TL_LANG']['MSC']['toggleAll'],
 				'href'                => 'tg=all',
-				'class'               => 'header_toggle'
+				'class'               => 'header_toggle',
+				'showOnSelect'        => true
 			),
 			'all' => array
 			(
@@ -127,7 +134,7 @@ $GLOBALS['TL_DCA']['tl_templates'] = array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_files']['name'],
 			'inputType'               => 'text',
-			'eval'                    => array('mandatory'=>true, 'maxlength'=>32, 'spaceToUnderscore'=>true)
+			'eval'                    => array('mandatory'=>true, 'maxlength'=>64, 'spaceToUnderscore'=>true)
 		)
 	)
 );
@@ -149,16 +156,16 @@ class tl_templates extends Backend
 	public function addBreadcrumb()
 	{
 		// Set a new node
-		if (isset($_GET['node']))
+		if (isset($_GET['fn']))
 		{
 			// Check the path (thanks to Arnaud Buchoux)
-			if (Validator::isInsecurePath(Input::get('node', true)))
+			if (Validator::isInsecurePath(Input::get('fn', true)))
 			{
-				throw new RuntimeException('Insecure path ' . Input::get('node', true));
+				throw new RuntimeException('Insecure path ' . Input::get('fn', true));
 			}
 
-			$this->Session->set('tl_templates_node', Input::get('node', true));
-			$this->redirect(preg_replace('/(&|\?)node=[^&]*/', '', Environment::get('request')));
+			$this->Session->set('tl_templates_node', Input::get('fn', true));
+			$this->redirect(preg_replace('/(&|\?)fn=[^&]*/', '', Environment::get('request')));
 		}
 
 		$strNode = $this->Session->get('tl_templates_node');
@@ -187,7 +194,7 @@ class tl_templates extends Backend
 		$arrLinks = array();
 
 		// Add root link
-		$arrLinks[] = '<img src="' . TL_FILES_URL . 'system/themes/' . Backend::getTheme() . '/images/filemounts.gif" width="18" height="18" alt=""> <a href="' . $this->addToUrl('node=') . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']).'">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
+		$arrLinks[] = Image::getHtml('filemounts.gif') . ' <a href="' . $this->addToUrl('fn=') . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']).'">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
 
 		// Generate breadcrumb trail
 		foreach ($arrNodes as $strFolder)
@@ -197,11 +204,11 @@ class tl_templates extends Backend
 			// No link for the active folder
 			if ($strFolder == basename($strNode))
 			{
-				$arrLinks[] = '<img src="' . TL_FILES_URL . 'system/themes/' . Backend::getTheme() . '/images/folderC.gif" width="18" height="18" alt=""> ' . $strFolder;
+				$arrLinks[] = Image::getHtml('folderC.gif') . ' ' . $strFolder;
 			}
 			else
 			{
-				$arrLinks[] = '<img src="' . TL_FILES_URL . 'system/themes/' . Backend::getTheme() . '/images/folderC.gif" width="18" height="18" alt=""> <a href="' . $this->addToUrl('node='.$strPath) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $strFolder . '</a>';
+				$arrLinks[] = Image::getHtml('folderC.gif') . ' <a href="' . $this->addToUrl('fn='.$strPath) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">' . $strFolder . '</a>';
 			}
 		}
 
@@ -275,7 +282,7 @@ class tl_templates extends Backend
 		}
 
 		$arrAllTemplates = array();
-		$arrAllowed = trimsplit(',', Config::get('templateFiles'));
+		$arrAllowed = trimsplit(',', strtolower(Config::get('templateFiles')));
 
 		// Get all templates
 		foreach (ModuleLoader::getActive() as $strModule)
@@ -286,7 +293,7 @@ class tl_templates extends Backend
 				continue;
 			}
 
-			/** @var \SplFileInfo[] $objFiles */
+			/** @var SplFileInfo[] $objFiles */
 			$objFiles = new SortedIterator(
 				new RecursiveIteratorIterator(
 					new RecursiveDirectoryIterator(
@@ -298,9 +305,7 @@ class tl_templates extends Backend
 
 			foreach ($objFiles as $objFile)
 			{
-				$strExtension = pathinfo($objFile->getFilename(), PATHINFO_EXTENSION);
-
-				if (in_array($strExtension, $arrAllowed))
+				if (in_array(strtolower($objFile->getExtension()), $arrAllowed))
 				{
 					$strRelpath = str_replace(TL_ROOT . '/', '', $objFile->getPathname());
 					$arrAllTemplates[$strModule][basename($strRelpath)] = $strRelpath;
@@ -369,9 +374,9 @@ class tl_templates extends Backend
 	 */
 	public function compareTemplate(DataContainer $dc)
 	{
-		$strCurrentPath = $dc->id;
-		$strName = pathinfo($strCurrentPath, PATHINFO_FILENAME);
-		$strExtension = pathinfo($strCurrentPath, PATHINFO_EXTENSION);
+		$objCurrentFile = new File($dc->id, true);
+		$strName = $objCurrentFile->filename;
+		$strExtension = $objCurrentFile->extension;
 		$arrTemplates = TemplateLoader::getFiles();
 		$blnOverridesAnotherTpl = isset($arrTemplates[$strName]);
 
@@ -399,16 +404,15 @@ class tl_templates extends Backend
 		}
 
 		// User selected template to compare against
-		if (\Input::post('from') && isset($arrTemplates[\Input::post('from')]))
+		if (Input::post('from') && isset($arrTemplates[Input::post('from')]))
 		{
-			$strCompareName = \Input::post('from');
+			$strCompareName = Input::post('from');
 			$strComparePath = $arrTemplates[$strCompareName] . '/' .$strCompareName . '.' . $strExtension;
 		}
 
 		if ($strComparePath !== null)
 		{
-			$objCurrentFile = new \File($strCurrentPath, true);
-			$objCompareFile = new \File($strComparePath, true);
+			$objCompareFile = new File($strComparePath, true);
 
 			// Abort if one file is missing
 			if (!$objCurrentFile->exists() || !$objCompareFile->exists())
@@ -417,7 +421,7 @@ class tl_templates extends Backend
 			}
 
 			$objDiff = new Diff($objCompareFile->getContentAsArray(), $objCurrentFile->getContentAsArray());
-			$strDiff = $objDiff->Render(new DiffRenderer(array('field'=>$strCurrentPath)));
+			$strDiff = $objDiff->render(new DiffRenderer(array('field'=>$dc->id)));
 
 			// Identical versions
 			if ($strDiff == '')
@@ -450,21 +454,22 @@ class tl_templates extends Backend
 			}
 		}
 
-		$objTemplate = new \BackendTemplate('be_diff');
+		/** @var BackendTemplate|object $objTemplate */
+		$objTemplate = new BackendTemplate('be_diff');
 
 		// Template variables
-		$objTemplate->staticTo = $strCurrentPath;
+		$objTemplate->staticTo = $dc->id;
 		$objTemplate->versions = $arrComparable;
 		$objTemplate->from = $strCompareName;
 		$objTemplate->showLabel = specialchars($GLOBALS['TL_LANG']['MSC']['showDifferences']);
 		$objTemplate->content = $strBuffer;
-		$objTemplate->theme = \Backend::getTheme();
-		$objTemplate->base = \Environment::get('base');
+		$objTemplate->theme = Backend::getTheme();
+		$objTemplate->base = Environment::get('base');
 		$objTemplate->language = $GLOBALS['TL_LANGUAGE'];
 		$objTemplate->title = specialchars($GLOBALS['TL_LANG']['MSC']['showDifferences']);
-		$objTemplate->charset = \Config::get('characterSet');
+		$objTemplate->charset = Config::get('characterSet');
 
-		\Config::set('debugMode', false);
+		Config::set('debugMode', false);
 
 		$objTemplate->output();
 		exit;

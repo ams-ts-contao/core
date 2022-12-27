@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -130,7 +130,7 @@ class ModuleAutoload extends \BackendModule
 			// Get all PHP files
 			foreach ($objFiles as $objFile)
 			{
-				if (pathinfo($objFile->getFilename(), PATHINFO_EXTENSION) == 'php')
+				if ($objFile->getExtension() == 'php')
 				{
 					$strRelpath = str_replace(TL_ROOT . '/system/modules/' . $strModule . '/', '', $objFile->getPathname());
 
@@ -171,7 +171,7 @@ class ModuleAutoload extends \BackendModule
 				$fh = fopen(TL_ROOT . '/system/modules/' . $strModule . '/' . $strFile, 'rb');
 
 				// Read until a class or interface definition has been found
-				while (!preg_match('/(class|interface) ' . preg_quote(basename($strFile, '.php'), '/') . '/', $strBuffer, $arrMatches) && $size > 0 && !feof($fh))
+				while (!preg_match('/(class|interface|trait) ' . preg_quote(basename($strFile, '.php'), '/') . '/', $strBuffer, $arrMatches) && $size > 0 && !feof($fh))
 				{
 					$length = min(512, $size);
 					$strBuffer .= fread($fh, $length);
@@ -260,11 +260,10 @@ class ModuleAutoload extends \BackendModule
 						continue;
 					}
 
-					$arrTplExts = trimsplit(',', \Config::get('templateFiles'));
-					$strExtension = pathinfo($objFile->getFilename(), PATHINFO_EXTENSION);
+					$arrTplExts = trimsplit(',', strtolower(\Config::get('templateFiles')));
 
 					// Add all known template types (see #5857)
-					if (in_array($strExtension, $arrTplExts))
+					if (in_array(strtolower($objFile->getExtension()), $arrTplExts))
 					{
 						$strRelpath = str_replace(TL_ROOT . '/', '', $objFile->getPathname());
 						$strKey = basename($strRelpath, strrchr($strRelpath, '.'));
@@ -279,8 +278,6 @@ class ModuleAutoload extends \BackendModule
 			{
 				continue;
 			}
-
-			$strPackage = ucfirst($strModule);
 
 			$objFile = new \File('system/modules/' . $strModule . '/config/autoload.php', true);
 			$objFile->write(

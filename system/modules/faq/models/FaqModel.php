@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -36,76 +36,76 @@ namespace Contao;
  * @property boolean $noComments
  * @property boolean $published
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByPid()
- * @method static $this findOneBySorting()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByQuestion()
- * @method static $this findOneByAlias()
- * @method static $this findOneByAuthor()
- * @method static $this findOneByAnswer()
- * @method static $this findOneByAddImage()
- * @method static $this findOneBySingleSRC()
- * @method static $this findOneByAlt()
- * @method static $this findOneBySize()
- * @method static $this findOneByImagemargin()
- * @method static $this findOneByImageUrl()
- * @method static $this findOneByFullsize()
- * @method static $this findOneByCaption()
- * @method static $this findOneByFloating()
- * @method static $this findOneByAddEnclosure()
- * @method static $this findOneByEnclosure()
- * @method static $this findOneByNoComments()
- * @method static $this findOneByPublished()
+ * @method static \FaqModel|null findById($id, $opt=array())
+ * @method static \FaqModel|null findByPk($id, $opt=array())
+ * @method static \FaqModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \FaqModel|null findOneBy($col, $val, $opt=array())
+ * @method static \FaqModel|null findOneByPid($val, $opt=array())
+ * @method static \FaqModel|null findOneBySorting($val, $opt=array())
+ * @method static \FaqModel|null findOneByTstamp($val, $opt=array())
+ * @method static \FaqModel|null findOneByQuestion($val, $opt=array())
+ * @method static \FaqModel|null findOneByAlias($val, $opt=array())
+ * @method static \FaqModel|null findOneByAuthor($val, $opt=array())
+ * @method static \FaqModel|null findOneByAnswer($val, $opt=array())
+ * @method static \FaqModel|null findOneByAddImage($val, $opt=array())
+ * @method static \FaqModel|null findOneBySingleSRC($val, $opt=array())
+ * @method static \FaqModel|null findOneByAlt($val, $opt=array())
+ * @method static \FaqModel|null findOneBySize($val, $opt=array())
+ * @method static \FaqModel|null findOneByImagemargin($val, $opt=array())
+ * @method static \FaqModel|null findOneByImageUrl($val, $opt=array())
+ * @method static \FaqModel|null findOneByFullsize($val, $opt=array())
+ * @method static \FaqModel|null findOneByCaption($val, $opt=array())
+ * @method static \FaqModel|null findOneByFloating($val, $opt=array())
+ * @method static \FaqModel|null findOneByAddEnclosure($val, $opt=array())
+ * @method static \FaqModel|null findOneByEnclosure($val, $opt=array())
+ * @method static \FaqModel|null findOneByNoComments($val, $opt=array())
+ * @method static \FaqModel|null findOneByPublished($val, $opt=array())
  *
- * @method static \Model\Collection|\FaqModel findByPid()
- * @method static \Model\Collection|\FaqModel findBySorting()
- * @method static \Model\Collection|\FaqModel findByTstamp()
- * @method static \Model\Collection|\FaqModel findByQuestion()
- * @method static \Model\Collection|\FaqModel findByAlias()
- * @method static \Model\Collection|\FaqModel findByAuthor()
- * @method static \Model\Collection|\FaqModel findByAnswer()
- * @method static \Model\Collection|\FaqModel findByAddImage()
- * @method static \Model\Collection|\FaqModel findBySingleSRC()
- * @method static \Model\Collection|\FaqModel findByAlt()
- * @method static \Model\Collection|\FaqModel findBySize()
- * @method static \Model\Collection|\FaqModel findByImagemargin()
- * @method static \Model\Collection|\FaqModel findByImageUrl()
- * @method static \Model\Collection|\FaqModel findByFullsize()
- * @method static \Model\Collection|\FaqModel findByCaption()
- * @method static \Model\Collection|\FaqModel findByFloating()
- * @method static \Model\Collection|\FaqModel findByAddEnclosure()
- * @method static \Model\Collection|\FaqModel findByEnclosure()
- * @method static \Model\Collection|\FaqModel findByNoComments()
- * @method static \Model\Collection|\FaqModel findByPublished()
- * @method static \Model\Collection|\FaqModel findMultipleByIds()
- * @method static \Model\Collection|\FaqModel findBy()
- * @method static \Model\Collection|\FaqModel findAll()
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByPid($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findBySorting($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByQuestion($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByAlias($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByAuthor($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByAnswer($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByAddImage($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findBySingleSRC($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByAlt($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findBySize($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByImagemargin($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByImageUrl($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByFullsize($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByCaption($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByFloating($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByAddEnclosure($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByEnclosure($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByNoComments($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findByPublished($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\FaqModel[]|\FaqModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByPid()
- * @method static integer countBySorting()
- * @method static integer countByTstamp()
- * @method static integer countByQuestion()
- * @method static integer countByAlias()
- * @method static integer countByAuthor()
- * @method static integer countByAnswer()
- * @method static integer countByAddImage()
- * @method static integer countBySingleSRC()
- * @method static integer countByAlt()
- * @method static integer countBySize()
- * @method static integer countByImagemargin()
- * @method static integer countByImageUrl()
- * @method static integer countByFullsize()
- * @method static integer countByCaption()
- * @method static integer countByFloating()
- * @method static integer countByAddEnclosure()
- * @method static integer countByEnclosure()
- * @method static integer countByNoComments()
- * @method static integer countByPublished()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByPid($val, $opt=array())
+ * @method static integer countBySorting($val, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByQuestion($val, $opt=array())
+ * @method static integer countByAlias($val, $opt=array())
+ * @method static integer countByAuthor($val, $opt=array())
+ * @method static integer countByAnswer($val, $opt=array())
+ * @method static integer countByAddImage($val, $opt=array())
+ * @method static integer countBySingleSRC($val, $opt=array())
+ * @method static integer countByAlt($val, $opt=array())
+ * @method static integer countBySize($val, $opt=array())
+ * @method static integer countByImagemargin($val, $opt=array())
+ * @method static integer countByImageUrl($val, $opt=array())
+ * @method static integer countByFullsize($val, $opt=array())
+ * @method static integer countByCaption($val, $opt=array())
+ * @method static integer countByFloating($val, $opt=array())
+ * @method static integer countByAddEnclosure($val, $opt=array())
+ * @method static integer countByEnclosure($val, $opt=array())
+ * @method static integer countByNoComments($val, $opt=array())
+ * @method static integer countByPublished($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -126,7 +126,7 @@ class FaqModel extends \Model
 	 * @param array $arrPids    An array of parent IDs
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return static The FaqModel or null if there is no FAQ
+	 * @return \FaqModel|null The model or null if there is no FAQ
 	 */
 	public static function findPublishedByParentAndIdOrAlias($varId, $arrPids, array $arrOptions=array())
 	{
@@ -153,7 +153,7 @@ class FaqModel extends \Model
 	 * @param int   $intPid     The parent ID
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\FaqModel|null A collection of models or null if there are no FAQs
+	 * @return \Model\Collection|\FaqModel[]|\FaqModel|null A collection of models or null if there are no FAQs
 	 */
 	public static function findPublishedByPid($intPid, array $arrOptions=array())
 	{
@@ -180,7 +180,7 @@ class FaqModel extends \Model
 	 * @param array $arrPids    An array of FAQ category IDs
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\FaqModel|null A collection of models or null if there are no FAQs
+	 * @return \Model\Collection|\FaqModel[]|\FaqModel|null A collection of models or null if there are no FAQs
 	 */
 	public static function findPublishedByPids($arrPids, array $arrOptions=array())
 	{

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -46,6 +46,11 @@ class DcaLoader extends \Controller
 		if ($strTable == '')
 		{
 			throw new \Exception('The table name must not be empty');
+		}
+
+		if (\Validator::isInsecurePath($strTable))
+		{
+			throw new \InvalidArgumentException('The table name contains invalid characters');
 		}
 
 		parent::__construct();
@@ -94,7 +99,7 @@ class DcaLoader extends \Controller
 			foreach ($GLOBALS['TL_HOOKS']['loadDataContainer'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($this->strTable);
+				$this->{$callback[0]}->{$callback[1]}($this->strTable);
 			}
 		}
 

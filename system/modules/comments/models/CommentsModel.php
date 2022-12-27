@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -30,58 +30,58 @@ namespace Contao;
  * @property string  $ip
  * @property boolean $notified
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByTstamp()
- * @method static $this findOneBySource()
- * @method static $this findOneByParent()
- * @method static $this findOneByDate()
- * @method static $this findOneByName()
- * @method static $this findOneByEmail()
- * @method static $this findOneByWebsite()
- * @method static $this findOneByComment()
- * @method static $this findOneByAddReply()
- * @method static $this findOneByAuthor()
- * @method static $this findOneByReply()
- * @method static $this findOneByPublished()
- * @method static $this findOneByIp()
- * @method static $this findOneByNotified()
+ * @method static \CommentsModel|null findById($id, $opt=array())
+ * @method static \CommentsModel|null findByPk($id, $opt=array())
+ * @method static \CommentsModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \CommentsModel|null findOneBy($col, $val, $opt=array())
+ * @method static \CommentsModel|null findOneByTstamp($val, $opt=array())
+ * @method static \CommentsModel|null findOneBySource($val, $opt=array())
+ * @method static \CommentsModel|null findOneByParent($val, $opt=array())
+ * @method static \CommentsModel|null findOneByDate($val, $opt=array())
+ * @method static \CommentsModel|null findOneByName($val, $opt=array())
+ * @method static \CommentsModel|null findOneByEmail($val, $opt=array())
+ * @method static \CommentsModel|null findOneByWebsite($val, $opt=array())
+ * @method static \CommentsModel|null findOneByComment($val, $opt=array())
+ * @method static \CommentsModel|null findOneByAddReply($val, $opt=array())
+ * @method static \CommentsModel|null findOneByAuthor($val, $opt=array())
+ * @method static \CommentsModel|null findOneByReply($val, $opt=array())
+ * @method static \CommentsModel|null findOneByPublished($val, $opt=array())
+ * @method static \CommentsModel|null findOneByIp($val, $opt=array())
+ * @method static \CommentsModel|null findOneByNotified($val, $opt=array())
  *
- * @method static \Model\Collection|\CommentsModel findByTstamp()
- * @method static \Model\Collection|\CommentsModel findBySource()
- * @method static \Model\Collection|\CommentsModel findByParent()
- * @method static \Model\Collection|\CommentsModel findByDate()
- * @method static \Model\Collection|\CommentsModel findByName()
- * @method static \Model\Collection|\CommentsModel findByEmail()
- * @method static \Model\Collection|\CommentsModel findByWebsite()
- * @method static \Model\Collection|\CommentsModel findByComment()
- * @method static \Model\Collection|\CommentsModel findByAddReply()
- * @method static \Model\Collection|\CommentsModel findByAuthor()
- * @method static \Model\Collection|\CommentsModel findByReply()
- * @method static \Model\Collection|\CommentsModel findByPublished()
- * @method static \Model\Collection|\CommentsModel findByIp()
- * @method static \Model\Collection|\CommentsModel findByNotified()
- * @method static \Model\Collection|\CommentsModel findMultipleByIds()
- * @method static \Model\Collection|\CommentsModel findBy()
- * @method static \Model\Collection|\CommentsModel findAll()
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findBySource($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByParent($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByDate($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByName($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByEmail($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByWebsite($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByComment($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByAddReply($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByAuthor($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByReply($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByPublished($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByIp($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findByNotified($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\CommentsModel[]|\CommentsModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByTstamp()
- * @method static integer countBySource()
- * @method static integer countByParent()
- * @method static integer countByDate()
- * @method static integer countByName()
- * @method static integer countByEmail()
- * @method static integer countByWebsite()
- * @method static integer countByComment()
- * @method static integer countByAddReply()
- * @method static integer countByAuthor()
- * @method static integer countByReply()
- * @method static integer countByPublished()
- * @method static integer countByIp()
- * @method static integer countByNotified()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countBySource($val, $opt=array())
+ * @method static integer countByParent($val, $opt=array())
+ * @method static integer countByDate($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countByEmail($val, $opt=array())
+ * @method static integer countByWebsite($val, $opt=array())
+ * @method static integer countByComment($val, $opt=array())
+ * @method static integer countByAddReply($val, $opt=array())
+ * @method static integer countByAuthor($val, $opt=array())
+ * @method static integer countByReply($val, $opt=array())
+ * @method static integer countByPublished($val, $opt=array())
+ * @method static integer countByIp($val, $opt=array())
+ * @method static integer countByNotified($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -105,7 +105,7 @@ class CommentsModel extends \Model
 	 * @param integer $intOffset  An optional offset
 	 * @param array   $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\CommentsModel|null A collection of models or null if there are no comments
+	 * @return \Model\Collection|\CommentsModel[]|\CommentsModel|null A collection of models or null if there are no comments
 	 */
 	public static function findPublishedBySourceAndParent($strSource, $intParent, $blnDesc=false, $intLimit=0, $intOffset=0, array $arrOptions=array())
 	{

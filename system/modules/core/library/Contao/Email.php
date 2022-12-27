@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -179,7 +179,7 @@ class Email
 				break;
 
 			case 'text':
-				$this->strText = \String::decodeEntities($varValue);
+				$this->strText = \StringUtil::decodeEntities($varValue);
 				break;
 
 			case 'html':
@@ -406,7 +406,6 @@ class Email
 
 		$this->objMessage->setTo($arrRecipients);
 		$this->objMessage->setCharset($this->strCharset);
-		$this->objMessage->setPriority($this->intPriority);
 
 		// Default subject
 		if ($this->strSubject == '')
@@ -478,7 +477,7 @@ class Email
 		// Add the administrator e-mail as default sender
 		if ($this->strSender == '')
 		{
-			list($this->strSenderName, $this->strSender) = \String::splitFriendlyEmail(\Config::get('adminEmail'));
+			list($this->strSenderName, $this->strSender) = \StringUtil::splitFriendlyEmail(\Config::get('adminEmail'));
 		}
 
 		// Sender
@@ -546,13 +545,13 @@ class Email
 		{
 			if (!is_array($varRecipients))
 			{
-				$varRecipients = \String::splitCsv($varRecipients);
+				$varRecipients = \StringUtil::splitCsv($varRecipients);
 			}
 
 			// Support friendly name addresses and internationalized domain names
 			foreach ($varRecipients as $v)
 			{
-				list($strName, $strEmail) = \String::splitFriendlyEmail($v);
+				list($strName, $strEmail) = \StringUtil::splitFriendlyEmail($v);
 
 				$strName = trim($strName, ' "');
 				$strEmail = \Idna::encodeEmail($strEmail);

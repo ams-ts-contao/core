@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -167,7 +167,7 @@ class ContentDownloads extends \ContentElement
 					'caption'   => $arrMeta['caption'],
 					'href'      => $strHref,
 					'filesize'  => $this->getReadableSize($objFile->filesize, 1),
-					'icon'      => TL_ASSETS_URL . 'assets/contao/images/' . $objFile->icon,
+					'icon'      => \Image::getPath($objFile->icon),
 					'mime'      => $objFile->mime,
 					'meta'      => $arrMeta,
 					'extension' => $objFile->extension,
@@ -243,7 +243,7 @@ class ContentDownloads extends \ContentElement
 						'caption'   => $arrMeta['caption'],
 						'href'      => $strHref,
 						'filesize'  => $this->getReadableSize($objFile->filesize, 1),
-						'icon'      => TL_ASSETS_URL . 'assets/contao/images/' . $objFile->icon,
+						'icon'      => \Image::getPath($objFile->icon),
 						'mime'      => $objFile->mime,
 						'meta'      => $arrMeta,
 						'extension' => $objFile->extension,
@@ -284,7 +284,7 @@ class ContentDownloads extends \ContentElement
 					if (!empty($tmp) && is_array($tmp))
 					{
 						// Remove all values
-						$arrOrder = array_map(function(){}, array_flip($tmp));
+						$arrOrder = array_map(function () {}, array_flip($tmp));
 
 						// Move the matching elements to their position in $arrOrder
 						foreach ($files as $k=>$v)

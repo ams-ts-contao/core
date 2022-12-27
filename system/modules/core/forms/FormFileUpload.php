@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -111,7 +111,7 @@ class FormFileUpload extends \Widget implements \uploadable
 		// Sanitize the filename
 		try
 		{
-			$file['name'] = \String::sanitizeFileName($file['name']);
+			$file['name'] = \StringUtil::sanitizeFileName($file['name']);
 		}
 		catch (\InvalidArgumentException $e)
 		{
@@ -134,17 +134,14 @@ class FormFileUpload extends \Widget implements \uploadable
 			if ($file['error'] == 1 || $file['error'] == 2)
 			{
 				$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['filesize'], $maxlength_kb));
-				$this->log('File "'.$file['name'].'" exceeds the maximum file size of '.$maxlength_kb, __METHOD__, TL_ERROR);
 			}
 			elseif ($file['error'] == 3)
 			{
 				$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['filepartial'], $file['name']));
-				$this->log('File "'.$file['name'].'" was only partially uploaded', __METHOD__, TL_ERROR);
 			}
 			elseif ($file['error'] > 0)
 			{
 				$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['fileerror'], $file['error'], $file['name']));
-				$this->log('File "'.$file['name'].'" could not be uploaded (error '.$file['error'].')' , __METHOD__, TL_ERROR);
 			}
 
 			unset($_FILES[$this->strName]);
@@ -156,22 +153,18 @@ class FormFileUpload extends \Widget implements \uploadable
 		if ($this->maxlength > 0 && $file['size'] > $this->maxlength)
 		{
 			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['filesize'], $maxlength_kb));
-			$this->log('File "'.$file['name'].'" exceeds the maximum file size of '.$maxlength_kb, __METHOD__, TL_ERROR);
-
 			unset($_FILES[$this->strName]);
 
 			return;
 		}
 
-		$strExtension = pathinfo($file['name'], PATHINFO_EXTENSION);
-		$uploadTypes = trimsplit(',', $this->extensions);
+		$objFile = new \File($file['name'], true);
+		$uploadTypes = trimsplit(',', strtolower($this->extensions));
 
 		// File type is not allowed
-		if (!in_array(strtolower($strExtension), $uploadTypes))
+		if (!in_array($objFile->extension, $uploadTypes))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['filetype'], $strExtension));
-			$this->log('File type "'.$strExtension.'" is not allowed to be uploaded ('.$file['name'].')', __METHOD__, TL_ERROR);
-
+			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['filetype'], $objFile->extension));
 			unset($_FILES[$this->strName]);
 
 			return;
@@ -183,8 +176,6 @@ class FormFileUpload extends \Widget implements \uploadable
 			if ($arrImageSize[0] > \Config::get('imageWidth'))
 			{
 				$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['filewidth'], $file['name'], \Config::get('imageWidth')));
-				$this->log('File "'.$file['name'].'" exceeds the maximum image width of '.\Config::get('imageWidth').' pixels', __METHOD__, TL_ERROR);
-
 				unset($_FILES[$this->strName]);
 
 				return;
@@ -194,8 +185,6 @@ class FormFileUpload extends \Widget implements \uploadable
 			if ($arrImageSize[1] > \Config::get('imageHeight'))
 			{
 				$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['fileheight'], $file['name'], \Config::get('imageHeight')));
-				$this->log('File "'.$file['name'].'" exceeds the maximum image height of '.\Config::get('imageHeight').' pixels', __METHOD__, TL_ERROR);
-
 				unset($_FILES[$this->strName]);
 
 				return;
@@ -206,7 +195,6 @@ class FormFileUpload extends \Widget implements \uploadable
 		if (!$this->hasErrors())
 		{
 			$_SESSION['FILES'][$this->strName] = $_FILES[$this->strName];
-			$this->log('File "'.$file['name'].'" uploaded successfully', __METHOD__, TL_FILES);
 
 			if ($this->storeFile)
 			{
@@ -242,48 +230,54 @@ class FormFileUpload extends \Widget implements \uploadable
 					if ($this->doNotOverwrite && file_exists(TL_ROOT . '/' . $strUploadFolder . '/' . $file['name']))
 					{
 						$offset = 1;
-						$pathinfo = pathinfo($file['name']);
-						$name = $pathinfo['filename'];
 
 						$arrAll = scan(TL_ROOT . '/' . $strUploadFolder);
-						$arrFiles = preg_grep('/^' . preg_quote($name, '/') . '.*\.' . preg_quote($pathinfo['extension'], '/') . '/', $arrAll);
+						$arrFiles = preg_grep('/^' . preg_quote($objFile->filename, '/') . '.*\.' . preg_quote($objFile->extension, '/') . '/', $arrAll);
 
 						foreach ($arrFiles as $strFile)
 						{
-							if (preg_match('/__[0-9]+\.' . preg_quote($pathinfo['extension'], '/') . '$/', $strFile))
+							if (preg_match('/__[0-9]+\.' . preg_quote($objFile->extension, '/') . '$/', $strFile))
 							{
-								$strFile = str_replace('.' . $pathinfo['extension'], '', $strFile);
+								$strFile = str_replace('.' . $objFile->extension, '', $strFile);
 								$intValue = intval(substr($strFile, (strrpos($strFile, '_') + 1)));
 
 								$offset = max($offset, $intValue);
 							}
 						}
 
-						$file['name'] = str_replace($name, $name . '__' . ++$offset, $file['name']);
+						$file['name'] = str_replace($objFile->filename, $objFile->filename . '__' . ++$offset, $file['name']);
 					}
 
+					// Move the file to its destination
 					$this->Files->move_uploaded_file($file['tmp_name'], $strUploadFolder . '/' . $file['name']);
 					$this->Files->chmod($strUploadFolder . '/' . $file['name'], \Config::get('defaultFileChmod'));
 
-					// Generate the DB entries
+					$strUuid = null;
 					$strFile = $strUploadFolder . '/' . $file['name'];
-					$objFile = \FilesModel::findByPath($strFile);
 
-					// Existing file is being replaced (see #4818)
-					if ($objFile !== null)
+					// Generate the DB entries
+					if (\Dbafs::shouldBeSynchronized($strFile))
 					{
-						$objFile->tstamp = time();
-						$objFile->path   = $strFile;
-						$objFile->hash   = md5_file(TL_ROOT . '/' . $strFile);
-						$objFile->save();
-					}
-					else
-					{
-						$objFile = \Dbafs::addResource($strFile);
-					}
+						$objModel = \FilesModel::findByPath($strFile);
 
-					// Update the hash of the target folder
-					\Dbafs::updateFolderHashes($strUploadFolder);
+						// Existing file is being replaced (see #4818)
+						if ($objModel !== null)
+						{
+							$objModel->tstamp = time();
+							$objModel->path   = $strFile;
+							$objModel->hash   = md5_file(TL_ROOT . '/' . $strFile);
+							$objModel->save();
+
+							$strUuid = \StringUtil::binToUuid($objModel->uuid);
+						}
+						else
+						{
+							$strUuid = \StringUtil::binToUuid(\Dbafs::addResource($strFile)->uuid);
+						}
+
+						// Update the hash of the target folder
+						\Dbafs::updateFolderHashes($strUploadFolder);
+					}
 
 					// Add the session entry (see #6986)
 					$_SESSION['FILES'][$this->strName] = array
@@ -294,11 +288,11 @@ class FormFileUpload extends \Widget implements \uploadable
 						'error'    => $file['error'],
 						'size'     => $file['size'],
 						'uploaded' => true,
-						'uuid'     => \String::binToUuid($objFile->uuid)
+						'uuid'     => $strUuid
 					);
 
 					// Add a log entry
-					$this->log('File "'.$file['name'].'" has been moved to "'.$strUploadFolder.'"', __METHOD__, TL_FILES);
+					$this->log('File "' . $strUploadFolder . '/' . $file['name'] . '" has been uploaded', __METHOD__, TL_FILES);
 				}
 			}
 		}

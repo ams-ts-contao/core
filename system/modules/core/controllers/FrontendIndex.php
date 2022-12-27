@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -134,9 +134,15 @@ class FrontendIndex extends \Frontend
 			}
 
 			// Try to find a page matching the language parameter
-			elseif (($lang = \Input::get('language')) != '' && isset($arrLangs[$lang]))
+			elseif (($lang = \Input::get('language')) && isset($arrLangs[$lang]))
 			{
 				$objNewPage = $arrLangs[$lang];
+			}
+
+			// Use the fallback language (see #8142)
+			elseif (isset($arrLangs['*']))
+			{
+				$objNewPage = $arrLangs['*'];
 			}
 
 			// Store the page object
@@ -147,7 +153,7 @@ class FrontendIndex extends \Frontend
 		}
 
 		// Throw a 404 error if the page could not be found or the result is still ambiguous
-		if ($objPage === null || ($objPage instanceof \Model\Collection && $objPage->count() != 1))
+		if ($objPage === null || ($objPage instanceof \Model\Collection && $objPage->count() > 1))
 		{
 			$this->User->authenticate();
 			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
@@ -161,11 +167,23 @@ class FrontendIndex extends \Frontend
 		}
 
 		// If the page has an alias, it can no longer be called via ID (see #7661)
-		if ($objPage->alias != '' && $pageId == $objPage->id)
+		if ($objPage->alias != '')
 		{
-			$this->User->authenticate();
-			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
-			$objHandler->generate($pageId);
+			if (\Config::get('addLanguageToUrl'))
+			{
+				$regex = '#^[a-z]{2}(-[A-Z]{2})?/' . $objPage->id . '[$/.]#';
+			}
+			else
+			{
+				$regex = '#^' . $objPage->id . '[$/.]#';
+			}
+
+			if (preg_match($regex, \Environment::get('request')))
+			{
+				$this->User->authenticate();
+				$objHandler = new $GLOBALS['TL_PTY']['error_404']();
+				$objHandler->generate($pageId);
+			}
 		}
 
 		// Load a website root page object (will redirect to the first active regular page)
@@ -184,11 +202,11 @@ class FrontendIndex extends \Frontend
 		// Set the admin e-mail address
 		if ($objPage->adminEmail != '')
 		{
-			list($GLOBALS['TL_ADMIN_NAME'], $GLOBALS['TL_ADMIN_EMAIL']) = \String::splitFriendlyEmail($objPage->adminEmail);
+			list($GLOBALS['TL_ADMIN_NAME'], $GLOBALS['TL_ADMIN_EMAIL']) = \StringUtil::splitFriendlyEmail($objPage->adminEmail);
 		}
 		else
 		{
-			list($GLOBALS['TL_ADMIN_NAME'], $GLOBALS['TL_ADMIN_EMAIL']) = \String::splitFriendlyEmail(\Config::get('adminEmail'));
+			list($GLOBALS['TL_ADMIN_NAME'], $GLOBALS['TL_ADMIN_EMAIL']) = \StringUtil::splitFriendlyEmail(\Config::get('adminEmail'));
 		}
 
 		// Exit if the root page has not been published (see #2425)
@@ -200,7 +218,7 @@ class FrontendIndex extends \Frontend
 		}
 
 		// Check wether the language matches the root page language
-		if (\Config::get('addLanguageToUrl') && \Input::get('language') != $objPage->rootLanguage)
+		if (\Config::get('addLanguageToUrl') && isset($_GET['language']) && \Input::get('language') != $objPage->rootLanguage)
 		{
 			$this->User->authenticate();
 			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
@@ -292,7 +310,7 @@ class FrontendIndex extends \Frontend
 	protected function outputFromCache()
 	{
 		// Build the page if a user is (potentially) logged in or there is POST data
-		if (!empty($_POST) || \Input::cookie('FE_USER_AUTH') || \Input::cookie('FE_AUTO_LOGIN') || $_SESSION['DISABLE_CACHE'] || isset($_SESSION['LOGIN_ERROR']) || \Config::get('debugMode'))
+		if (!empty($_POST) || \Input::cookie('BE_USER_AUTH') || \Input::cookie('FE_USER_AUTH') || \Input::cookie('FE_AUTO_LOGIN') || $_SESSION['DISABLE_CACHE'] || isset($_SESSION['LOGIN_ERROR']) || \Config::get('debugMode'))
 		{
 			return;
 		}
@@ -363,7 +381,7 @@ class FrontendIndex extends \Frontend
 			foreach ($GLOBALS['TL_HOOKS']['getCacheKey'] as $callback)
 			{
 				$this->import($callback[0]);
-				$strCacheKey = $this->$callback[0]->$callback[1]($strCacheKey);
+				$strCacheKey = $this->{$callback[0]}->{$callback[1]}($strCacheKey);
 			}
 		}
 
@@ -415,6 +433,8 @@ class FrontendIndex extends \Frontend
 		$expire = null;
 		$content = null;
 		$type = null;
+		$files = null;
+		$assets = null;
 
 		// Include the file
 		ob_start();
@@ -427,6 +447,10 @@ class FrontendIndex extends \Frontend
 
 			return;
 		}
+
+		// Define the static URL constants (see #7914)
+		define('TL_FILES_URL', $files);
+		define('TL_ASSETS_URL', $assets);
 
 		// Read the buffer
 		$strBuffer = ob_get_contents();
@@ -459,7 +483,7 @@ class FrontendIndex extends \Frontend
 			foreach ($GLOBALS['TL_HOOKS']['modifyFrontendPage'] as $callback)
 			{
 				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]($strBuffer, null);
+				$strBuffer = $this->{$callback[0]}->{$callback[1]}($strBuffer, null);
 			}
 		}
 
@@ -501,6 +525,9 @@ class FrontendIndex extends \Frontend
 			header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
 			header('Expires: Fri, 06 Jun 1975 15:10:00 GMT');
 		}
+
+		// CORS support
+		\Controller::setCorsHeaders();
 
 		echo $strBuffer;
 		exit;

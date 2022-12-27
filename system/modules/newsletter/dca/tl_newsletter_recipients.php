@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -246,7 +246,11 @@ class tl_newsletter_recipients extends Backend
 		{
 			case 'paste':
 			case 'select':
-				// Allow
+				if (!in_array(CURRENT_ID, $root)) // check CURRENT_ID here (see #247)
+				{
+					$this->log('Not enough permissions to access newsletter channel ID "'.$id.'"', __METHOD__, TL_ERROR);
+					$this->redirect('contao/main.php?act=error');
+				}
 				break;
 
 			case 'create':
@@ -371,7 +375,7 @@ class tl_newsletter_recipients extends Backend
 	 */
 	public function listRecipient($row)
 	{
-		$label = $row['email'];
+		$label = Idna::decodeEmail($row['email']);
 
 		if ($row['addedOn'])
 		{
@@ -382,7 +386,7 @@ class tl_newsletter_recipients extends Backend
 			$label .= ' <span style="color:#b3b3b3;padding-left:3px">(' . $GLOBALS['TL_LANG']['tl_newsletter_recipients']['manually'] . ')</span>';
 		}
 
-		return sprintf('<div class="tl_content_left"><div class="list_icon" style="background-image:url(\'%ssystem/themes/%s/images/%s.gif\')">%s</div></div>', TL_ASSETS_URL, Backend::getTheme(), ($row['active'] ? 'member' : 'member_'), $label) . "\n";
+		return sprintf('<div class="tl_content_left"><div class="list_icon" style="background-image:url(\'%ssystem/themes/%s/images/%s.gif\')" data-icon="member.gif" data-icon-disabled="member_.gif">%s</div></div>', TL_ASSETS_URL, Backend::getTheme(), $row['active'] ? 'member' : 'member_', $label) . "\n";
 	}
 
 
@@ -419,7 +423,7 @@ class tl_newsletter_recipients extends Backend
 			$icon = 'invisible.gif';
 		}
 
-		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ';
+		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label, 'data-state="' . ($row['active'] ? 1 : 0) . '"').'</a> ';
 	}
 
 
@@ -432,12 +436,18 @@ class tl_newsletter_recipients extends Backend
 	 */
 	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
-		// Check permissions to edit
+		// Set the ID and action
 		Input::setGet('id', $intId);
 		Input::setGet('act', 'toggle');
+
+		if ($dc)
+		{
+			$dc->id = $intId; // see #8043
+		}
+
 		$this->checkPermission();
 
-		// Check permissions to publish
+		// Check the field access
 		if (!$this->User->hasAccess('tl_newsletter_recipients::active', 'alexf'))
 		{
 			$this->log('Not enough permissions to publish/unpublish newsletter recipient ID "'.$intId.'"', __METHOD__, TL_ERROR);
@@ -455,7 +465,7 @@ class tl_newsletter_recipients extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
+					$blnVisible = $this->{$callback[0]}->{$callback[1]}($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
@@ -469,6 +479,5 @@ class tl_newsletter_recipients extends Backend
 					   ->execute($intId);
 
 		$objVersions->create();
-		$this->log('A new version of record "tl_newsletter_recipients.id='.$intId.'" has been created'.$this->getParentEntries('tl_newsletter_recipients', $intId), __METHOD__, TL_GENERAL);
 	}
 }

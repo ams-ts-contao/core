@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -24,34 +24,38 @@ namespace Contao;
  *
  *     File::putContent('test.txt', 'This is a test');
  *
- * @property integer  $size        The file size
- * @property integer  $filesize    Alias of $size
- * @property string   $name        The file name and extension
- * @property string   $basename    Alias of $name
- * @property string   $dirname     The path of the parent folder
- * @property string   $extension   The file extension
- * @property string   $filename    The file name without extension
- * @property string   $tmpname     The name of the temporary file
- * @property string   $path        The file path
- * @property string   $value       Alias of $path
- * @property string   $mime        The mime type
- * @property string   $hash        The MD5 checksum
- * @property string   $ctime       The ctime
- * @property string   $mtime       The mtime
- * @property string   $atime       The atime
- * @property string   $icon        The mime icon name
- * @property array    $imageSize   The file dimensions (images only)
- * @property integer  $width       The file width (images only)
- * @property integer  $height      The file height (images only)
- * @property boolean  $isImage     True if the file is an image
- * @property boolean  $isGdImage   True if the file can be handled by the GDlib
- * @property boolean  $isSvgImage  True if the file is an SVG image
- * @property integer  $channels    The number of channels (images only)
- * @property integer  $bits        The number of bits for each color (images only)
- * @property boolean  $isRgbImage  True if the file is an RGB image
- * @property boolean  $isCmykImage True if the file is a CMYK image
- * @property resource $handle      The file handle (returned by fopen())
- * @property string   $title       The file title
+ * @property integer  $size          The file size
+ * @property integer  $filesize      Alias of $size
+ * @property string   $name          The file name and extension
+ * @property string   $basename      Alias of $name
+ * @property string   $dirname       The path of the parent folder
+ * @property string   $extension     The lowercase file extension
+ * @property string   $origext       The original file extension
+ * @property string   $filename      The file name without extension
+ * @property string   $tmpname       The name of the temporary file
+ * @property string   $path          The file path
+ * @property string   $value         Alias of $path
+ * @property string   $mime          The mime type
+ * @property string   $hash          The MD5 checksum
+ * @property string   $ctime         The ctime
+ * @property string   $mtime         The mtime
+ * @property string   $atime         The atime
+ * @property string   $icon          The mime icon name
+ * @property array    $imageSize     The file dimensions (images only)
+ * @property integer  $width         The file width (images only)
+ * @property integer  $height        The file height (images only)
+ * @property array    $imageViewSize The viewbox dimensions
+ * @property integer  $viewWidth     The viewbox width
+ * @property integer  $viewHeight    The viewbox height
+ * @property boolean  $isImage       True if the file is an image
+ * @property boolean  $isGdImage     True if the file can be handled by the GDlib
+ * @property boolean  $isSvgImage    True if the file is an SVG image
+ * @property integer  $channels      The number of channels (images only)
+ * @property integer  $bits          The number of bits for each color (images only)
+ * @property boolean  $isRgbImage    True if the file is an RGB image
+ * @property boolean  $isCmykImage   True if the file is a CMYK image
+ * @property resource $handle        The file handle (returned by fopen())
+ * @property string   $title         The file title
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -95,6 +99,18 @@ class File extends \System
 	protected $arrImageSize = array();
 
 	/**
+	 * Image size runtime cache
+	 * @var array
+	 */
+	protected static $arrImageSizeCache = array();
+
+	/**
+	 * Image view size
+	 * @var array
+	 */
+	protected $arrImageViewSize = array();
+
+	/**
 	 * Do not create the file
 	 * @var string
 	 */
@@ -111,6 +127,8 @@ class File extends \System
 	 */
 	public function __construct($strFile, $blnDoNotCreate=false)
 	{
+		// No parent::__construct() here
+
 		// Handle open_basedir restrictions
 		if ($strFile == '.')
 		{
@@ -127,27 +145,6 @@ class File extends \System
 
 		$this->strFile = $strFile;
 		$this->blnDoNotCreate = $blnDoNotCreate;
-		$strFolder = dirname($strFile);
-
-		// Check whether we need to sync the database
-		$this->blnSyncDb = (\Config::get('uploadPath') != 'templates' && strncmp($strFolder . '/', \Config::get('uploadPath') . '/', strlen(\Config::get('uploadPath')) + 1) === 0);
-
-		// Check the excluded folders
-		if ($this->blnSyncDb && \Config::get('fileSyncExclude') != '')
-		{
-			$arrExempt = array_map(function($e) {
-				return \Config::get('uploadPath') . '/' . $e;
-			}, trimsplit(',', \Config::get('fileSyncExclude')));
-
-			foreach ($arrExempt as $strExempt)
-			{
-				if (strncmp($strExempt . '/', $strFolder . '/', strlen($strExempt) + 1) === 0)
-				{
-					$this->blnSyncDb = false;
-					break;
-				}
-			}
-		}
 
 		if (!$blnDoNotCreate)
 		{
@@ -188,33 +185,33 @@ class File extends \System
 			case 'basename':
 				if (!isset($this->arrPathinfo[$strKey]))
 				{
-					$this->arrPathinfo = pathinfo(TL_ROOT . '/' . $this->strFile);
+					$this->arrPathinfo = $this->getPathinfo();
 				}
 				return $this->arrPathinfo['basename'];
 				break;
 
 			case 'dirname':
+			case 'filename':
 				if (!isset($this->arrPathinfo[$strKey]))
 				{
-					$this->arrPathinfo = pathinfo(TL_ROOT . '/' . $this->strFile);
+					$this->arrPathinfo = $this->getPathinfo();
 				}
-				return $this->arrPathinfo['dirname'];
-				break;
+				return $this->arrPathinfo[$strKey];
 
 			case 'extension':
 				if (!isset($this->arrPathinfo['extension']))
 				{
-					$this->arrPathinfo = pathinfo(TL_ROOT . '/' . $this->strFile);
+					$this->arrPathinfo = $this->getPathinfo();
 				}
 				return strtolower($this->arrPathinfo['extension']);
 				break;
 
-			case 'filename':
-				if (!isset($this->arrPathinfo[$strKey]))
+			case 'origext':
+				if (!isset($this->arrPathinfo['extension']))
 				{
-					$this->arrPathinfo = pathinfo(TL_ROOT . '/' . $this->strFile);
+					$this->arrPathinfo = $this->getPathinfo();
 				}
-				return $this->arrPathinfo['filename'];
+				return $this->arrPathinfo['extension'];
 				break;
 
 			case 'tmpname':
@@ -253,7 +250,13 @@ class File extends \System
 			case 'imageSize':
 				if (empty($this->arrImageSize))
 				{
-					if ($this->isGdImage)
+					$strCacheKey = $this->strFile . '|' . $this->mtime;
+
+					if (isset(static::$arrImageSizeCache[$strCacheKey]))
+					{
+						$this->arrImageSize = static::$arrImageSizeCache[$strCacheKey];
+					}
+					elseif ($this->isGdImage)
 					{
 						$this->arrImageSize = @getimagesize(TL_ROOT . '/' . $this->strFile);
 					}
@@ -263,46 +266,48 @@ class File extends \System
 
 						if ($this->extension == 'svgz')
 						{
-							$doc->loadXML(gzdecode($this->getContent()));
+							$status = $doc->loadXML(gzdecode($this->getContent()), LIBXML_NOERROR);
 						}
 						else
 						{
-							$doc->loadXML($this->getContent());
+							$status = $doc->loadXML($this->getContent(), LIBXML_NOERROR);
 						}
 
-						$svgElement = $doc->documentElement;
-
-						if ($svgElement->getAttribute('width') && $svgElement->getAttribute('height'))
-						{
-							$this->arrImageSize = array
-							(
-								\Image::getPixelValue($svgElement->getAttribute('width')),
-								\Image::getPixelValue($svgElement->getAttribute('height'))
-							);
-						}
-						elseif ($svgElement->getAttribute('viewBox'))
-						{
-							$svgViewBox = preg_split('/[\s,]+/', $svgElement->getAttribute('viewBox'));
-
-							$this->arrImageSize = array
-							(
-								\Image::getPixelValue($svgViewBox[2]),
-								\Image::getPixelValue($svgViewBox[3])
-							);
-						}
-
-						if ($this->arrImageSize && $this->arrImageSize[0] && $this->arrImageSize[1])
-						{
-							$this->arrImageSize[2] = 0;  // Replace this with IMAGETYPE_SVG when it becomes available
-							$this->arrImageSize[3] = 'width="' . $this->arrImageSize[0] . '" height="' . $this->arrImageSize[1] . '"';
-							$this->arrImageSize['bits'] = 8;
-							$this->arrImageSize['channels'] = 3;
-							$this->arrImageSize['mime'] = $this->getMimeType();
-						}
-						else
+						if ($status !== true)
 						{
 							$this->arrImageSize = false;
 						}
+						else
+						{
+							$svgElement = $doc->documentElement;
+
+							if ($svgElement->getAttribute('width') && $svgElement->getAttribute('height') && substr(rtrim($svgElement->getAttribute('width')), -1) != '%' && substr(rtrim($svgElement->getAttribute('height')), -1) != '%')
+							{
+								$this->arrImageSize = array
+								(
+									\Image::getPixelValue($svgElement->getAttribute('width')),
+									\Image::getPixelValue($svgElement->getAttribute('height'))
+								);
+							}
+
+							if ($this->arrImageSize && $this->arrImageSize[0] && $this->arrImageSize[1])
+							{
+								$this->arrImageSize[2] = 0; // replace this with IMAGETYPE_SVG when it becomes available
+								$this->arrImageSize[3] = 'width="' . $this->arrImageSize[0] . '" height="' . $this->arrImageSize[1] . '"';
+								$this->arrImageSize['bits'] = 8;
+								$this->arrImageSize['channels'] = 3;
+								$this->arrImageSize['mime'] = $this->getMimeType();
+							}
+							else
+							{
+								$this->arrImageSize = false;
+							}
+						}
+					}
+
+					if (!isset(static::$arrImageSizeCache[$strCacheKey]))
+					{
+						static::$arrImageSizeCache[$strCacheKey] = $this->arrImageSize;
 					}
 				}
 				return $this->arrImageSize;
@@ -314,6 +319,67 @@ class File extends \System
 
 			case 'height':
 				return $this->imageSize[1];
+				break;
+
+			case 'imageViewSize':
+				if (empty($this->arrImageViewSize))
+				{
+					if ($this->imageSize)
+					{
+						$this->arrImageViewSize = array
+						(
+							$this->imageSize[0],
+							$this->imageSize[1]
+						);
+					}
+					elseif ($this->isSvgImage)
+					{
+						$doc = new \DOMDocument();
+
+						if ($this->extension == 'svgz')
+						{
+							$status = $doc->loadXML(gzdecode($this->getContent()), LIBXML_NOERROR);
+						}
+						else
+						{
+							$status = $doc->loadXML($this->getContent(), LIBXML_NOERROR);
+						}
+
+						if ($status !== true)
+						{
+							$this->arrImageViewSize = false;
+						}
+						else
+						{
+							$svgElement = $doc->documentElement;
+
+							if ($svgElement->getAttribute('viewBox'))
+							{
+								$svgViewBox = preg_split('/[\s,]+/', $svgElement->getAttribute('viewBox'));
+
+								$this->arrImageViewSize = array
+								(
+									intval($svgViewBox[2]),
+									intval($svgViewBox[3])
+								);
+							}
+						}
+
+						if (!$this->arrImageViewSize || !$this->arrImageViewSize[0] || !$this->arrImageViewSize[1])
+						{
+							$this->arrImageViewSize = false;
+						}
+					}
+				}
+				return $this->arrImageViewSize;
+				break;
+
+			case 'viewWidth':
+				return $this->imageViewSize[0];
+				break;
+
+			case 'viewHeight':
+				return $this->imageViewSize[1];
 				break;
 
 			case 'isImage':
@@ -471,7 +537,7 @@ class File extends \System
 		$return = $this->Files->delete($this->strFile);
 
 		// Update the database
-		if ($this->blnSyncDb)
+		if (\Dbafs::shouldBeSynchronized($this->strFile))
 		{
 			\Dbafs::deleteResource($this->strFile);
 		}
@@ -500,7 +566,12 @@ class File extends \System
 	 */
 	public function close()
 	{
-		$return = $this->Files->fclose($this->resFile);
+		$return = true;
+
+		if (is_resource($this->resFile))
+		{
+			$return = $this->Files->fclose($this->resFile);
+		}
 
 		// Move the temporary file to its destination
 		if ($this->blnDoNotCreate)
@@ -522,10 +593,11 @@ class File extends \System
 			}
 
 			$return = $this->Files->rename($this->strTmp, $this->strFile);
+			$this->strTmp = null;
 		}
 
 		// Update the database
-		if ($this->blnSyncDb)
+		if (\Dbafs::shouldBeSynchronized($this->strFile))
 		{
 			$this->objModel = \Dbafs::addResource($this->strFile);
 		}
@@ -541,7 +613,7 @@ class File extends \System
 	 */
 	public function getModel()
 	{
-		if ($this->blnSyncDb && $this->objModel === null)
+		if ($this->objModel === null && \Dbafs::shouldBeSynchronized($this->strFile))
 		{
 			$this->objModel = \FilesModel::findByPath($this->strFile);
 		}
@@ -557,7 +629,7 @@ class File extends \System
 	 */
 	public function getContent()
 	{
-		$strContent = file_get_contents(TL_ROOT . '/' . $this->strFile);
+		$strContent = file_get_contents(TL_ROOT . '/' . ($this->strTmp ?: $this->strFile));
 
 		// Remove BOMs (see #4469)
 		if (strncmp($strContent, "\xEF\xBB\xBF", 3) === 0)
@@ -622,9 +694,21 @@ class File extends \System
 		$return = $this->Files->rename($this->strFile, $strNewName);
 
 		// Update the database AFTER the file has been renamed
-		if ($this->blnSyncDb)
+		$syncSource = \Dbafs::shouldBeSynchronized($this->strFile);
+		$syncTarget = \Dbafs::shouldBeSynchronized($strNewName);
+
+		// Synchronize the database
+		if ($syncSource && $syncTarget)
 		{
 			$this->objModel = \Dbafs::moveResource($this->strFile, $strNewName);
+		}
+		elseif ($syncSource)
+		{
+			$this->objModel = \Dbafs::deleteResource($this->strFile);
+		}
+		elseif ($syncTarget)
+		{
+			$this->objModel = \Dbafs::addResource($strNewName);
 		}
 
 		// Reset the object AFTER the database has been updated
@@ -659,9 +743,17 @@ class File extends \System
 		$this->Files->copy($this->strFile, $strNewName);
 
 		// Update the database AFTER the file has been renamed
-		if ($this->blnSyncDb)
+		$syncSource = \Dbafs::shouldBeSynchronized($this->strFile);
+		$syncTarget = \Dbafs::shouldBeSynchronized($strNewName);
+
+		// Synchronize the database
+		if ($syncSource && $syncTarget)
 		{
-			$this->objModel = \Dbafs::copyResource($this->strFile, $strNewName);
+			\Dbafs::copyResource($this->strFile, $strNewName);
+		}
+		elseif ($syncTarget)
+		{
+			\Dbafs::addResource($strNewName);
 		}
 
 		return true;
@@ -835,5 +927,43 @@ class File extends \System
 		{
 			return md5_file(TL_ROOT . '/' . $this->strFile);
 		}
+	}
+
+
+	/**
+	 * Return the path info (binary-safe)
+	 *
+	 * @return array The path info
+	 *
+	 * @see https://github.com/PHPMailer/PHPMailer/blob/master/class.phpmailer.php#L3520
+	 */
+	protected function getPathinfo()
+	{
+		$matches = array();
+		$return = array('dirname'=>'', 'basename'=>'', 'extension'=>'', 'filename'=>'');
+
+		preg_match('%^(.*?)[\\\\/]*(([^/\\\\]*?)(\.([^\.\\\\/]+?)|))[\\\\/\.]*$%im', $this->strFile, $matches);
+
+		if (isset($matches[1]))
+		{
+			$return['dirname'] = TL_ROOT . '/' . $matches[1]; // see #8325
+		}
+
+		if (isset($matches[2]))
+		{
+			$return['basename'] = $matches[2];
+		}
+
+		if (isset($matches[5]))
+		{
+			$return['extension'] = $matches[5];
+		}
+
+		if (isset($matches[3]))
+		{
+			$return['filename'] = $matches[3];
+		}
+
+		return $return;
 	}
 }

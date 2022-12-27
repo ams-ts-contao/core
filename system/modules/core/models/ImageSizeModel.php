@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -25,43 +25,43 @@ namespace Contao;
  * @property string  $resizeMode
  * @property integer $zoom
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByPid()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByName()
- * @method static $this findOneBySizes()
- * @method static $this findOneByDensities()
- * @method static $this findOneByWidth()
- * @method static $this findOneByHeight()
- * @method static $this findOneByResizeMode()
- * @method static $this findOneByZoom()
+ * @method static \ImageSizeModel|null findById($id, $opt=array())
+ * @method static \ImageSizeModel|null findByPk($id, $opt=array())
+ * @method static \ImageSizeModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneBy($col, $val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByPid($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByTstamp($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByName($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneBySizes($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByDensities($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByWidth($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByHeight($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByResizeMode($val, $opt=array())
+ * @method static \ImageSizeModel|null findOneByZoom($val, $opt=array())
  *
- * @method static \Model\Collection|\ImageSizeModel findByPid()
- * @method static \Model\Collection|\ImageSizeModel findByTstamp()
- * @method static \Model\Collection|\ImageSizeModel findByName()
- * @method static \Model\Collection|\ImageSizeModel findBySizes()
- * @method static \Model\Collection|\ImageSizeModel findByDensities()
- * @method static \Model\Collection|\ImageSizeModel findByWidth()
- * @method static \Model\Collection|\ImageSizeModel findByHeight()
- * @method static \Model\Collection|\ImageSizeModel findByResizeMode()
- * @method static \Model\Collection|\ImageSizeModel findByZoom()
- * @method static \Model\Collection|\ImageSizeModel findMultipleByIds()
- * @method static \Model\Collection|\ImageSizeModel findBy()
- * @method static \Model\Collection|\ImageSizeModel findAll()
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByPid($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByName($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findBySizes($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByDensities($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByWidth($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByHeight($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByResizeMode($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findByZoom($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\ImageSizeModel[]|\ImageSizeModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByPid()
- * @method static integer countByTstamp()
- * @method static integer countByName()
- * @method static integer countBySizes()
- * @method static integer countByDensities()
- * @method static integer countByWidth()
- * @method static integer countByHeight()
- * @method static integer countByResizeMode()
- * @method static integer countByZoom()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByPid($val, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countBySizes($val, $opt=array())
+ * @method static integer countByDensities($val, $opt=array())
+ * @method static integer countByWidth($val, $opt=array())
+ * @method static integer countByHeight($val, $opt=array())
+ * @method static integer countByResizeMode($val, $opt=array())
+ * @method static integer countByZoom($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */

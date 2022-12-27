@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -50,8 +50,8 @@ class BackendMain extends \Backend
 		// Password change required
 		if ($this->User->pwChange)
 		{
-			$objSession = $this->Database->prepare("SELECT su FROM tl_session WHERE sessionID=? AND pid=?")
-										 ->execute(session_id(), $this->User->id);
+			$objSession = $this->Database->prepare("SELECT su FROM tl_session WHERE hash=?")
+										 ->execute(sha1(session_id() . (!\Config::get('disableIpCheck') ? \Environment::get('ip') : '') . 'BE_USER_AUTH'));
 
 			if (!$objSession->su)
 			{
@@ -157,7 +157,7 @@ class BackendMain extends \Backend
 			foreach ($GLOBALS['TL_HOOKS']['getSystemMessages'] as $callback)
 			{
 				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]();
+				$strBuffer = $this->{$callback[0]}->{$callback[1]}();
 
 				if ($strBuffer != '')
 				{
@@ -203,9 +203,9 @@ class BackendMain extends \Backend
 		}
 
 		// File picker reference
-		if (\Input::get('popup') && \Input::get('act') != 'show' && (\Input::get('do') == 'page' || \Input::get('do') == 'files') && $this->Session->get('filePickerRef'))
+		if (\Input::get('popup') && \Input::get('act') != 'show' && (\Input::get('do') == 'page' && $this->User->hasAccess('page', 'modules') || \Input::get('do') == 'files' && $this->User->hasAccess('files', 'modules')) && $this->Session->get('filePickerRef'))
 		{
-			$this->Template->managerHref = $this->Session->get('filePickerRef');
+			$this->Template->managerHref = ampersand($this->Session->get('filePickerRef'));
 			$this->Template->manager = (strpos($this->Session->get('filePickerRef'), 'contao/page.php') !== false) ? $GLOBALS['TL_LANG']['MSC']['pagePickerHome'] : $GLOBALS['TL_LANG']['MSC']['filePickerHome'];
 		}
 
@@ -217,7 +217,7 @@ class BackendMain extends \Backend
 		$this->Template->account = $GLOBALS['TL_LANG']['MOD']['login'][1];
 		$this->Template->preview = $GLOBALS['TL_LANG']['MSC']['fePreview'];
 		$this->Template->previewTitle = specialchars($GLOBALS['TL_LANG']['MSC']['fePreviewTitle']);
-		$this->Template->pageOffset = \Input::cookie('BE_PAGE_OFFSET');
+		$this->Template->pageOffset = (int) \Input::cookie('BE_PAGE_OFFSET');
 		$this->Template->logout = $GLOBALS['TL_LANG']['MSC']['logoutBT'];
 		$this->Template->logoutTitle = specialchars($GLOBALS['TL_LANG']['MSC']['logoutBTTitle']);
 		$this->Template->backendModules = $GLOBALS['TL_LANG']['MSC']['backendModules'];

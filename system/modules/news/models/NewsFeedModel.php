@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -27,46 +27,46 @@ namespace Contao;
  * @property string  $description
  * @property string  $feedName
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByTitle()
- * @method static $this findOneByAlias()
- * @method static $this findOneByLanguage()
- * @method static $this findOneByArchives()
- * @method static $this findOneByFormat()
- * @method static $this findOneBySource()
- * @method static $this findOneByMaxItems()
- * @method static $this findOneByFeedBase()
- * @method static $this findOneByDescription()
+ * @method static \NewsFeedModel|null findById($id, $opt=array())
+ * @method static \NewsFeedModel|null findByPk($id, $opt=array())
+ * @method static \NewsFeedModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneBy($col, $val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByTstamp($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByTitle($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByAlias($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByLanguage($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByArchives($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByFormat($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneBySource($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByMaxItems($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByFeedBase($val, $opt=array())
+ * @method static \NewsFeedModel|null findOneByDescription($val, $opt=array())
  *
- * @method static \Model\Collection|\NewsFeedModel findByTstamp()
- * @method static \Model\Collection|\NewsFeedModel findByTitle()
- * @method static \Model\Collection|\NewsFeedModel findByAlias()
- * @method static \Model\Collection|\NewsFeedModel findByLanguage()
- * @method static \Model\Collection|\NewsFeedModel findByArchives()
- * @method static \Model\Collection|\NewsFeedModel findByFormat()
- * @method static \Model\Collection|\NewsFeedModel findBySource()
- * @method static \Model\Collection|\NewsFeedModel findByMaxItems()
- * @method static \Model\Collection|\NewsFeedModel findByFeedBase()
- * @method static \Model\Collection|\NewsFeedModel findByDescription()
- * @method static \Model\Collection|\NewsFeedModel findMultipleByIds()
- * @method static \Model\Collection|\NewsFeedModel findBy()
- * @method static \Model\Collection|\NewsFeedModel findAll()
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByTitle($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByAlias($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByLanguage($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByArchives($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByFormat($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findBySource($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByMaxItems($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByFeedBase($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findByDescription($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByTstamp()
- * @method static integer countByTitle()
- * @method static integer countByAlias()
- * @method static integer countByLanguage()
- * @method static integer countByArchives()
- * @method static integer countByFormat()
- * @method static integer countBySource()
- * @method static integer countByMaxItems()
- * @method static integer countByFeedBase()
- * @method static integer countByDescription()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByTitle($val, $opt=array())
+ * @method static integer countByAlias($val, $opt=array())
+ * @method static integer countByLanguage($val, $opt=array())
+ * @method static integer countByArchives($val, $opt=array())
+ * @method static integer countByFormat($val, $opt=array())
+ * @method static integer countBySource($val, $opt=array())
+ * @method static integer countByMaxItems($val, $opt=array())
+ * @method static integer countByFeedBase($val, $opt=array())
+ * @method static integer countByDescription($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -86,7 +86,7 @@ class NewsFeedModel extends \Model
 	 * @param integer $intId      The news archive ID
 	 * @param array   $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\NewsFeedModel|null A collection of models or null if the news archive is not part of a feed
+	 * @return \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null A collection of models or null if the news archive is not part of a feed
 	 */
 	public static function findByArchive($intId, array $arrOptions=array())
 	{
@@ -102,7 +102,7 @@ class NewsFeedModel extends \Model
 	 * @param array $arrIds     An array of news feed IDs
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\NewsFeedModel|null A collection of models or null if there are no feeds
+	 * @return \Model\Collection|\NewsFeedModel[]|\NewsFeedModel|null A collection of models or null if there are no feeds
 	 */
 	public static function findByIds($arrIds, array $arrOptions=array())
 	{

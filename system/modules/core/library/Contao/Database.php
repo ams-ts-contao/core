@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -321,7 +321,7 @@ abstract class Database
 
 		foreach ($this->listFields($strTable, $blnNoCache) as $arrField)
 		{
-			if ($arrField['name'] == $strField)
+			if ($arrField['name'] == $strField && $arrField['type'] != 'index')
 			{
 				return true;
 			}
@@ -374,7 +374,10 @@ abstract class Database
 
 		foreach ($arrFields as $arrField)
 		{
-			$arrNames[] = $arrField['name'];
+			if ($arrField['type'] != 'index')
+			{
+				$arrNames[] = $arrField['name'];
+			}
 		}
 
 		return $arrNames;
@@ -393,7 +396,7 @@ abstract class Database
 	 */
 	public function isUniqueValue($strTable, $strField, $varValue, $intId=null)
 	{
-		$strQuery = "SELECT * FROM $strTable WHERE $strField=?";
+		$strQuery = "SELECT * FROM $strTable WHERE ".static::quoteIdentifier($strField)."=?";
 
 		if ($intId !== null)
 		{
@@ -587,6 +590,28 @@ abstract class Database
 	public function getUuid()
 	{
 		return $this->get_uuid();
+	}
+
+
+	/**
+	 * Quote an identifier if it is a reserved word
+	 *
+	 * @param string $strName
+	 *
+	 * @return string
+	 */
+	public static function quoteIdentifier($strName)
+	{
+		if (strtolower($strName) == 'rows')
+		{
+			$strName = '`'.$strName.'`';
+		}
+		if (strtolower($strName) == 'groups')
+		{
+			$strName = '`'.$strName.'`';
+		}
+
+		return $strName;
 	}
 
 

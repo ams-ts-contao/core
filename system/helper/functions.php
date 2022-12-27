@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -39,8 +39,8 @@ function __error($intType, $strMessage, $strFile, $intLine)
 		E_USER_DEPRECATED   => 'Deprecated notice'
 	);
 
-	// Ignore functions with an error control operator (@function_name)
-	if (ini_get('error_reporting') > 0)
+	// Only log errors that have been configured to get logged (see #8267)
+	if (error_reporting() & $intType)
 	{
 		$e = new Exception();
 
@@ -58,10 +58,10 @@ function __error($intType, $strMessage, $strFile, $intLine)
 			$strMessage = sprintf('<strong>%s</strong>: %s in <strong>%s</strong> on line <strong>%s</strong>',
 								$arrErrors[$intType],
 								$strMessage,
-								str_replace(TL_ROOT . '/', '', $strFile), // see #4971
+								str_replace(TL_ROOT . DIRECTORY_SEPARATOR, '', $strFile), // see #4971
 								$intLine);
 
-			$strMessage .= "\n" . '<pre style="margin:11px 0 0">' . "\n" . str_replace(TL_ROOT . '/', '', $e->getTraceAsString()) . "\n" . '</pre>';
+			$strMessage .= "\n" . '<pre style="margin:11px 0 0">' . "\n" . str_replace(TL_ROOT . DIRECTORY_SEPARATOR, '', $e->getTraceAsString()) . "\n" . '</pre>';
 			echo '<br>' . $strMessage;
 		}
 
@@ -82,10 +82,16 @@ function __error($intType, $strMessage, $strFile, $intLine)
  * if "display_errors" is set. Callback to a custom exception handler defined
  * in the application file "config/error.php".
  *
- * @param Exception $e
+ * @param Exception|Throwable $e
  */
-function __exception(Exception $e)
+function __exception($e)
 {
+	// PHP 7 compatibility
+	if (!$e instanceof Exception && (!interface_exists('Throwable', false) || !$e instanceof Throwable))
+	{
+		throw new InvalidArgumentException('Exception or Throwable expected, ' . gettype($e) . ' given');
+	}
+
 	error_log(sprintf("PHP Fatal error: Uncaught exception '%s' with message '%s' thrown in %s on line %s\n%s",
 					get_class($e),
 					$e->getMessage(),
@@ -99,10 +105,10 @@ function __exception(Exception $e)
 		$strMessage = sprintf('<strong>Fatal error</strong>: Uncaught exception <strong>%s</strong> with message <strong>%s</strong> thrown in <strong>%s</strong> on line <strong>%s</strong>',
 							get_class($e),
 							$e->getMessage(),
-							str_replace(TL_ROOT . '/', '', $e->getFile()),
+							str_replace(TL_ROOT . DIRECTORY_SEPARATOR, '', $e->getFile()),
 							$e->getLine());
 
-		$strMessage .= "\n" . '<pre style="margin:11px 0 0">' . "\n" . str_replace(TL_ROOT . '/', '', $e->getTraceAsString()) . "\n" . '</pre>';
+		$strMessage .= "\n" . '<pre style="margin:11px 0 0">' . "\n" . str_replace(TL_ROOT . DIRECTORY_SEPARATOR, '', $e->getTraceAsString()) . "\n" . '</pre>';
 		echo '<br>' . $strMessage;
 	}
 
@@ -116,7 +122,7 @@ function __exception(Exception $e)
  */
 function show_help_message()
 {
-	if (ini_get('display_errors'))
+	if (ini_get('display_errors') || headers_sent())
 	{
 		return;
 	}
@@ -279,7 +285,7 @@ function strip_insert_tags($strString)
 
 	do
 	{
-		$strString = preg_replace('/\{\{[^\{\}]*\}\}/', '', $strString, -1, $count);
+		$strString = preg_replace('/{{[^{}]*}}/', '', $strString, -1, $count);
 	}
 	while ($count > 0);
 
@@ -460,7 +466,7 @@ function nl2br_pre($str, $xhtml=false)
  */
 function dump()
 {
-	echo "<pre>";
+	echo '<pre>';
 
 	foreach (func_get_args() as $var)
 	{
@@ -474,7 +480,7 @@ function dump()
 		}
 	}
 
-	echo "</pre>";
+	echo '</pre>';
 }
 
 

@@ -1,9 +1,9 @@
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -31,7 +31,7 @@ var DECIMAL_SEPARATOR = '.';
 /**
  * Provide methods to sort tables keeping the Contao class names intact.
  *
- * @author Leo Feyer <http://contao.org>
+ * @author Leo Feyer <https://contao.org>
  */
 var TableSort = new Class(
 {
@@ -56,6 +56,7 @@ var TableSort = new Class(
 		}
 
 		var cook = null,
+			sorter = this,
 			vars = Cookie.read('TS_' + table.get('id').toUpperCase());
 
 		if (vars !== null) {
@@ -79,13 +80,13 @@ var TableSort = new Class(
 
 			// Add the event
 			a.addEvent('click', function(i, el) {
-				this.resort(i, el)
+				sorter.resort(i, el)
 			}.pass([i, el], this)).inject(el);
 
 			// Sort the table if there is a cookie
 			if (cook !== null && cook[0] == i) {
 				$(el).addClass((cook[1] == 'desc') ? 'asc' : 'desc');
-				this.resort(cook[0], el);
+				sorter.resort(cook[0], el);
 			}
 		}
 	},

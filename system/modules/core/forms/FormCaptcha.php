@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -184,12 +184,11 @@ class FormCaptcha extends \Widget
 			return '';
 		}
 
-		return sprintf('<label for="ctrl_%s" class="mandatory%s">%s%s%s <span class="invisible">%s</span></label>',
+		return sprintf('<label for="ctrl_%s" class="mandatory%s"><span class="invisible">%s </span>%s<span class="mandatory">*</span><span class="invisible"> %s</span></label>',
 						$this->strId,
 						(($this->strClass != '') ? ' ' . $this->strClass : ''),
-						'<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ',
+						$GLOBALS['TL_LANG']['MSC']['mandatory'],
 						$this->strLabel,
-						'<span class="mandatory">*</span>',
 						$this->getQuestion());
 	}
 
@@ -201,10 +200,11 @@ class FormCaptcha extends \Widget
 	 */
 	public function generate()
 	{
-		return sprintf('<input type="text" name="%s" id="ctrl_%s" class="captcha mandatory%s" value=""%s%s',
+		return sprintf('<input type="text" name="%s" id="ctrl_%s" class="captcha mandatory%s" value="" aria-describedby="captcha_text_%s"%s%s',
 						$this->strCaptchaKey,
 						$this->strId,
 						(($this->strClass != '') ? ' ' . $this->strClass : ''),
+						$this->strId,
 						$this->getAttributes(),
 						$this->strTagEnding) . $this->addSubmit();
 	}
@@ -217,7 +217,8 @@ class FormCaptcha extends \Widget
 	 */
 	public function generateQuestion()
 	{
-		return sprintf('<span class="captcha_text%s">%s</span>',
+		return sprintf('<span id="captcha_text_%s" class="captcha_text%s">%s</span>',
+						$this->strId,
 						(($this->strClass != '') ? ' ' . $this->strClass : ''),
 						$this->getQuestion());
 	}

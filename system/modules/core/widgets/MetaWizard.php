@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -35,6 +35,32 @@ class MetaWizard extends \Widget
 
 
 	/**
+	 * Set an object property
+	 *
+	 * @param string $strKey   The property name
+	 * @param mixed  $varValue The property value
+	 */
+	public function __set($strKey, $varValue)
+	{
+		switch ($strKey)
+		{
+			case 'metaFields':
+				if (!array_is_assoc($varValue))
+				{
+					$varValue = array_combine($varValue, array_fill(0, count($varValue), ''));
+				}
+
+				$this->arrConfiguration['metaFields'] = $varValue;
+				break;
+
+			default:
+				parent::__set($strKey, $varValue);
+				break;
+		}
+	}
+
+
+	/**
 	 * Trim the values and add new languages if necessary
 	 *
 	 * @param mixed $varInput
@@ -53,7 +79,8 @@ class MetaWizard extends \Widget
 			{
 				if ($v != '')
 				{
-					$varInput[$v] = array('title'=>'', 'link'=>'', 'caption'=>'');
+					// Take the fields from the DCA (see #4327)
+					$varInput[$v] = array_combine(array_keys($this->metaFields), array_fill(0, count($this->metaFields), ''));
 				}
 
 				unset($varInput[$k]);
@@ -71,13 +98,6 @@ class MetaWizard extends \Widget
 	 */
 	public function generate()
 	{
-		// Make sure there is at least an empty array
-		if (!is_array($this->varValue) || empty($this->varValue))
-		{
-			$this->import('BackendUser', 'User');
-			$this->varValue = array($this->User->language=>array()); // see #4188
-		}
-
 		$count = 0;
 		$languages = $this->getLanguages();
 		$return = '';
@@ -88,6 +108,19 @@ class MetaWizard extends \Widget
 		// Only show the root page languages (see #7112, #7667)
 		$objRootLangs = $this->Database->query("SELECT REPLACE(language, '-', '_') AS language FROM tl_page WHERE type='root'");
 		$languages = array_intersect_key($languages, array_flip($objRootLangs->fetchEach('language')));
+
+		// Make sure there is at least an empty array
+		if (!is_array($this->varValue) || empty($this->varValue))
+		{
+			if (count($languages) > 0)
+			{
+				$this->varValue = array(key($languages)=>array()); // see #4188
+			}
+			else
+			{
+				return '<p class="tl_info">' . $GLOBALS['TL_LANG']['MSC']['metaNoLanguages'] . '</p>';
+			}
+		}
 
 		// Add the existing entries
 		if (!empty($this->varValue))
@@ -100,12 +133,12 @@ class MetaWizard extends \Widget
 				$return .= '
     <li class="' . (($count%2 == 0) ? 'even' : 'odd') . '" data-language="' . $lang . '">';
 
-				$return .= '<span class="lang">' . $languages[$lang] . ' ' . \Image::getHtml('delete.gif', '', 'class="tl_metawizard_img" onclick="Backend.metaDelete(this)"') . '</span>';
+				$return .= '<span class="lang">' . (isset($languages[$lang]) ? $languages[$lang] : $lang) . ' ' . \Image::getHtml('delete.gif', '', 'class="tl_metawizard_img" onclick="Backend.metaDelete(this)"') . '</span>';
 
 				// Take the fields from the DCA (see #4327)
-				foreach ($this->metaFields as $field)
+				foreach ($this->metaFields as $field=>$attributes)
 				{
-					$return .= '<label for="ctrl_' . $field . '_' . $count . '">' . $GLOBALS['TL_LANG']['MSC']['aw_' . $field] . '</label> <input type="text" name="' . $this->strId . '[' . $lang . '][' . $field . ']" id="ctrl_' . $field . '_' . $count . '" class="tl_text" value="' . specialchars($meta[$field]) . '"><br>';
+					$return .= '<label for="ctrl_' . $field . '_' . $count . '">' . $GLOBALS['TL_LANG']['MSC']['aw_' . $field] . '</label> <input type="text" name="' . $this->strId . '[' . $lang . '][' . $field . ']" id="ctrl_' . $field . '_' . $count . '" class="tl_text" value="' . specialchars($meta[$field]) . '"' . (!empty($attributes) ? ' ' . $attributes : '') . '><br>';
 				}
 
 				$return .= '

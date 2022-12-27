@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -23,37 +23,37 @@ namespace Contao;
  * @property string  $templates
  * @property string  $vars
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByName()
- * @method static $this findOneByAuthor()
- * @method static $this findOneByFolders()
- * @method static $this findOneByScreenshot()
- * @method static $this findOneByTemplates()
- * @method static $this findOneByVars()
+ * @method static \ThemeModel|null findById($id, $opt=array())
+ * @method static \ThemeModel|null findByPk($id, $opt=array())
+ * @method static \ThemeModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \ThemeModel|null findOneBy($col, $val, $opt=array())
+ * @method static \ThemeModel|null findOneByTstamp($val, $opt=array())
+ * @method static \ThemeModel|null findOneByName($val, $opt=array())
+ * @method static \ThemeModel|null findOneByAuthor($val, $opt=array())
+ * @method static \ThemeModel|null findOneByFolders($val, $opt=array())
+ * @method static \ThemeModel|null findOneByScreenshot($val, $opt=array())
+ * @method static \ThemeModel|null findOneByTemplates($val, $opt=array())
+ * @method static \ThemeModel|null findOneByVars($val, $opt=array())
  *
- * @method static \Model\Collection|\ThemeModel findByTstamp()
- * @method static \Model\Collection|\ThemeModel findByName()
- * @method static \Model\Collection|\ThemeModel findByAuthor()
- * @method static \Model\Collection|\ThemeModel findByFolders()
- * @method static \Model\Collection|\ThemeModel findByScreenshot()
- * @method static \Model\Collection|\ThemeModel findByTemplates()
- * @method static \Model\Collection|\ThemeModel findByVars()
- * @method static \Model\Collection|\ThemeModel findMultipleByIds()
- * @method static \Model\Collection|\ThemeModel findBy()
- * @method static \Model\Collection|\ThemeModel findAll()
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findByName($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findByAuthor($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findByFolders($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findByScreenshot($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findByTemplates($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findByVars($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\ThemeModel[]|\ThemeModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByTstamp()
- * @method static integer countByName()
- * @method static integer countByAuthor()
- * @method static integer countByFolders()
- * @method static integer countByScreenshot()
- * @method static integer countByTemplates()
- * @method static integer countByVars()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countByAuthor($val, $opt=array())
+ * @method static integer countByFolders($val, $opt=array())
+ * @method static integer countByScreenshot($val, $opt=array())
+ * @method static integer countByTemplates($val, $opt=array())
+ * @method static integer countByVars($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */

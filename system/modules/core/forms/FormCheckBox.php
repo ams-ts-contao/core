@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -121,7 +121,7 @@ class FormCheckBox extends \Widget
 		// Check for a valid option (see #4383)
 		if (!empty($varInput) && !$this->isValidOption($varInput))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalid'], (is_array($varInput) ? implode(', ', $varInput) : $varInput)));
+			$this->addError($GLOBALS['TL_LANG']['ERR']['invalid']);
 		}
 
 		// Add class "error"
@@ -175,17 +175,48 @@ class FormCheckBox extends \Widget
 	protected function getOptions()
 	{
 		$arrOptions = array();
+		$blnHasGroups = false;
 
 		foreach ($this->arrOptions as $i=>$arrOption)
 		{
+			if ($arrOption['group'])
+			{
+				if ($blnHasGroups)
+				{
+					$arrOptions[] = array
+					(
+						'type' => 'group_end'
+					);
+				}
+
+				$arrOptions[] = array
+				(
+					'type'  => 'group_start',
+					'label' => specialchars($arrOption['label'])
+				);
+
+				$blnHasGroups = true;
+			}
+			else
+			{
+				$arrOptions[] = array
+				(
+					'type'       => 'option',
+					'name'       => $this->strName . ((count($this->arrOptions) > 1) ? '[]' : ''),
+					'id'         => $this->strId . '_' . $i,
+					'value'      => $arrOption['value'],
+					'checked'    => $this->isChecked($arrOption),
+					'attributes' => $this->getAttributes(),
+					'label'      => $arrOption['label']
+				);
+			}
+		}
+
+		if ($blnHasGroups)
+		{
 			$arrOptions[] = array
 			(
-				'name'       => $this->strName . ((count($this->arrOptions) > 1) ? '[]' : ''),
-				'id'         => $this->strId . '_' . $i,
-				'value'      => $arrOption['value'],
-				'checked'    => $this->isChecked($arrOption),
-				'attributes' => $this->getAttributes(),
-				'label'      => $arrOption['label']
+				'type' => 'group_end'
 			);
 		}
 
@@ -236,7 +267,7 @@ class FormCheckBox extends \Widget
 			return sprintf('<fieldset id="ctrl_%s" class="checkbox_container%s"><legend>%s%s%s</legend>%s<input type="hidden" name="%s" value=""%s%s</fieldset>',
 							$this->strId,
 							(($this->strClass != '') ? ' ' . $this->strClass : ''),
-							($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
+							($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].' </span>' : ''),
 							$this->strLabel,
 							($this->mandatory ? '<span class="mandatory">*</span>' : ''),
 							$this->strError,

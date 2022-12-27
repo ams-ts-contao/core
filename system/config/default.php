@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -99,7 +99,7 @@ $GLOBALS['TL_CONFIG']['allowedTags']
 	. '<map><mark><menu>'
 	. '<nav>'
 	. '<object><ol><optgroup><option><output>'
-	. '<p><param><pre>'
+	. '<p><param><picture><pre>'
 	. '<q>'
 	. '<s><samp><section><select><small><source><span><strong><style><sub><sup>'
 	. '<table><tbody><td><textarea><tfoot><th><thead><time><tr><tt>'
@@ -262,8 +262,8 @@ $GLOBALS['TL_CONFIG']['lockPeriod']     = 300;
  *
  *   showHelp    = show a help text after each input field
  *   thumbnails  = show image thumbnails in the file manager
- *   useRTE      = use the rich text editor (TinyMCE)
- *   useCE       = use the code editor (ACE)
+ *   useRTE      = use the TinyMCE rich text editor
+ *   useCE       = use the Ace code editor
  */
 $GLOBALS['TL_CONFIG']['showHelp']   = true;
 $GLOBALS['TL_CONFIG']['thumbnails'] = true;
@@ -297,7 +297,7 @@ $GLOBALS['TL_CONFIG']['useCE']      = true;
 $GLOBALS['TL_CONFIG']['loginCount']           = 3;
 $GLOBALS['TL_CONFIG']['resultsPerPage']       = 30;
 $GLOBALS['TL_CONFIG']['maxResultsPerPage']    = 500;
-$GLOBALS['TL_CONFIG']['maxImageWidth']        = '';
+$GLOBALS['TL_CONFIG']['maxImageWidth']        = 0;
 $GLOBALS['TL_CONFIG']['defaultUser']          = 0;
 $GLOBALS['TL_CONFIG']['defaultGroup']         = 0;
 $GLOBALS['TL_CONFIG']['defaultChmod']         = array('u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'g4', 'g5', 'g6');

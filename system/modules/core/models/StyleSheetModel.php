@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -33,42 +33,42 @@ namespace Contao;
  * @property integer $tstamp2
  * @property integer $tstamp3
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findByName()
- * @method static $this findOneByPid()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByDisablePie()
- * @method static $this findOneByEmbedImages()
- * @method static $this findOneByCc()
- * @method static $this findOneByMedia()
- * @method static $this findOneByMediaQuery()
- * @method static $this findOneByVars()
+ * @method static \StyleSheetModel|null findById($id, $opt=array())
+ * @method static \StyleSheetModel|null findByPk($id, $opt=array())
+ * @method static \StyleSheetModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneBy($col, $val, $opt=array())
+ * @method static \StyleSheetModel|null findByName($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByPid($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByTstamp($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByDisablePie($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByEmbedImages($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByCc($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByMedia($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByMediaQuery($val, $opt=array())
+ * @method static \StyleSheetModel|null findOneByVars($val, $opt=array())
  *
- * @method static \Model\Collection|\StyleSheetModel findByPid()
- * @method static \Model\Collection|\StyleSheetModel findByTstamp()
- * @method static \Model\Collection|\StyleSheetModel findByDisablePie()
- * @method static \Model\Collection|\StyleSheetModel findByEmbedImages()
- * @method static \Model\Collection|\StyleSheetModel findByCc()
- * @method static \Model\Collection|\StyleSheetModel findByMedia()
- * @method static \Model\Collection|\StyleSheetModel findByMediaQuery()
- * @method static \Model\Collection|\StyleSheetModel findByVars()
- * @method static \Model\Collection|\StyleSheetModel findMultipleByIds()
- * @method static \Model\Collection|\StyleSheetModel findBy()
- * @method static \Model\Collection|\StyleSheetModel findAll()
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByPid($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByDisablePie($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByEmbedImages($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByCc($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByMedia($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByMediaQuery($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findByVars($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByPid()
- * @method static integer countByTstamp()
- * @method static integer countByName()
- * @method static integer countByDisablePie()
- * @method static integer countByEmbedImages()
- * @method static integer countByCc()
- * @method static integer countByMedia()
- * @method static integer countByMediaQuery()
- * @method static integer countByVars()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByPid($val, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countByDisablePie($val, $opt=array())
+ * @method static integer countByEmbedImages($val, $opt=array())
+ * @method static integer countByCc($val, $opt=array())
+ * @method static integer countByMedia($val, $opt=array())
+ * @method static integer countByMediaQuery($val, $opt=array())
+ * @method static integer countByVars($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -87,7 +87,7 @@ class StyleSheetModel extends \Model
 	 *
 	 * @param array $arrIds An array of style sheet IDs
 	 *
-	 * @return \Model\Collection|\StyleSheetModel|null A collection of models or null if there are no style sheets
+	 * @return \Model\Collection|\StyleSheetModel[]|\StyleSheetModel|null A collection of models or null if there are no style sheets
 	 */
 	public static function findByIds($arrIds)
 	{

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -39,7 +39,7 @@ class BackendTemplate extends \Template
 			foreach ($GLOBALS['TL_HOOKS']['parseBackendTemplate'] as $callback)
 			{
 				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]($strBuffer, $this->strTemplate);
+				$strBuffer = $this->{$callback[0]}->{$callback[1]}($strBuffer, $this->strTemplate);
 			}
 		}
 
@@ -64,7 +64,7 @@ class BackendTemplate extends \Template
 
 			foreach (array_unique($GLOBALS['TL_CSS']) as $stylesheet)
 			{
-				$options = \String::resolveFlaggedUrl($stylesheet);
+				$options = \StringUtil::resolveFlaggedUrl($stylesheet);
 				$strStyleSheets .= \Template::generateStyleTag($this->addStaticUrlTo($stylesheet), $options->media);
 			}
 
@@ -84,7 +84,7 @@ class BackendTemplate extends \Template
 
 			foreach (array_unique($GLOBALS['TL_JAVASCRIPT']) as $javascript)
 			{
-				$options = \String::resolveFlaggedUrl($javascript);
+				$options = \StringUtil::resolveFlaggedUrl($javascript);
 				$strJavaScripts .= \Template::generateScriptTag($this->addStaticUrlTo($javascript), false, $options->async) . "\n";
 			}
 
@@ -112,7 +112,7 @@ class BackendTemplate extends \Template
 			foreach ($GLOBALS['TL_HOOKS']['outputBackendTemplate'] as $callback)
 			{
 				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]($strBuffer, $this->strTemplate);
+				$strBuffer = $this->{$callback[0]}->{$callback[1]}($strBuffer, $this->strTemplate);
 			}
 		}
 

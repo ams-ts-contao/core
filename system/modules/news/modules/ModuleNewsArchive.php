@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -145,7 +145,7 @@ class ModuleNewsArchive extends \ModuleNews
 		{
 			/** @var \PageError404 $objHandler */
 			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
-			#$objHandler->generate($objPage->id);
+			$objHandler->generate($objPage->id);
 		}
 
 		$this->Template->articles = array();

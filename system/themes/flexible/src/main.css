@@ -1,9 +1,9 @@
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 /* Body */
@@ -282,6 +282,9 @@ h2.sub_headline_index {
 }
 .tl_subpanel strong {
 	line-height:21px;
+}
+.tl_subpanel select {
+	height:20px;
 }
 .tl_submit_panel {
 	padding-left:6px;
@@ -710,9 +713,11 @@ input[type=search]::-webkit-search-decoration {
 }
 .tl_form_field_preview td {
 	padding-right:6px;
+	vertical-align:top;
 }
 .tl_form_field_preview td.col_0 {
 	min-width:180px;
+	padding-top:3px;
 }
 .tl_form_field_preview .text,.tl_form_field_preview .password {
 	width:140px;
@@ -722,6 +727,11 @@ input[type=search]::-webkit-search-decoration {
 }
 .tl_form_field_preview textarea {
 	width:280px;
+}
+.tl_form_field_preview .checkbox_container legend,.tl_form_field_preview .radio_container legend {
+	position:absolute;
+	left:4px;
+	margin-top:3px;
 }
 
 /* Tree view */
@@ -900,7 +910,7 @@ ul.sgallery li {
 #tl_messages h2,#tl_shortcuts h2,#tl_versions h2 {
 	margin:18px 0 6px;
 	padding:2px 6px 3px;
-	border:1px solid #e9e9e9;
+	border:solid #e9e9e9;
 	border-width:1px 0;
 	background:#f6f6f6;
 }
@@ -975,7 +985,17 @@ ul.sgallery li {
 .tl_modulewizard .tl_select {
 	width:400px;
 }
-.tl_modulewizard img.mw_enable,.js .tl_modulewizard input.mw_enable {
+.js .tl_modulewizard input.mw_enable {
+	border:0;
+	clip:rect(0 0 0 0);
+	height:1px;
+	margin:-1px;
+	overflow:hidden;
+	padding:0;
+	position:absolute;
+	width:1px;
+}
+.tl_modulewizard img.mw_enable {
 	display:none;
 }
 .js .tl_modulewizard img.mw_enable {
@@ -1231,6 +1251,12 @@ ul.sortable li:hover .dirname {
 	border:0;
 	z-index:10000;
 }
+.float_left {
+	float:left;
+}
+.float_right {
+	float:right;
+}
 
 /* Navigation icons */
 a.navigation.article {
@@ -1430,7 +1456,7 @@ fieldset.tl_tbox {
 }
 fieldset.tl_tbox,fieldset.tl_box {
 	padding-top:6px;
-	border:1px solid #ddd;
+	border:solid #ddd;
 	border-width:1px 0 0;
 }
 fieldset.nolegend {
@@ -1494,24 +1520,26 @@ fieldset.collapsed > legend {
 	overflow:hidden;
 	background:#f6f6f6;
 	margin-top:6px;
-	border:1px solid #e9e9e9;
+	border:solid #e9e9e9;
 	border-width:1px 0;
-	padding:2px 0 4px;
 }
 .pagination ul {
-	width:60%;
+	max-width:60%;
 	float:right;
 	text-align:right;
-	padding-right:3px;
+	padding-right:2px;
 }
 .pagination p {
-	width:30%;
+	max-width:30%;
 	float:left;
 	margin-bottom:0;
 }
 .pagination li {
-	display:inline;
-	padding-right:3px;
+	float:left;
+}
+.pagination a,.pagination span,.pagination p {
+	display:block;
+	padding:3px 4px 4px;
 }
 .pagination .current {
 	color:#999;
@@ -1823,6 +1851,7 @@ fieldset.collapsed > legend {
 	}
 	.tl_submit_panel {
 		float:right;
+		z-index:1;
 	}
 	input.tl_submit {
 		margin-top:3px;

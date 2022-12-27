@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -103,7 +103,7 @@ class GdImage
 		$image = imagecreatetruecolor($width, $height);
 
 		$arrGdInfo = gd_info();
-		$strGdVersion = preg_replace('/[^0-9\.]+/', '', $arrGdInfo['GD Version']);
+		$strGdVersion = preg_replace('/[^0-9.]+/', '', $arrGdInfo['GD Version']);
 
 		// Handle transparency (GDlib >= 2.0 required)
 		if (version_compare($strGdVersion, '2.0', '>='))
@@ -162,7 +162,7 @@ class GdImage
 	public function saveToFile($path)
 	{
 		$arrGdInfo = gd_info();
-		$extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+		$extension = strtolower(substr($path, strrpos($path, '.') + 1));
 
 		// Fallback to PNG if GIF ist not supported
 		if ($extension == 'gif' && !$arrGdInfo['GIF Create Support'])
@@ -204,7 +204,7 @@ class GdImage
 	/**
 	 * Save the GD image to a file
 	 *
-	 * @param self    $gdImage The target GD image
+	 * @param GdImage $gdImage The target GD image
 	 * @param integer $x       The target X coordinate
 	 * @param integer $y       The target Y coordinate
 	 * @param integer $width   The target width

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -151,14 +151,10 @@ class ModuleFaqList extends \Module
 		{
 			$this->arrTargets[$jumpTo] = ampersand(\Environment::get('request'), true);
 
-			if ($jumpTo > 0)
+			if ($jumpTo > 0 && ($objTarget = \PageModel::findByPk($jumpTo)) !== null)
 			{
-				$objTarget = \PageModel::findByPk($jumpTo);
-
-				if ($objTarget !== null)
-				{
-					$this->arrTargets[$jumpTo] = ampersand($this->generateFrontendUrl($objTarget->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/items/%s')));
-				}
+				/** @var \PageModel $objTarget */
+				$this->arrTargets[$jumpTo] = ampersand($objTarget->getFrontendUrl((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/%s' : '/items/%s'));
 			}
 		}
 

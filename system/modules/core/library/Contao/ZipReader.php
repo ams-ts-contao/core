@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -428,8 +428,6 @@ class ZipReader
 	/**
 	 * Return a list of all files in the archive
 	 *
-	 * @return array The files array
-	 *
 	 * @throws \Exception If the central directory cannot be found
 	 */
 	protected function readCentralDirectory()
@@ -538,7 +536,7 @@ class ZipReader
 			$arrFile['file_dirname'] = (($path = dirname($arrFile['file_name'])) != '.' ? $path : '');
 
 			// Add UNIX time
-			$arrFile['last_mod_file_unix'] = $this->decToUnix($arrFile['last_mod_file_time'], $arrFile['last_mod_file_date']);
+			$arrFile['last_mod_file_unix'] = $this->decToUnix((int) $arrFile['last_mod_file_time'], (int) $arrFile['last_mod_file_date']);
 
 			// Read next signature
 			$strSignature = @fread($this->resFile, 4);

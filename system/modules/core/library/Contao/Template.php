@@ -1,14 +1,16 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
+
+use MatthiasMullie\Minify;
 
 
 /**
@@ -53,6 +55,31 @@ abstract class Template extends \BaseTemplate
 	 * @var array
 	 */
 	protected $arrData = array();
+
+	/**
+	 * Valid JavaScipt types
+	 * @var array
+	 * @see http://www.w3.org/TR/html5/scripting-1.html#scriptingLanguages
+	 */
+	protected static $validJavaScriptTypes = array
+	(
+		'application/ecmascript',
+		'application/javascript',
+		'application/x-ecmascript',
+		'application/x-javascript',
+		'text/ecmascript',
+		'text/javascript',
+		'text/javascript1.0',
+		'text/javascript1.1',
+		'text/javascript1.2',
+		'text/javascript1.3',
+		'text/javascript1.4',
+		'text/javascript1.5',
+		'text/jscript',
+		'text/livescript',
+		'text/x-ecmascript',
+		'text/x-javascript',
+	);
 
 
 	/**
@@ -243,7 +270,7 @@ abstract class Template extends \BaseTemplate
 			foreach ($GLOBALS['TL_HOOKS']['parseTemplate'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($this);
+				$this->{$callback[0]}->{$callback[1]}($this);
 			}
 		}
 
@@ -267,6 +294,9 @@ abstract class Template extends \BaseTemplate
 		header('Vary: User-Agent', false);
 		header('Content-Type: ' . $this->strContentType . '; charset=' . \Config::get('characterSet'));
 
+		// CORS support
+		\Controller::setCorsHeaders();
+
 		// Add the debug bar
 		if (\Config::get('debugMode') && !\Config::get('hideDebugBar') && !isset($_GET['popup']))
 		{
@@ -284,7 +314,7 @@ abstract class Template extends \BaseTemplate
 			foreach ($GLOBALS['TL_HOOKS']['postFlushData'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($this->strBuffer, $this);
+				$this->{$callback[0]}->{$callback[1]}($this->strBuffer, $this);
 			}
 		}
 	}
@@ -316,7 +346,7 @@ abstract class Template extends \BaseTemplate
 
 		$strDebug = sprintf(
 			"<!-- indexer::stop -->\n"
-			. '<div id="contao-debug" class="%s">'
+			. '<div id="contao-debug">'
 			. '<p>'
 				. '<span class="debug-time">Execution time: %s ms</span>'
 				. '<span class="debug-memory">Memory usage: %s</span>'
@@ -326,7 +356,6 @@ abstract class Template extends \BaseTemplate
 				. '<span id="debug-tog">&nbsp;</span>'
 			. '</p>'
 			. '<div><pre>',
-			\Input::cookie('CONTAO_CONSOLE'),
 			$this->getFormattedNumber(($intElapsed * 1000), 0),
 			$this->getReadableSize(memory_get_peak_usage()),
 			count($GLOBALS['TL_DEBUG']['database_queries']),
@@ -347,15 +376,10 @@ abstract class Template extends \BaseTemplate
 		$strDebug .= '</pre></div></div>'
 			. $this->generateInlineScript(
 				"(function($) {"
-					. "$$('#contao-debug>*').setStyle('width',window.getSize().x);"
-					. "$(document.body).setStyle('margin-bottom',$('contao-debug').hasClass('closed')?'60px':'320px');"
+					. "$(document.body).addClass('debug-enabled " . \Input::cookie('CONTAO_CONSOLE') . "');"
 					. "$('debug-tog').addEvent('click',function(e) {"
-						. "$('contao-debug').toggleClass('closed');"
-						. "Cookie.write('CONTAO_CONSOLE',$('contao-debug').hasClass('closed')?'closed':'',{path:'" . (TL_PATH ?: '/') . "'});"
-						. "$(document.body).setStyle('margin-bottom',$('contao-debug').hasClass('closed')?'60px':'320px');"
-					. "});"
-					. "window.addEvent('resize',function() {"
-						. "$$('#contao-debug>*').setStyle('width',window.getSize().x);"
+						. "$(document.body).toggleClass('debug-closed');"
+						. "Cookie.write('CONTAO_CONSOLE',$(document.body).hasClass('debug-closed')?'debug-closed':'',{path:'" . (TL_PATH ?: '/') . "'});"
 					. "});"
 				. "})(document.id);",
 				($this->strFormat == 'xhtml')
@@ -388,6 +412,25 @@ abstract class Template extends \BaseTemplate
 		$strHtml = '';
 		$blnPreserveNext = false;
 		$blnOptimizeNext = false;
+		$strType = null;
+
+		// Check for valid JavaScript types (see #7927)
+		$isJavaScript = function ($strChunk)
+		{
+			$typeMatch = array();
+
+			if (preg_match('/\stype\s*=\s*(?:(?J)(["\'])\s*(?<type>.*?)\s*\1|(?<type>[^\s>]+))/i', $strChunk, $typeMatch) && !in_array(strtolower($typeMatch['type']), static::$validJavaScriptTypes))
+			{
+				return false;
+			}
+
+			if (preg_match('/\slanguage\s*=\s*(?:(?J)(["\'])\s*(?<type>.*?)\s*\1|(?<type>[^\s>]+))/i', $strChunk, $typeMatch) && !in_array('text/' . strtolower($typeMatch['type']), static::$validJavaScriptTypes))
+			{
+				return false;
+			}
+
+			return true;
+		};
 
 		// Recombine the markup
 		foreach ($arrChunks as $strChunk)
@@ -396,9 +439,22 @@ abstract class Template extends \BaseTemplate
 			{
 				$blnPreserveNext = true;
 			}
-			elseif (strncasecmp($strChunk, '<script', 7) === 0 || strncasecmp($strChunk, '<style', 6) === 0)
+			elseif (strncasecmp($strChunk, '<script', 7) === 0)
+			{
+				if ($isJavaScript($strChunk))
+				{
+					$blnOptimizeNext = true;
+					$strType = 'js';
+				}
+				else
+				{
+					$blnPreserveNext = true;
+				}
+			}
+			elseif (strncasecmp($strChunk, '<style', 6) === 0)
 			{
 				$blnOptimizeNext = true;
+				$strType = 'css';
 			}
 			elseif ($blnPreserveNext)
 			{
@@ -409,32 +465,30 @@ abstract class Template extends \BaseTemplate
 				$blnOptimizeNext = false;
 
 				// Minify inline scripts
-				$strChunk = str_replace(array("/* <![CDATA[ */\n", "<!--\n", "\n//-->"), array('/* <![CDATA[ */', '', ''), $strChunk);
-				$strChunk = preg_replace(array('@(?<![:\'"])//(?!W3C|DTD|EN).*@', '/[ \n\t]*(;|=|\{|\}|\[|\]|&&|,|<|>|\',|",|\':|":|: |\|\|)[ \n\t]*/'), array('', '$1'), $strChunk);
-				$strChunk = trim($strChunk);
+				if ($strType == 'js')
+				{
+					$objMinify = new Minify\JS();
+					$objMinify->add($strChunk);
+					$strChunk = $objMinify->minify();
+				}
+				elseif ($strType == 'css')
+				{
+					$objMinify = new Minify\CSS();
+					$objMinify->add($strChunk);
+					$strChunk = $objMinify->minify();
+				}
 			}
 			else
 			{
-				$arrReplace = array
-				(
-					'/\n ?\n+/'                   => "\n",    // Convert multiple line-breaks
-					'/^[\t ]+</m'                 => '<',     // Remove tag indentation
-					'/>\n<(a|input|select|span)/' => '> <$1', // Remove line-breaks between tags
-					'/([^>])\n/'                  => '$1 ',   // Remove line-breaks of wrapped text
-					'/  +/'                       => ' ',     // Remove redundant whitespace characters
-					'/\n/'                        => '',      // Remove all remaining line-breaks
-					'/ <\/(div|p)>/'              => '</$1>'  // Remove spaces before closing DIV and P tags
-				);
-
+				// Remove line indentations and trailing spaces
 				$strChunk = str_replace("\r", '', $strChunk);
-				$strChunk = preg_replace(array_keys($arrReplace), array_values($arrReplace), $strChunk);
-				$strChunk = trim($strChunk);
+				$strChunk = preg_replace(array('/^[\t ]+/m', '/[\t ]+$/m', '/\n\n+/'), array('', '', "\n"), $strChunk);
 			}
 
 			$strHtml .= $strChunk;
 		}
 
-		return $strHtml;
+		return trim($strHtml);
 	}
 
 

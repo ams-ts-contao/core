@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -126,7 +126,7 @@ class Form extends \Hybrid
 			foreach ($GLOBALS['TL_HOOKS']['compileFormFields'] as $callback)
 			{
 				$this->import($callback[0]);
-				$arrFields = $this->$callback[0]->$callback[1]($arrFields, $formId, $this);
+				$arrFields = $this->{$callback[0]}->{$callback[1]}($arrFields, $formId, $this);
 			}
 		}
 
@@ -188,7 +188,7 @@ class Form extends \Hybrid
 					foreach ($GLOBALS['TL_HOOKS']['loadFormField'] as $callback)
 					{
 						$this->import($callback[0]);
-						$objWidget = $this->$callback[0]->$callback[1]($objWidget, $formId, $this->arrData, $this);
+						$objWidget = $this->{$callback[0]}->{$callback[1]}($objWidget, $formId, $this->arrData, $this);
 					}
 				}
 
@@ -203,7 +203,7 @@ class Form extends \Hybrid
 						foreach ($GLOBALS['TL_HOOKS']['validateFormField'] as $callback)
 						{
 							$this->import($callback[0]);
-							$objWidget = $this->$callback[0]->$callback[1]($objWidget, $formId, $this->arrData, $this);
+							$objWidget = $this->{$callback[0]}->{$callback[1]}($objWidget, $formId, $this->arrData, $this);
 						}
 					}
 
@@ -279,7 +279,8 @@ class Form extends \Hybrid
 		// Get the target URL
 		if ($this->method == 'GET' && $this->jumpTo && ($objTarget = $this->objModel->getRelated('jumpTo')) !== null)
 		{
-			$this->Template->action = $this->generateFrontendUrl($objTarget->row());
+			/** @var \PageModel $objTarget */
+			$this->Template->action = $objTarget->getFrontendUrl();
 		}
 
 		return $this->Template->parse();
@@ -301,7 +302,7 @@ class Form extends \Hybrid
 			foreach ($GLOBALS['TL_HOOKS']['prepareFormData'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($arrSubmitted, $arrLabels, $this, $arrFields);
+				$this->{$callback[0]}->{$callback[1]}($arrSubmitted, $arrLabels, $this, $arrFields);
 			}
 		}
 
@@ -349,7 +350,7 @@ class Form extends \Hybrid
 				}
 			}
 
-			$recipients = \String::splitCsv($this->recipient);
+			$recipients = \StringUtil::splitCsv($this->recipient);
 
 			// Format recipients
 			foreach ($recipients as $k=>$v)
@@ -412,7 +413,7 @@ class Form extends \Hybrid
 			// Attach CSV file
 			if ($this->format == 'csv')
 			{
-				$email->attachFileFromString(\String::decodeEntities('"' . implode('";"', $keys) . '"' . "\n" . '"' . implode('";"', $values) . '"'), 'form.csv', 'text/comma-separated-values');
+				$email->attachFileFromString(\StringUtil::decodeEntities('"' . implode('";"', $keys) . '"' . "\n" . '"' . implode('";"', $values) . '"'), 'form.csv', 'text/comma-separated-values');
 			}
 
 			$uploaded = '';
@@ -434,7 +435,7 @@ class Form extends \Hybrid
 			}
 
 			$uploaded = strlen(trim($uploaded)) ? "\n\n---\n" . $uploaded : '';
-			$email->text = \String::decodeEntities(trim($message)) . $uploaded . "\n\n";
+			$email->text = \StringUtil::decodeEntities(trim($message)) . $uploaded . "\n\n";
 
 			// Send the e-mail
 			try
@@ -485,7 +486,7 @@ class Form extends \Hybrid
 				foreach ($GLOBALS['TL_HOOKS']['storeFormData'] as $callback)
 				{
 					$this->import($callback[0]);
-					$arrSet = $this->$callback[0]->$callback[1]($arrSet, $this);
+					$arrSet = $this->{$callback[0]}->{$callback[1]}($arrSet, $this);
 				}
 			}
 
@@ -516,7 +517,7 @@ class Form extends \Hybrid
 			foreach ($GLOBALS['TL_HOOKS']['processFormData'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($arrSubmitted, $this->arrData, $arrFiles, $arrLabels, $this);
+				$this->{$callback[0]}->{$callback[1]}($arrSubmitted, $this->arrData, $arrFiles, $arrLabels, $this);
 			}
 		}
 

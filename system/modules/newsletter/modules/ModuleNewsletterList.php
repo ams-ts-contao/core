@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -77,7 +77,7 @@ class ModuleNewsletterList extends \Module
 		{
 			while ($objNewsletter->next())
 			{
-				/** @var \NewsletterModel $objNewsletter */
+				/** @var \PageModel $objTarget */
 				if (($objTarget = $objNewsletter->getRelated('pid')) === null)
 				{
 					continue;
@@ -95,13 +95,10 @@ class ModuleNewsletterList extends \Module
 
 				if (!isset($arrJumpTo[$objTarget->jumpTo]))
 				{
-					/** @var \PageModel $objModel */
-					$objModel = $objTarget->getRelated('jumpTo');
-					$objJumpTo = $objModel->loadDetails();
-
-					if ($objJumpTo !== null)
+					if (($objJumpTo = $objTarget->getRelated('jumpTo')) !== null)
 					{
-						$arrJumpTo[$objTarget->jumpTo] = $this->generateFrontendUrl($objJumpTo->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/items/%s'));
+						/** @var \PageModel $objJumpTo */
+						$arrJumpTo[$objTarget->jumpTo] = $objJumpTo->getFrontendUrl((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/%s' : '/items/%s');
 					}
 					else
 					{
@@ -120,7 +117,7 @@ class ModuleNewsletterList extends \Module
 					'date' => \Date::parse($objPage->dateFormat, $objNewsletter->date),
 					'datim' => \Date::parse($objPage->datimFormat, $objNewsletter->date),
 					'time' => \Date::parse($objPage->timeFormat, $objNewsletter->date),
-					'channel' => $objNewsletter->channel
+					'channel' => $objNewsletter->pid
 				);
 			}
 		}

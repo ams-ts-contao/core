@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -187,7 +187,8 @@ class Environment
 	{
 		if (!empty($_SERVER['REQUEST_URI']))
 		{
-			$strRequest = $_SERVER['REQUEST_URI'];
+			$arrComponents = parse_url($_SERVER['REQUEST_URI']);
+			$strRequest = $arrComponents['path'] . (isset($arrComponents['query']) ? '?' . $arrComponents['query'] : '');
 		}
 		else
 		{
@@ -223,7 +224,7 @@ class Environment
 			{
 				$locale = $chunks[0] . '-' . strtoupper($chunks[1]);
 
-				if (preg_match('/^[a-z]{2}(\-[A-Z]{2})?$/', $locale))
+				if (preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $locale))
 				{
 					$arrLanguages[] = $locale;
 				}
@@ -288,7 +289,7 @@ class Environment
 			}
 		}
 
-		return preg_replace('/[^A-Za-z0-9\[\]\.:-]/', '', $host);
+		return preg_replace('/[^A-Za-z0-9[\].:-]/', '', $host);
 	}
 
 
@@ -299,7 +300,7 @@ class Environment
 	 */
 	protected static function httpXForwardedHost()
 	{
-		return preg_replace('/[^A-Za-z0-9\[\]\.:-]/', '', $_SERVER['HTTP_X_FORWARDED_HOST']);
+		return preg_replace('/[^A-Za-z0-9[\].:-]/', '', $_SERVER['HTTP_X_FORWARDED_HOST']);
 	}
 
 
@@ -310,7 +311,12 @@ class Environment
 	 */
 	protected static function ssl()
 	{
-		return ($_SERVER['SSL_SESSION_ID'] || $_SERVER['HTTPS'] == 'on' || $_SERVER['HTTPS'] == 1);
+		if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && in_array($_SERVER['REMOTE_ADDR'], trimsplit(',', \Config::get('proxyServerIps'))))
+		{
+		    return strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https';
+		}
+
+		return ($_SERVER['SSL_SESSION_ID'] || strtolower($_SERVER['HTTPS']) == 'on' || $_SERVER['HTTPS'] == 1);
 	}
 
 
@@ -353,7 +359,7 @@ class Environment
 	protected static function ip()
 	{
 		// No X-Forwarded-For IP
-		if (empty($_SERVER['HTTP_X_FORWARDED_FOR']) || !preg_match('/^[A-Fa-f0-9, \.\:]+$/', $_SERVER['HTTP_X_FORWARDED_FOR']))
+		if (empty($_SERVER['HTTP_X_FORWARDED_FOR']) || !preg_match('/^[A-Fa-f0-9, .:]+$/', $_SERVER['HTTP_X_FORWARDED_FOR']))
 		{
 			return substr($_SERVER['REMOTE_ADDR'], 0, 64);
 		}

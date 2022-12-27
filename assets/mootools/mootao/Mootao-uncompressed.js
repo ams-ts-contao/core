@@ -1,9 +1,9 @@
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -69,7 +69,7 @@ Request.Contao = new Class(
 		// Isolate scripts and execute them
 		if (json.content != '') {
 			json.content = json.content.stripScripts(function(script) {
-				json.javascript = script.replace(/<!--|\/\/-->|<!\[CDATA\[\/\/>|<!\]\]>/g, '');
+				json.javascript = script.replace(/<!--|\/\/-->|<!\[CDATA\[\/\/>|<!]]>/g, '');
 			});
 			if (json.javascript && this.options.evalScripts) {
 				Browser.exec(json.javascript);
@@ -109,10 +109,10 @@ Tips.Contao = new Class(
 
 	options: {
 		id: 'tip',
-		onShow: function(){
+		onShow: function() {
 			this.tip.setStyle('display', 'block');
 		},
-		onHide: function(){
+		onHide: function() {
 			this.tip.setStyle('display', 'none');
 		},
 		title: 'title',
@@ -302,5 +302,66 @@ Class.refactor(Sortables,
 			element.fireEvent('touchstart', event);
 		});
 		return clone;
+	}
+});
+
+
+/*
+---
+
+script: Request.Queue.js
+
+name: Request.Queue
+
+description: Extends the base Request.Queue class and attempts to fix some issues.
+
+license: MIT-style license
+
+authors:
+ - Leo Feyer
+
+requires:
+  - Core/Element
+  - Core/Request
+  - Class.Binds
+
+provides: [Request.Queue]
+
+...
+*/
+
+Class.refactor(Request.Queue,
+{
+	// Do not fire the "end" event here
+	onComplete: function(){
+		this.fireEvent('complete', arguments);
+	},
+
+	// Call resume() instead of runNext()
+	onCancel: function(){
+		if (this.options.autoAdvance && !this.error) this.resume();
+		this.fireEvent('cancel', arguments);
+	},
+
+	// Call resume() instead of runNext() and fire the "end" event
+	onSuccess: function(){
+		if (this.options.autoAdvance && !this.error) this.resume();
+		this.fireEvent('success', arguments);
+		if (!this.queue.length && !this.isRunning()) this.fireEvent('end');
+	},
+
+	// Call resume() instead of runNext() and fire the "end" event
+	onFailure: function(){
+		this.error = true;
+		if (!this.options.stopOnFailure && this.options.autoAdvance) this.resume();
+		this.fireEvent('failure', arguments);
+		if (!this.queue.length && !this.isRunning()) this.fireEvent('end');
+	},
+
+	// Call resume() instead of runNext()
+	onException: function(){
+		this.error = true;
+		if (!this.options.stopOnFailure && this.options.autoAdvance) this.resume();
+		this.fireEvent('exception', arguments);
 	}
 });

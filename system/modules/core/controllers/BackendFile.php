@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -104,7 +104,7 @@ class BackendFile extends \Backend
 			// Can be a UUID or a path
 			if (\Validator::isStringUuid($v))
 			{
-				$arrValues[$k] = \String::uuidToBin($v);
+				$arrValues[$k] = \StringUtil::uuidToBin($v);
 			}
 		}
 
@@ -116,7 +116,7 @@ class BackendFile extends \Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$arrValues = $this->$callback[0]->$callback[1]($arrValues, $objDca);
+					$arrValues = $this->{$callback[0]}->{$callback[1]}($arrValues, $objDca);
 				}
 				elseif (is_callable($callback))
 				{
@@ -141,11 +141,15 @@ class BackendFile extends \Backend
 		$objTemplate->search = $GLOBALS['TL_LANG']['MSC']['search'];
 		$objTemplate->action = ampersand(\Environment::get('request'));
 		$objTemplate->value = $this->Session->get('file_selector_search');
-		$objTemplate->manager = $GLOBALS['TL_LANG']['MSC']['fileManager'];
-		$objTemplate->managerHref = 'contao/main.php?do=files&amp;popup=1';
 		$objTemplate->breadcrumb = $GLOBALS['TL_DCA']['tl_files']['list']['sorting']['breadcrumb'];
 
-		if (\Input::get('switch'))
+		if ($this->User->hasAccess('files', 'modules'))
+		{
+			$objTemplate->manager = $GLOBALS['TL_LANG']['MSC']['fileManager'];
+			$objTemplate->managerHref = 'contao/main.php?do=files&amp;popup=1';
+		}
+
+		if (\Input::get('switch') && $this->User->hasAccess('page', 'modules'))
 		{
 			$objTemplate->switch = $GLOBALS['TL_LANG']['MSC']['pagePicker'];
 			$objTemplate->switchHref = str_replace('contao/file.php', 'contao/page.php', ampersand(\Environment::get('request')));

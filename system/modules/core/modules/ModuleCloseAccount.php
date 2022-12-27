@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -70,7 +70,7 @@ class ModuleCloseAccount extends \Module
 			'name' => 'password',
 			'inputType' => 'text',
 			'label' => $GLOBALS['TL_LANG']['MSC']['password'][0],
-			'eval' => array('hideInput'=>true, 'mandatory'=>true, 'required'=>true, 'tableless'=>$this->tableless)
+			'eval' => array('hideInput'=>true, 'preserveTags'=>true, 'mandatory'=>true, 'required'=>true, 'tableless'=>$this->tableless)
 		);
 
 		$objWidget = new \FormTextField(\FormTextField::getAttributesFromDca($arrField, $arrField['name']));
@@ -82,24 +82,10 @@ class ModuleCloseAccount extends \Module
 			$objWidget->validate();
 
 			// Validate the password
-			if (!$objWidget->hasErrors())
+			if (!$objWidget->hasErrors() && !password_verify($objWidget->value, $this->User->password))
 			{
-				// The password has been generated with crypt()
-				if (\Encryption::test($this->User->password))
-				{
-					$blnAuthenticated = \Encryption::verify($objWidget->value, $this->User->password);
-				}
-				else
-				{
-					list($strPassword, $strSalt) = explode(':', $this->User->password);
-					$blnAuthenticated = ($strSalt == '') ? ($strPassword === sha1($objWidget->value)) : ($strPassword === sha1($strSalt . $objWidget->value));
-				}
-
-				if (!$blnAuthenticated)
-				{
-					$objWidget->value = '';
-					$objWidget->addError($GLOBALS['TL_LANG']['ERR']['invalidPass']);
-				}
+				$objWidget->value = '';
+				$objWidget->addError($GLOBALS['TL_LANG']['ERR']['invalidPass']);
 			}
 
 			// Close account
@@ -111,7 +97,7 @@ class ModuleCloseAccount extends \Module
 					foreach ($GLOBALS['TL_HOOKS']['closeAccount'] as $callback)
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($this->User->id, $this->reg_close, $this);
+						$this->{$callback[0]}->{$callback[1]}($this->User->id, $this->reg_close, $this);
 					}
 				}
 
@@ -121,7 +107,7 @@ class ModuleCloseAccount extends \Module
 				if ($this->reg_close == 'close_delete')
 				{
 					$objMember->delete();
-					$this->log('User account ID ' . $this->User->id . ' (' . $this->User->email . ') has been deleted', __METHOD__, TL_ACCESS);
+					$this->log('User account ID ' . $this->User->id . ' (' . \Idna::decodeEmail($this->User->email) . ') has been deleted', __METHOD__, TL_ACCESS);
 				}
 				// Deactivate the account
 				else
@@ -129,7 +115,7 @@ class ModuleCloseAccount extends \Module
 					$objMember->disable = 1;
 					$objMember->tstamp = time();
 					$objMember->save();
-					$this->log('User account ID ' . $this->User->id . ' (' . $this->User->email . ') has been deactivated', __METHOD__, TL_ACCESS);
+					$this->log('User account ID ' . $this->User->id . ' (' . \Idna::decodeEmail($this->User->email) . ') has been deactivated', __METHOD__, TL_ACCESS);
 				}
 
 				$this->User->logout();

@@ -3,7 +3,7 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * Copyright (c) 2005-2016 Leo Feyer
  *
  * @package   Repository
  * @author    Peter Koch, IBK Software AG
@@ -375,7 +375,7 @@ class RepositoryManager extends RepositoryBackendModule
 		foreach ($exts as $ext) {
 			if ((int)$ext->updprot==0) {
 				$label =
-					($ext->version != $ext->upd_version || $ext->upd_build != $ext->upd_build)
+					($ext->version != $ext->upd_version || $ext->build != $ext->upd_build)
 					? $text['updatingext']
 					: $text['validatingext'];
 				$rep->log .=
@@ -481,6 +481,7 @@ class RepositoryManager extends RepositoryBackendModule
 			$_SESSION['sql_commands'] = array();
 		} // if
 		$this->handleRunOnce(); // PATCH
+		$this->loadLanguageFile('tl_install');
 		$this->import('Database\\Installer', 'Installer');
 		$rep->dbUpdate = $this->Installer->generateSqlForm();
 		if ($rep->dbUpdate != '') {

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -72,7 +72,8 @@ class ModuleCalendar extends \Events
 
 		if ($this->jumpTo && ($objTarget = $this->objModel->getRelated('jumpTo')) !== null)
 		{
-			$this->strLink = $this->generateFrontendUrl($objTarget->row());
+			/** @var \PageModel $objTarget */
+			$this->strLink = $objTarget->getFrontendUrl();
 		}
 
 		return parent::generate();
@@ -131,7 +132,7 @@ class ModuleCalendar extends \Events
 		$intPrevYm = intval($prevYear . str_pad($prevMonth, 2, 0, STR_PAD_LEFT));
 
 		// Only generate a link if there are events (see #4160)
-		if ($objMinMax->dateFrom !== null && $intPrevYm >= date('Ym', $objMinMax->dateFrom))
+		if (($objMinMax->dateFrom !== null && $intPrevYm >= date('Ym', $objMinMax->dateFrom)) || $intPrevYm >= date('Ym'))
 		{
 			$objTemplate->prevHref = $this->strUrl . (\Config::get('disableAlias') ? '?id=' . \Input::get('id') . '&amp;' : '?') . 'month=' . $intPrevYm;
 			$objTemplate->prevTitle = specialchars($lblPrevious);
@@ -149,7 +150,7 @@ class ModuleCalendar extends \Events
 		$intNextYm = $nextYear . str_pad($nextMonth, 2, 0, STR_PAD_LEFT);
 
 		// Only generate a link if there are events (see #4160)
-		if ($objMinMax->dateTo !== null && $intNextYm <= date('Ym', max($objMinMax->dateTo, $objMinMax->repeatUntil)))
+		if (($objMinMax->dateTo !== null && $intNextYm <= date('Ym', max($objMinMax->dateTo, $objMinMax->repeatUntil))) || $intNextYm <= date('Ym'))
 		{
 			$objTemplate->nextHref = $this->strUrl . (\Config::get('disableAlias') ? '?id=' . \Input::get('id') . '&amp;' : '?') . 'month=' . $intNextYm;
 			$objTemplate->nextTitle = specialchars($lblNext);

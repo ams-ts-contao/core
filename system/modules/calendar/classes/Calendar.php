@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -160,7 +160,7 @@ class Calendar extends \Frontend
 					}
 					else
 					{
-						$arrUrls[$jumpTo] = $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/events/%s'), $objParent->language);
+						$arrUrls[$jumpTo] = $objParent->getAbsoluteUrl((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/%s' : '/events/%s');
 					}
 				}
 
@@ -171,14 +171,14 @@ class Calendar extends \Frontend
 				}
 
 				$strUrl = $arrUrls[$jumpTo];
-				$this->addEvent($objArticle, $objArticle->startTime, $objArticle->endTime, $strUrl, $strLink);
+				$this->addEvent($objArticle, $objArticle->startTime, $objArticle->endTime, $strUrl);
 
 				// Recurring events
 				if ($objArticle->recurring)
 				{
 					$arrRepeat = deserialize($objArticle->repeatEach);
 
-					if ($arrRepeat['value'] < 1)
+					if (!is_array($arrRepeat) || !isset($arrRepeat['unit']) || !isset($arrRepeat['value']) || $arrRepeat['value'] < 1)
 					{
 						continue;
 					}
@@ -201,7 +201,7 @@ class Calendar extends \Frontend
 
 						if ($intStartTime >= $time)
 						{
-							$this->addEvent($objArticle, $intStartTime, $intEndTime, $strUrl, $strLink);
+							$this->addEvent($objArticle, $intStartTime, $intEndTime, $strUrl);
 						}
 					}
 				}
@@ -240,10 +240,16 @@ class Calendar extends \Frontend
 
 						if ($objElement !== null)
 						{
+							// Overwrite the request (see #7756)
+							$strRequest = \Environment::get('request');
+							\Environment::set('request', $objItem->link);
+
 							while ($objElement->next())
 							{
 								$strDescription .= $this->getContentElement($objElement->current());
 							}
+
+							\Environment::set('request', $strRequest);
 						}
 					}
 					else
@@ -258,7 +264,7 @@ class Calendar extends \Frontend
 					{
 						foreach ($event['enclosure'] as $enclosure)
 						{
-							$objItem->addEnclosure($enclosure);
+							$objItem->addEnclosure($enclosure, $strLink);
 						}
 					}
 
@@ -330,17 +336,23 @@ class Calendar extends \Frontend
 						continue;
 					}
 
-					// The target page is exempt from the sitemap (see #6418)
-					if ($blnIsSitemap && $objParent->sitemap == 'map_never')
+					if ($blnIsSitemap)
 					{
-						continue;
+						// The target page is protected (see #8416)
+						if ($objParent->protected)
+						{
+							continue;
+						}
+
+						// The target page is exempt from the sitemap (see #6418)
+						if ($objParent->sitemap == 'map_never')
+						{
+							continue;
+						}
 					}
 
-					// Set the domain (see #6421)
-					$domain = ($objParent->rootUseSSL ? 'https://' : 'http://') . ($objParent->domain ?: \Environment::get('host')) . TL_PATH . '/';
-
 					// Generate the URL
-					$arrProcessed[$objCalendar->jumpTo] = $domain . $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/events/%s'), $objParent->language);
+					$arrProcessed[$objCalendar->jumpTo] = $objParent->getAbsoluteUrl((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/events/%s');
 				}
 
 				$strUrl = $arrProcessed[$objCalendar->jumpTo];
@@ -371,7 +383,7 @@ class Calendar extends \Frontend
 	 * @param string               $strUrl
 	 * @param string               $strBase
 	 */
-	protected function addEvent($objEvent, $intStart, $intEnd, $strUrl, $strBase)
+	protected function addEvent($objEvent, $intStart, $intEnd, $strUrl, $strBase='')
 	{
 		if ($intEnd < time()) // see #3917
 		{
@@ -397,15 +409,22 @@ class Calendar extends \Frontend
 		// Add date
 		if ($span > 0)
 		{
-			$title = \Date::parse($objPage->$format, $intStart) . ' - ' . \Date::parse($objPage->$format, $intEnd);
+			$title = \Date::parse($objPage->$format, $intStart) . $GLOBALS['TL_LANG']['MSC']['cal_timeSeparator'] . \Date::parse($objPage->$format, $intEnd);
 		}
 		else
 		{
-			$title = \Date::parse($objPage->dateFormat, $intStart) . ($objEvent->addTime ? ' (' . \Date::parse($objPage->timeFormat, $intStart) . (($intStart < $intEnd) ? ' - ' . \Date::parse($objPage->timeFormat, $intEnd) : '') . ')' : '');
+			$title = \Date::parse($objPage->dateFormat, $intStart) . ($objEvent->addTime ? ' (' . \Date::parse($objPage->timeFormat, $intStart) . (($intStart < $intEnd) ? $GLOBALS['TL_LANG']['MSC']['cal_timeSeparator'] . \Date::parse($objPage->timeFormat, $intEnd) : '') . ')' : '');
 		}
 
 		// Add title and link
 		$title .= ' ' . $objEvent->title;
+
+		// Backwards compatibility (see #8329)
+		if ($strBase != '' && !preg_match('#^https?://#', $strUrl))
+		{
+			$strUrl = $strBase . $strUrl;
+		}
+
 		$link = '';
 
 		switch ($objEvent->source)
@@ -417,22 +436,22 @@ class Calendar extends \Frontend
 			case 'internal':
 				if (($objTarget = $objEvent->getRelated('jumpTo')) !== null)
 				{
-					$link = $strBase . $this->generateFrontendUrl($objTarget->row());
+					/** @var \PageModel $objTarget */
+					$link = $objTarget->getAbsoluteUrl();
 				}
 				break;
 
 			case 'article':
 				if (($objArticle = \ArticleModel::findByPk($objEvent->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 				{
-					$link = $strBase . ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
+					/** @var \PageModel $objPid */
+					$link = ampersand($objPid->getAbsoluteUrl('/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
 				}
 				break;
-		}
 
-		// Link to the default page
-		if ($link == '')
-		{
-			$link = $strBase . sprintf($strUrl, (($objEvent->alias != '' && !\Config::get('disableAlias')) ? $objEvent->alias : $objEvent->id));
+			default:
+				$link = sprintf($strUrl, (($objEvent->alias != '' && !\Config::get('disableAlias')) ? $objEvent->alias : $objEvent->id));
+				break;
 		}
 
 		// Store the whole row (see #5085)
@@ -445,11 +464,11 @@ class Calendar extends \Frontend
 		// Clean the RTE output
 		if ($objPage->outputFormat == 'xhtml')
 		{
-			$arrEvent['teaser'] = \String::toXhtml($objEvent->teaser);
+			$arrEvent['teaser'] = \StringUtil::toXhtml($objEvent->teaser);
 		}
 		else
 		{
-			$arrEvent['teaser'] = \String::toHtml5($objEvent->teaser);
+			$arrEvent['teaser'] = \StringUtil::toHtml5($objEvent->teaser);
 		}
 
 		// Reset the enclosures (see #5685)

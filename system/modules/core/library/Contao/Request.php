@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -430,7 +430,15 @@ class Request
 				if ($this->blnFollowRedirects && $this->intRedirects < $this->intRedirectLimit && !empty($this->arrResponseHeaders['Location']))
 				{
 					++$this->intRedirects;
-					$this->send($this->arrResponseHeaders['Location']);
+					$strLocation = $this->arrResponseHeaders['Location'];
+
+					// Make sure the location is an absolute URL (see #7799)
+					if (!preg_match('@^https?://@', $strLocation))
+					{
+						$strLocation = $uri['scheme'] . '://' . $host . $strLocation;
+					}
+
+					$this->send($strLocation);
 				}
 				break;
 

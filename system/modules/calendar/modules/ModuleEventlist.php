@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -141,10 +141,10 @@ class ModuleEventlist extends \Events
 			$objHandler->generate($objPage->id);
 		}
 
-		list($strBegin, $strEnd, $strEmpty) = $this->getDatesFromFormat($this->Date, $this->cal_format);
+		list($intStart, $intEnd, $strEmpty) = $this->getDatesFromFormat($this->Date, $this->cal_format);
 
 		// Get all events
-		$arrAllEvents = $this->getAllEvents($this->cal_calendar, $strBegin, $strEnd);
+		$arrAllEvents = $this->getAllEvents($this->cal_calendar, $intStart, $intEnd);
 		$sort = ($this->cal_order == 'descending') ? 'krsort' : 'ksort';
 
 		// Sort the days
@@ -157,24 +157,35 @@ class ModuleEventlist extends \Events
 		}
 
 		$arrEvents = array();
-		$dateBegin = date('Ymd', $strBegin);
-		$dateEnd = date('Ymd', $strEnd);
 
 		// Remove events outside the scope
 		foreach ($arrAllEvents as $key=>$days)
 		{
-			if ($key < $dateBegin || $key > $dateEnd)
-			{
-				continue;
-			}
-
 			foreach ($days as $day=>$events)
 			{
+				// Skip events before the start day if the "shortened view" option is not set.
+				// Events after the end day are filtered in the Events::addEvent() method (see #8782).
+				if (!$this->cal_noSpan && $day < $intStart)
+				{
+					continue;
+				}
+
 				foreach ($events as $event)
 				{
+					// Use repeatEnd if > 0 (see #8447)
+					if (($event['repeatEnd'] ?: $event['endTime']) < $intStart || $event['startTime'] > $intEnd)
+					{
+						continue;
+					}
+
+					// Skip occurrences in the past but show running events (see #8497)
+					if ($event['repeatEnd'] && $event['end'] < $intStart)
+					{
+						continue;
+					}
+
 					$event['firstDay'] = $GLOBALS['TL_LANG']['DAYS'][date('w', $day)];
 					$event['firstDate'] = \Date::parse($objPage->dateFormat, $day);
-					$event['datetime'] = date('Y-m-d', $day);
 
 					$arrEvents[] = $event;
 				}
@@ -270,7 +281,7 @@ class ModuleEventlist extends \Events
 			// Show the teaser text of redirect events (see #6315)
 			if (is_bool($event['details']))
 			{
-				$objTemplate->details = $event['teaser'];
+				$objTemplate->hasDetails = false;
 			}
 
 			// Add the template variables
@@ -285,13 +296,11 @@ class ModuleEventlist extends \Events
 			{
 				$objTemplate->day = $event['day'];
 				$objTemplate->date = $event['date'];
-				$objTemplate->span = ($event['time'] == '' && $event['day'] == '') ? $event['date'] : '';
 			}
 			else
 			{
 				$objTemplate->day = $event['firstDay'];
 				$objTemplate->date = $event['firstDate'];
-				$objTemplate->span = '';
 			}
 
 			$objTemplate->addImage = false;

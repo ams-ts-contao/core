@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -170,7 +170,7 @@ class Automator extends \System
 
 		// Recreate the internal style sheets
 		$this->import('StyleSheets');
-		$this->StyleSheets->updateStylesheets();
+		$this->StyleSheets->updateStyleSheets();
 
 		// Also empty the page cache so there are no links to deleted scripts
 		$this->purgePageCache();
@@ -261,7 +261,7 @@ class Automator extends \System
 			foreach ($GLOBALS['TL_HOOKS']['generateXmlFiles'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]();
+				$this->{$callback[0]}->{$callback[1]}();
 			}
 		}
 
@@ -299,7 +299,7 @@ class Automator extends \System
 			foreach ($GLOBALS['TL_HOOKS']['removeOldFeeds'] as $callback)
 			{
 				$this->import($callback[0]);
-				$arrFeeds = array_merge($arrFeeds, $this->$callback[0]->$callback[1]());
+				$arrFeeds = array_merge($arrFeeds, $this->{$callback[0]}->{$callback[1]}());
 			}
 		}
 
@@ -377,7 +377,7 @@ class Automator extends \System
 		// Get all published root pages
 		else
 		{
-			$objRoot = $objDatabase->execute("SELECT id, dns, language, useSSL, sitemapName FROM tl_page WHERE type='root' AND createSitemap='1' AND sitemapName!='' AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "') AND published='1'");
+			$objRoot = $objDatabase->execute("SELECT id, language, sitemapName FROM tl_page WHERE type='root' AND createSitemap='1' AND sitemapName!='' AND (start='' OR start<='$time') AND (stop='' OR stop>'" . ($time + 60) . "') AND published='1'");
 		}
 
 		// Return if there are no pages
@@ -395,11 +395,8 @@ class Automator extends \System
 			$objFile->append('<?xml version="1.0" encoding="UTF-8"?>');
 			$objFile->append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">');
 
-			// Set the domain (see #6421)
-			$strDomain = ($objRoot->useSSL ? 'https://' : 'http://') . ($objRoot->dns ?: \Environment::get('host')) . TL_PATH . '/';
-
 			// Find the searchable pages
-			$arrPages = \Backend::findSearchablePages($objRoot->id, $strDomain, true, $objRoot->language);
+			$arrPages = \Backend::findSearchablePages($objRoot->id, '', true);
 
 			// HOOK: take additional pages
 			if (isset($GLOBALS['TL_HOOKS']['getSearchablePages']) && is_array($GLOBALS['TL_HOOKS']['getSearchablePages']))
@@ -407,15 +404,22 @@ class Automator extends \System
 				foreach ($GLOBALS['TL_HOOKS']['getSearchablePages'] as $callback)
 				{
 					$this->import($callback[0]);
-					$arrPages = $this->$callback[0]->$callback[1]($arrPages, $objRoot->id, true, $objRoot->language);
+					$arrPages = $this->{$callback[0]}->{$callback[1]}($arrPages, $objRoot->id, true, $objRoot->language);
 				}
 			}
 
 			// Add pages
 			foreach ($arrPages as $strUrl)
 			{
-				$strUrl = rawurlencode($strUrl);
-				$strUrl = str_replace(array('%2F', '%3F', '%3D', '%26', '%3A//'), array('/', '?', '=', '&', '://'), $strUrl);
+				$strUrl = explode('/', $strUrl, 4);
+
+				if (isset($strUrl[3]))
+				{
+					$strUrl[3] = rawurlencode($strUrl[3]);
+					$strUrl[3] = str_replace(array('%2F', '%3F', '%3D', '%26', '%5B', '%5D', '%25'), array('/', '?', '=', '&', '[', ']', '%'), $strUrl[3]);
+				}
+
+				$strUrl = implode('/', $strUrl);
 				$strUrl = ampersand($strUrl, true);
 
 				$objFile->append('  <url><loc>' . $strUrl . '</loc></url>');
@@ -489,7 +493,7 @@ class Automator extends \System
 	{
 		// Generate the class/template laoder cache file
 		$objCacheFile = new \File('system/cache/config/autoload.php', true);
-		$objCacheFile->write('<?php '); // add one space to prevent the "unexpected $end" error
+		$objCacheFile->write("<?php\n");
 
 		foreach (\ModuleLoader::getActive() as $strModule)
 		{
@@ -497,7 +501,7 @@ class Automator extends \System
 
 			if (file_exists(TL_ROOT . '/' . $strFile))
 			{
-				$objCacheFile->append(static::readPhpFileWithoutTags($strFile));
+				$objCacheFile->append(static::readPhpFileWithoutTags($strFile, true));
 			}
 		}
 
@@ -516,7 +520,7 @@ class Automator extends \System
 
 		// Generate the config cache file
 		$objCacheFile = new \File('system/cache/config/config.php', true);
-		$objCacheFile->write('<?php '); // add one space to prevent the "unexpected $end" error
+		$objCacheFile->write("<?php\n");
 
 		foreach (\ModuleLoader::getActive() as $strModule)
 		{
@@ -524,7 +528,7 @@ class Automator extends \System
 
 			if (file_exists(TL_ROOT . '/' . $strFile))
 			{
-				$objCacheFile->append(static::readPhpFileWithoutTags($strFile));
+				$objCacheFile->append(static::readPhpFileWithoutTags($strFile, true));
 			}
 		}
 
@@ -593,7 +597,7 @@ class Automator extends \System
 		{
 			// Generate the cache file
 			$objCacheFile = new \File('system/cache/dca/' . $strName . '.php', true);
-			$objCacheFile->write('<?php '); // add one space to prevent the "unexpected $end" error
+			$objCacheFile->write("<?php\n");
 
 			// Parse all active modules
 			foreach (\ModuleLoader::getActive() as $strModule)
@@ -602,7 +606,7 @@ class Automator extends \System
 
 				if (file_exists(TL_ROOT . '/' . $strFile))
 				{
-					$objCacheFile->append(static::readPhpFileWithoutTags($strFile));
+					$objCacheFile->append(static::readPhpFileWithoutTags($strFile, true));
 				}
 			}
 
@@ -677,7 +681,7 @@ class Automator extends \System
 						   . "/**\n"
 						   . " * Contao Open Source CMS\n"
 						   . " * \n"
-						   . " * Copyright (c) 2005-2015 Leo Feyer\n"
+						   . " * Copyright (c) 2005-2016 Leo Feyer\n"
 						   . " * \n"
 						   . " * Core translations are managed using Transifex. To create a new translation\n"
 						   . " * or to help to maintain an existing one, please register at transifex.com.\n"
@@ -765,6 +769,7 @@ class Automator extends \System
 			$objFile->append(sprintf("\$this->arrMeta = %s;\n", var_export($objExtract->getMeta(), true)));
 			$objFile->append(sprintf("\$this->arrFields = %s;\n", var_export($objExtract->getFields(), true)));
 			$objFile->append(sprintf("\$this->arrOrderFields = %s;\n", var_export($objExtract->getOrderFields(), true)));
+			$objFile->append(sprintf("\$this->arrUniqueFields = %s;\n", var_export($objExtract->getUniqueFields(), true)));
 			$objFile->append(sprintf("\$this->arrKeys = %s;\n", var_export($objExtract->getKeys(), true)));
 			$objFile->append(sprintf("\$this->arrRelations = %s;\n", var_export($objExtract->getRelations(), true)));
 

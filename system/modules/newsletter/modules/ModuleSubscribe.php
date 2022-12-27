@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -176,16 +176,13 @@ class ModuleSubscribe extends \Module
 			$objRecipient->save();
 		}
 
-		// Log activity
-		$this->log($objRecipient->email . ' has subscribed to the following channels: ' . implode(', ', $arrChannels), __METHOD__, TL_NEWSLETTER);
-
 		// HOOK: post activation callback
 		if (isset($GLOBALS['TL_HOOKS']['activateRecipient']) && is_array($GLOBALS['TL_HOOKS']['activateRecipient']))
 		{
 			foreach ($GLOBALS['TL_HOOKS']['activateRecipient'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objRecipient->email, $arrAdd, $arrCids);
+				$this->{$callback[0]}->{$callback[1]}($objRecipient->email, $arrAdd, $arrCids);
 			}
 		}
 
@@ -204,7 +201,7 @@ class ModuleSubscribe extends \Module
 
 		if (!is_array($arrChannels))
 		{
-			$_SESSION['UNSUBSCRIBE_ERROR'] = $GLOBALS['TL_LANG']['ERR']['noChannels'];
+			$_SESSION['SUBSCRIBE_ERROR'] = $GLOBALS['TL_LANG']['ERR']['noChannels'];
 			$this->reload();
 		}
 
@@ -244,7 +241,7 @@ class ModuleSubscribe extends \Module
 		}
 
 		// Remove old subscriptions that have not been activated yet
-		if (($objOld = \NewsletterRecipientsModel::findBy(array("email=? AND active=''"), $varInput)) !== null)
+		if (($objOld = \NewsletterRecipientsModel::findOldSubscriptionsByEmailAndPids($varInput, $arrNew)) !== null)
 		{
 			while ($objOld->next())
 			{
@@ -287,13 +284,14 @@ class ModuleSubscribe extends \Module
 		$objEmail->from = $GLOBALS['TL_ADMIN_EMAIL'];
 		$objEmail->fromName = $GLOBALS['TL_ADMIN_NAME'];
 		$objEmail->subject = sprintf($GLOBALS['TL_LANG']['MSC']['nl_subject'], \Idna::decode(\Environment::get('host')));
-		$objEmail->text = \String::parseSimpleTokens($this->nl_subscribe, $arrData);
+		$objEmail->text = \StringUtil::parseSimpleTokens($this->nl_subscribe, $arrData);
 		$objEmail->sendTo($varInput);
 
 		// Redirect to the jumpTo page
 		if ($this->jumpTo && ($objTarget = $this->objModel->getRelated('jumpTo')) !== null)
 		{
-			$this->redirect($this->generateFrontendUrl($objTarget->row()));
+			/** @var \PageModel $objTarget */
+			$this->redirect($objTarget->getFrontendUrl());
 		}
 
 		$_SESSION['SUBSCRIBE_CONFIRM'] = $GLOBALS['TL_LANG']['MSC']['nl_confirm'];

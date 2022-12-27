@@ -1,17 +1,17 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
 /**
- * This is the ACE (code editor) configuration file. Please visit
- * http://ace.ajax.org for more information.
+ * This is the Ace code editor configuration file. Please visit
+ * http://ace.c9.io for more information.
  */
 if ($GLOBALS['TL_CONFIG']['useCE']):
 
@@ -39,6 +39,7 @@ window.ace && window.addEvent('domready', function() {
   editor.getSession().setValue(ta.value);
   editor.getSession().setMode("ace/mode/<?php echo Backend::getAceType($type); ?>");
   editor.getSession().setUseSoftTabs(false);
+  editor.getSession().setUseWrapMode(true);
   editor.setAutoScrollEditorIntoView(true);
 
   // Add the fullscreen command
@@ -58,8 +59,7 @@ window.ace && window.addEvent('domready', function() {
   var updateHeight = function() {
     var newHeight
       = editor.getSession().getScreenLength()
-      * (editor.renderer.lineHeight || 14)
-      + editor.renderer.scrollBar.getWidth();
+      * (editor.renderer.lineHeight || 14);
     editor.container.style['height'] = Math.max(newHeight, editor.renderer.lineHeight) + 'px';
     editor.resize();
   };

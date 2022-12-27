@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -115,14 +115,14 @@ class ModuleFaqReader extends \Module
 		// Clean RTE output
 		if ($objPage->outputFormat == 'xhtml')
 		{
-			$objFaq->answer = \String::toXhtml($objFaq->answer);
+			$objFaq->answer = \StringUtil::toXhtml($objFaq->answer);
 		}
 		else
 		{
-			$objFaq->answer = \String::toHtml5($objFaq->answer);
+			$objFaq->answer = \StringUtil::toHtml5($objFaq->answer);
 		}
 
-		$this->Template->answer = \String::encodeEmail($objFaq->answer);
+		$this->Template->answer = \StringUtil::encodeEmail($objFaq->answer);
 		$this->Template->addImage = false;
 
 		// Add image
@@ -157,7 +157,7 @@ class ModuleFaqReader extends \Module
 
 		$strAuthor = '';
 
-		// Add the author
+		/** @var \UserModel $objAuthor */
 		if (($objAuthor = $objFaq->getRelated('author')) !== null)
 		{
 			$strAuthor = $objAuthor->name;

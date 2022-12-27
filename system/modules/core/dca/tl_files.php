@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -56,7 +56,8 @@ $GLOBALS['TL_DCA']['tl_files'] = array
 			(
 				'label'               => &$GLOBALS['TL_LANG']['MSC']['toggleAll'],
 				'href'                => 'tg=all',
-				'class'               => 'header_toggle'
+				'class'               => 'header_toggle',
+				'showOnSelect'        => true
 			),
 			'all' => array
 			(
@@ -215,7 +216,7 @@ $GLOBALS['TL_DCA']['tl_files'] = array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_files']['meta'],
 			'inputType'               => 'metaWizard',
-			'eval'                    => array('allowHtml'=>true, 'metaFields'=>array('title', 'link', 'caption')),
+			'eval'                    => array('allowHtml'=>true, 'metaFields'=>array('title'=>'maxlength="255"', 'link'=>'maxlength="255"', 'caption'=>'maxlength="255"')),
 			'sql'                     => "blob NULL"
 		)
 	)
@@ -417,7 +418,7 @@ class tl_files extends Backend
 			return;
 		}
 
-		if (is_dir(TL_ROOT . '/' . $dc->id) || !in_array(strtolower(pathinfo($dc->id, PATHINFO_EXTENSION)), trimsplit(',', Config::get('validImageTypes'))))
+		if (is_dir(TL_ROOT . '/' . $dc->id) || !in_array(strtolower(substr($dc->id, strrpos($dc->id, '.') + 1)), trimsplit(',', strtolower(Config::get('validImageTypes')))))
 		{
 			$GLOBALS['TL_DCA'][$dc->table]['palettes'] = str_replace(',importantPartX,importantPartY,importantPartWidth,importantPartHeight', '', $GLOBALS['TL_DCA'][$dc->table]['palettes']);
 		}
@@ -448,13 +449,14 @@ class tl_files extends Backend
 	/**
 	 * Check a file name and romanize it
 	 *
-	 * @param mixed $varValue
+	 * @param string                  $varValue
+	 * @param DataContainer|DC_Folder $dc
 	 *
 	 * @return mixed
 	 *
 	 * @throws Exception
 	 */
-	public function checkFilename($varValue)
+	public function checkFilename($varValue, DataContainer $dc)
 	{
 		$varValue = utf8_romanize($varValue);
 		$varValue = str_replace('"', '', $varValue);
@@ -462,6 +464,22 @@ class tl_files extends Backend
 		if (strpos($varValue, '/') !== false || preg_match('/\.$/', $varValue))
 		{
 			throw new Exception($GLOBALS['TL_LANG']['ERR']['invalidName']);
+		}
+
+		// Check the length without the file extension
+		if ($dc->activeRecord && $varValue != '')
+		{
+			$intMaxlength = $GLOBALS['TL_DCA'][$dc->table]['fields'][$dc->field]['eval']['maxlength'];
+
+			if ($dc->activeRecord->type == 'file')
+			{
+				$intMaxlength -= (strlen($dc->activeRecord->extension) + 1);
+			}
+
+			if ($intMaxlength && utf8_strlen($varValue) > $intMaxlength)
+			{
+				throw new Exception(sprintf($GLOBALS['TL_LANG']['ERR']['maxlength'], $GLOBALS['TL_DCA'][$dc->table]['fields'][$dc->field]['label'][0], $intMaxlength));
+			}
 		}
 
 		return $varValue;
@@ -553,7 +571,9 @@ class tl_files extends Backend
 	 */
 	public function deleteFile($row, $href, $label, $title, $icon, $attributes)
 	{
-		if (is_dir(TL_ROOT . '/' . $row['id']) && count(scan(TL_ROOT . '/' . $row['id'])) > 0)
+		$path = TL_ROOT . '/' . urldecode($row['id']);
+
+		if (is_dir($path) && count(scan($path)) > 0)
 		{
 			return $this->User->hasAccess('f4', 'fop') ? '<a href="'.$this->addToUrl($href.'&amp;id='.$row['id']).'" title="'.specialchars($title, false, true).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
 		}
@@ -592,7 +612,7 @@ class tl_files extends Backend
 
 		$objFile = new File($strDecoded, true);
 
-		if (!in_array($objFile->extension, trimsplit(',', Config::get('editableFiles'))))
+		if (!in_array($objFile->extension, trimsplit(',', strtolower(Config::get('editableFiles')))))
 		{
 			return Image::getHtml(preg_replace('/\.gif$/i', '_.gif', $icon)).' ';
 		}
@@ -621,7 +641,7 @@ class tl_files extends Backend
 		}
 		else
 		{
-			return '<a href="contao/popup.php?src=' . base64_encode($row['id']) . '" title="'.specialchars($title, false, true).'"'.$attributes.' onclick="Backend.openModalIframe({\'width\':'.$row['popupWidth'].',\'title\':\''.str_replace("'", "\\'", specialchars($row['fileNameEncoded'], false, true)).'\',\'url\':this.href,\'height\':'.$row['popupHeight'].'});return false">'.Image::getHtml($icon, $label).'</a> ';
+			return '<a href="contao/popup.php?src=' . base64_encode($row['id']) . '" title="'.specialchars($title, false, true).'"'.$attributes.' onclick="Backend.openModalIframe({\'width\':'.$row['popupWidth'].',\'title\':\''.str_replace("'", "\\'", specialchars($row['fileNameEncoded'], false, true)).'\',\'url\':this.href});return false">'.Image::getHtml($icon, $label).'</a> ';
 		}
 	}
 
@@ -635,13 +655,23 @@ class tl_files extends Backend
 	 */
 	public function protectFolder(DataContainer $dc)
 	{
-		$count = 0;
 		$strPath = $dc->id;
 
 		// Check whether the temporary name has been replaced already (see #6432)
-		if (Input::post('name') && ($strNewPath = str_replace('__new__', Input::post('name'), $strPath, $count)) && $count > 0 && is_dir(TL_ROOT . '/' . $strNewPath))
+		if (Input::post('name'))
 		{
-			$strPath = $strNewPath;
+			if (Validator::isInsecurePath(Input::post('name')))
+			{
+				throw new RuntimeException('Invalid file or folder name ' . Input::post('name'));
+			}
+
+			$count = 0;
+			$strName = basename($strPath);
+
+			if (($strNewPath = str_replace($strName, Input::post('name'), $strPath, $count)) && $count > 0 && is_dir(TL_ROOT . '/' . $strNewPath))
+			{
+				$strPath = $strNewPath;
+			}
 		}
 
 		// Only show for folders (see #5660)

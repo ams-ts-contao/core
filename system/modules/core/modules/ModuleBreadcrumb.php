@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -61,7 +61,7 @@ class ModuleBreadcrumb extends \Module
 
 		$type = null;
 		$pageId = $objPage->id;
-		$pages = array($objPage->row());
+		$pages = array($objPage);
 		$items = array();
 
 		// Get all pages up to the root page
@@ -73,7 +73,7 @@ class ModuleBreadcrumb extends \Module
 			{
 				$type = $objPages->type;
 				$pageId = $objPages->pid;
-				$pages[] = $objPages->row();
+				$pages[] = $objPages->current();
 			}
 		}
 
@@ -86,7 +86,7 @@ class ModuleBreadcrumb extends \Module
 			(
 				'isRoot'   => true,
 				'isActive' => false,
-				'href'     => (($objFirstPage !== null) ? $this->generateFrontendUrl($objFirstPage->row()) : \Environment::get('base')),
+				'href'     => (($objFirstPage !== null) ? $objFirstPage->getFrontendUrl() : \Environment::get('base')),
 				'title'    => specialchars($objPages->pageTitle ?: $objPages->title, true),
 				'link'     => $objPages->title,
 				'data'     => $objFirstPage->row(),
@@ -96,38 +96,37 @@ class ModuleBreadcrumb extends \Module
 			array_pop($pages);
 		}
 
-		// Build the breadcrumb menu
+		/** @var \PageModel[] $pages */
 		for ($i=(count($pages)-1); $i>0; $i--)
 		{
-			if (($pages[$i]['hide'] && !$this->showHidden) || (!$pages[$i]['published'] && !BE_USER_LOGGED_IN))
+			if (($pages[$i]->hide && !$this->showHidden) || (!$pages[$i]->published && !BE_USER_LOGGED_IN))
 			{
 				continue;
 			}
 
 			// Get href
-			switch ($pages[$i]['type'])
+			switch ($pages[$i]->type)
 			{
 				case 'redirect':
-					$href = $pages[$i]['url'];
+					$href = $pages[$i]->url;
 
 					if (strncasecmp($href, 'mailto:', 7) === 0)
 					{
-						$href = \String::encodeEmail($href);
+						$href = \StringUtil::encodeEmail($href);
 					}
 					break;
 
 				case 'forward':
-					$objNext = \PageModel::findPublishedById($pages[$i]['jumpTo']);
-
-					if ($objNext !== null)
+					if (($objNext = $pages[$i]->getRelated('jumpTo')) !== null || ($objNext = \PageModel::findFirstPublishedRegularByPid($pages[$i]->id)) !== null)
 					{
-						$href = $this->generateFrontendUrl($objNext->row());
+						/** @var \PageModel $objNext */
+						$href = $objNext->getFrontendUrl();
 						break;
 					}
 					// DO NOT ADD A break; STATEMENT
 
 				default:
-					$href = $this->generateFrontendUrl($pages[$i]);
+					$href = $pages[$i]->getFrontendUrl();
 					break;
 			}
 
@@ -136,9 +135,9 @@ class ModuleBreadcrumb extends \Module
 				'isRoot'   => false,
 				'isActive' => false,
 				'href'     => $href,
-				'title'    => specialchars($pages[$i]['pageTitle'] ?: $pages[$i]['title'], true),
-				'link'     => $pages[$i]['title'],
-				'data'     => $pages[$i],
+				'title'    => specialchars($pages[$i]->pageTitle ?: $pages[$i]->title, true),
+				'link'     => $pages[$i]->title,
+				'data'     => $pages[$i]->row(),
 				'class'    => ''
 			);
 		}
@@ -150,10 +149,10 @@ class ModuleBreadcrumb extends \Module
 			(
 				'isRoot'   => false,
 				'isActive' => false,
-				'href'     => $this->generateFrontendUrl($pages[0]),
-				'title'    => specialchars($pages[0]['pageTitle'] ?: $pages[0]['title'], true),
-				'link'     => $pages[0]['title'],
-				'data'     => $pages[0],
+				'href'     => $pages[0]->getFrontendUrl(),
+				'title'    => specialchars($pages[0]->pageTitle ?: $pages[0]->title, true),
+				'link'     => $pages[0]->title,
+				'data'     => $pages[0]->row(),
 				'class'    => ''
 			);
 
@@ -178,7 +177,7 @@ class ModuleBreadcrumb extends \Module
 				(
 					'isRoot'   => false,
 					'isActive' => true,
-					'href'     => $this->generateFrontendUrl($pages[0], '/articles/' . $strAlias),
+					'href'     => $pages[0]->getFrontendUrl('/articles/' . $strAlias),
 					'title'    => specialchars($objArticle->title, true),
 					'link'     => $objArticle->title,
 					'data'     => $objArticle->row(),
@@ -194,10 +193,10 @@ class ModuleBreadcrumb extends \Module
 			(
 				'isRoot'   => false,
 				'isActive' => true,
-				'href'     => $this->generateFrontendUrl($pages[0]),
-				'title'    => specialchars($pages[0]['pageTitle'] ?: $pages[0]['title']),
-				'link'     => $pages[0]['title'],
-				'data'     => $pages[0],
+				'href'     => $pages[0]->getFrontendUrl(),
+				'title'    => specialchars($pages[0]->pageTitle ?: $pages[0]->title),
+				'link'     => $pages[0]->title,
+				'data'     => $pages[0]->row(),
 				'class'    => ''
 			);
 		}
@@ -211,7 +210,7 @@ class ModuleBreadcrumb extends \Module
 			foreach ($GLOBALS['TL_HOOKS']['generateBreadcrumb'] as $callback)
 			{
 				$this->import($callback[0]);
-				$items = $this->$callback[0]->$callback[1]($items, $this);
+				$items = $this->{$callback[0]}->{$callback[1]}($items, $this);
 			}
 		}
 

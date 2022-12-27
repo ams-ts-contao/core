@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -119,7 +119,7 @@ require_once TL_ROOT . '/vendor/autoload.php';
 /**
  * Override some SwiftMailer defaults
  */
-Swift::init(function()
+Swift::init(function ()
 {
 	$preferences = Swift_Preferences::getInstance();
 
@@ -240,7 +240,7 @@ if (isset($GLOBALS['TL_HOOKS']['initializeSystem']) && is_array($GLOBALS['TL_HOO
 {
 	foreach ($GLOBALS['TL_HOOKS']['initializeSystem'] as $callback)
 	{
-		System::importStatic($callback[0])->$callback[1]();
+		System::importStatic($callback[0])->{$callback[1]}();
 	}
 }
 

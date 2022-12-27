@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -46,7 +46,7 @@ abstract class Controller extends \System
 	 */
 	public static function getTemplate($strTemplate, $strFormat='html5')
 	{
-		$arrAllowed = trimsplit(',', \Config::get('templateFiles'));
+		$arrAllowed = trimsplit(',', strtolower(\Config::get('templateFiles')));
 		array_push($arrAllowed, 'html5'); // see #3398
 
 		if (!in_array($strFormat, $arrAllowed))
@@ -207,13 +207,21 @@ abstract class Controller extends \System
 
 				if ($strSection == $strColumn)
 				{
-					$objArticle = \ArticleModel::findByIdOrAliasAndPid($strArticle, $objPage->id);
+					$objArticle = \ArticleModel::findPublishedByIdOrAliasAndPid($strArticle, $objPage->id);
 
-					// Send a 404 header if the article does not exist
+					// Send a 404 header if there is no published article
 					if (null === $objArticle)
 					{
 						/** @var \PageError404 $objHandler */
 						$objHandler = new $GLOBALS['TL_PTY']['error_404']();
+						$objHandler->generate($objPage->id);
+					}
+
+					// Send a 403 header if the article cannot be accessed
+					if (!static::isVisibleElement($objArticle))
+					{
+						/** @var \PageError403 $objHandler */
+						$objHandler = new $GLOBALS['TL_PTY']['error_403']();
 						$objHandler->generate($objPage->id);
 					}
 
@@ -317,7 +325,7 @@ abstract class Controller extends \System
 			{
 				foreach ($GLOBALS['TL_HOOKS']['getFrontendModule'] as $callback)
 				{
-					$strBuffer = static::importStatic($callback[0])->$callback[1]($objRow, $strBuffer, $objModule);
+					$strBuffer = static::importStatic($callback[0])->{$callback[1]}($objRow, $strBuffer, $objModule);
 				}
 			}
 
@@ -401,7 +409,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getArticle'] as $callback)
 			{
-				static::importStatic($callback[0])->$callback[1]($objRow);
+				static::importStatic($callback[0])->{$callback[1]}($objRow);
 			}
 		}
 
@@ -480,7 +488,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getContentElement'] as $callback)
 			{
-				$strBuffer = static::importStatic($callback[0])->$callback[1]($objRow, $strBuffer, $objElement);
+				$strBuffer = static::importStatic($callback[0])->{$callback[1]}($objRow, $strBuffer, $objElement);
 			}
 		}
 
@@ -533,7 +541,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getForm'] as $callback)
 			{
-				$strBuffer = static::importStatic($callback[0])->$callback[1]($objRow, $strBuffer, $objElement);
+				$strBuffer = static::importStatic($callback[0])->{$callback[1]}($objRow, $strBuffer, $objElement);
 			}
 		}
 
@@ -609,7 +617,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getPageStatusIcon'] as $callback)
 			{
-				$image = static::importStatic($callback[0])->$callback[1]($objPage, $image);
+				$image = static::importStatic($callback[0])->{$callback[1]}($objPage, $image);
 			}
 		}
 
@@ -626,36 +634,34 @@ abstract class Controller extends \System
 	 */
 	public static function isVisibleElement(\Model $objElement)
 	{
-		// Only apply the restrictions in the front end
-		if (TL_MODE != 'FE' || BE_USER_LOGGED_IN)
-		{
-			return true;
-		}
-
 		$blnReturn = true;
 
-		// Protected element
-		if ($objElement->protected)
+		// Only apply the restrictions in the front end
+		if (TL_MODE == 'FE' && !BE_USER_LOGGED_IN)
 		{
-			if (!FE_USER_LOGGED_IN)
+			// Protected element
+			if ($objElement->protected)
 			{
-				$blnReturn = false;
-			}
-			else
-			{
-				$groups = deserialize($objElement->groups);
-
-				if (empty($groups) || !is_array($groups) || !count(array_intersect($groups, \FrontendUser::getInstance()->groups)))
+				if (!FE_USER_LOGGED_IN)
 				{
 					$blnReturn = false;
 				}
-			}
-		}
+				else
+				{
+					$groups = deserialize($objElement->groups);
 
-		// Show to guests only
-		elseif ($objElement->guests && FE_USER_LOGGED_IN)
-		{
-			$blnReturn = false;
+					if (empty($groups) || !is_array($groups) || !count(array_intersect($groups, \FrontendUser::getInstance()->groups)))
+					{
+						$blnReturn = false;
+					}
+				}
+			}
+
+			// Show to guests only
+			elseif ($objElement->guests && FE_USER_LOGGED_IN)
+			{
+				$blnReturn = false;
+			}
 		}
 
 		// HOOK: add custom logic
@@ -663,7 +669,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['isVisibleElement'] as $callback)
 			{
-				$blnReturn = static::importStatic($callback[0])->$callback[1]($objElement, $blnReturn);
+				$blnReturn = static::importStatic($callback[0])->{$callback[1]}($objElement, $blnReturn);
 			}
 		}
 
@@ -701,7 +707,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['replaceDynamicScriptTags'] as $callback)
 			{
-				$strBuffer = static::importStatic($callback[0])->$callback[1]($strBuffer);
+				$strBuffer = static::importStatic($callback[0])->{$callback[1]}($strBuffer);
 			}
 		}
 
@@ -784,11 +790,16 @@ abstract class Controller extends \System
 		{
 			foreach (array_unique($GLOBALS['TL_CSS']) as $stylesheet)
 			{
-				$options = \String::resolveFlaggedUrl($stylesheet);
+				$options = \StringUtil::resolveFlaggedUrl($stylesheet);
 
 				if ($options->static)
 				{
-					$objCombiner->add($stylesheet, filemtime(TL_ROOT . '/' . $stylesheet), $options->media);
+					if ($options->mtime === null)
+					{
+						$options->mtime = filemtime(TL_ROOT . '/' . $stylesheet);
+					}
+
+					$objCombiner->add($stylesheet, $options->mtime, $options->media);
 				}
 				else
 				{
@@ -802,7 +813,7 @@ abstract class Controller extends \System
 		{
 			foreach (array_unique($GLOBALS['TL_USER_CSS']) as $stylesheet)
 			{
-				$options = \String::resolveFlaggedUrl($stylesheet);
+				$options = \StringUtil::resolveFlaggedUrl($stylesheet);
 
 				if ($options->static)
 				{
@@ -837,18 +848,16 @@ abstract class Controller extends \System
 
 			foreach (array_unique($GLOBALS['TL_JAVASCRIPT']) as $javascript)
 			{
-				$options = \String::resolveFlaggedUrl($javascript);
+				$options = \StringUtil::resolveFlaggedUrl($javascript);
 
 				if ($options->static)
 				{
-					if ($options->async)
+					if ($options->mtime === null)
 					{
-						$objCombinerAsync->add($javascript, filemtime(TL_ROOT . '/' . $javascript));
+						$options->mtime = filemtime(TL_ROOT . '/' . $javascript);
 					}
-					else
-					{
-						$objCombiner->add($javascript, filemtime(TL_ROOT . '/' . $javascript));
-					}
+
+					$options->async ? $objCombinerAsync->add($javascript, $options->mtime) : $objCombiner->add($javascript, $options->mtime);
 				}
 				else
 				{
@@ -987,26 +996,7 @@ abstract class Controller extends \System
 	 */
 	public static function reload()
 	{
-		if (headers_sent())
-		{
-			exit;
-		}
-
-		$strLocation = \Environment::get('uri');
-
-		// Ajax request
-		if (\Environment::get('isAjaxRequest'))
-		{
-			header('HTTP/1.1 204 No Content');
-			header('X-Ajax-Location: ' . $strLocation);
-		}
-		else
-		{
-			header('HTTP/1.1 303 See Other');
-			header('Location: ' . $strLocation);
-		}
-
-		exit;
+		static::redirect(\Environment::get('uri'));
 	}
 
 
@@ -1028,7 +1018,7 @@ abstract class Controller extends \System
 		// Make the location an absolute URL
 		if (!preg_match('@^https?://@i', $strLocation))
 		{
-			$strLocation = \Environment::get('base') . $strLocation;
+			$strLocation = \Environment::get('base') . ltrim($strLocation, '/');
 		}
 
 		// Ajax request
@@ -1062,7 +1052,47 @@ abstract class Controller extends \System
 			header('Location: ' . $strLocation);
 		}
 
+		static::setCorsHeaders();
+
 		exit;
+	}
+
+
+	/**
+	 * Send the correct HTTP headers when rebuilding the search index in the back end
+	 */
+	public static function setCorsHeaders()
+	{
+		if (TL_SCRIPT == 'contao/install.php')
+		{
+			return;
+		}
+
+		$strOrigin = \Environment::get('httpOrigin');
+
+		// Not a CORS request
+		if (!$strOrigin)
+		{
+			return;
+		}
+
+		$arrAllowedMethods = array('GET', 'HEAD', 'OPTIONS');
+
+		// Protect and only allow requests from own known hosts and methods
+		if (in_array(\Environment::get('requestMethod'), $arrAllowedMethods))
+		{
+			$blnCheck = \Database::getInstance()
+				->prepare('SELECT id FROM tl_page WHERE type=? AND dns=?')
+				->execute('root', preg_replace('@^https?://@', '', $strOrigin))
+			;
+
+			if ($blnCheck->numRows)
+			{
+				header('Access-Control-Allow-Headers: X-Requested-With');
+				header('Access-Control-Allow-Methods: ' . implode(', ', $arrAllowedMethods));
+				header('Access-Control-Allow-Origin: ' . $strOrigin);
+			}
+		}
 	}
 
 
@@ -1078,6 +1108,33 @@ abstract class Controller extends \System
 	 */
 	public static function generateFrontendUrl(array $arrRow, $strParams=null, $strForceLang=null, $blnFixDomain=false)
 	{
+		$strUrl = '';
+
+		if ($strForceLang !== null)
+		{
+			@trigger_error('Using Controller::generateFrontendUrl() with $strForceLang has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		}
+
+		if ($blnFixDomain !== true)
+		{
+			@trigger_error('Using Controller::generateFrontendUrl() without $blnFixDomain has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		}
+
+		if (!isset($arrRow['rootId']))
+		{
+			$row = \PageModel::findWithDetails($arrRow['id']);
+
+			$arrRow['rootId'] = $row->rootId;
+
+			foreach (array('domain', 'rootLanguage', 'rootUseSSL') as $key)
+			{
+				if (!isset($arrRow[$key]))
+				{
+					$arrRow[$key] = $row->$key;
+				}
+			}
+		}
+
 		if (!\Config::get('disableAlias'))
 		{
 			$strLanguage = '';
@@ -1087,6 +1144,10 @@ abstract class Controller extends \System
 				if ($strForceLang != '')
 				{
 					$strLanguage = $strForceLang . '/';
+				}
+				elseif (isset($arrRow['rootLanguage']))
+				{
+					$strLanguage = $arrRow['rootLanguage'] . '/';
 				}
 				elseif (isset($arrRow['language']) && $arrRow['type'] == 'root')
 				{
@@ -1132,7 +1193,7 @@ abstract class Controller extends \System
 		}
 
 		// Add the domain if it differs from the current one (see #3765 and #6927)
-		if ($blnFixDomain && $arrRow['domain'] != '' && $arrRow['domain'] != \Environment::get('host'))
+		if ($blnFixDomain && !empty($arrRow['domain']) && $arrRow['domain'] != \Environment::get('host'))
 		{
 			$strUrl = ($arrRow['rootUseSSL'] ? 'https://' : 'http://') . $arrRow['domain'] . TL_PATH . '/' . $strUrl;
 		}
@@ -1142,7 +1203,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['generateFrontendUrl'] as $callback)
 			{
-				$strUrl = static::importStatic($callback[0])->$callback[1]($arrRow, $strParams, $strUrl);
+				$strUrl = static::importStatic($callback[0])->{$callback[1]}($arrRow, $strParams, $strUrl);
 			}
 		}
 
@@ -1182,7 +1243,7 @@ abstract class Controller extends \System
 			$strAttribute = $arrUrls[$i+2];
 			$strUrl = $arrUrls[$i+3];
 
-			if (!preg_match('@^(https?://|ftp://|mailto:|#)@i', $strUrl))
+			if (!preg_match('@^(?:[a-z0-9]+:|#)@i', $strUrl))
 			{
 				$strUrl = $strBase . (($strUrl != '/') ? $strUrl : '');
 			}
@@ -1237,7 +1298,7 @@ abstract class Controller extends \System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['postDownload'] as $callback)
 			{
-				static::importStatic($callback[0])->$callback[1]($strFile);
+				static::importStatic($callback[0])->{$callback[1]}($strFile);
 			}
 		}
 
@@ -1282,7 +1343,7 @@ abstract class Controller extends \System
 			$varArticle = '/articles/' . $varArticle;
 		}
 
-		$strUrl = $this->generateFrontendUrl($objPage->row(), $varArticle, $objPage->language, true);
+		$strUrl = $objPage->getFrontendUrl($varArticle);
 
 		// Make sure the URL is absolute (see #4332)
 		if (strncmp($strUrl, 'http://', 7) !== 0 && strncmp($strUrl, 'https://', 8) !== 0)
@@ -1398,7 +1459,7 @@ abstract class Controller extends \System
 		}
 
 		// Thanks to Andreas Schempp (see #2475 and #3423)
-		$arrPages = array_intersect($this->Database->getChildRecords(0, $strTable, $blnSorting), $arrPages);
+		$arrPages = array_intersect($arrPages, $this->Database->getChildRecords(0, $strTable, $blnSorting));
 		$arrPages = array_values(array_diff($arrPages, $this->Database->getChildRecords($arrPages, $strTable, $blnSorting)));
 
 		return $arrPages;
@@ -1431,6 +1492,17 @@ abstract class Controller extends \System
 		$imgSize = $objFile->imageSize;
 		$size = deserialize($arrItem['size']);
 
+		if (is_numeric($size))
+		{
+			$size = array(0, 0, (int) $size);
+		}
+		elseif (!is_array($size))
+		{
+			$size = array();
+		}
+
+		$size += array(0, 0, 'crop');
+
 		if ($intMaxWidth === null)
 		{
 			$intMaxWidth = (TL_MODE == 'BE') ? 320 : \Config::get('maxImageWidth');
@@ -1448,7 +1520,7 @@ abstract class Controller extends \System
 			// Subtract the margins before deciding whether to resize (see #6018)
 			if (is_array($arrMargin) && $arrMargin['unit'] == 'px')
 			{
-				$intMargin = $arrMargin['left'] + $arrMargin['right'];
+				$intMargin = (int) $arrMargin['left'] + (int) $arrMargin['right'];
 
 				// Reset the margin if it exceeds the maximum width (see #7245)
 				if ($intMaxWidth - $intMargin < 1)
@@ -1462,14 +1534,20 @@ abstract class Controller extends \System
 				}
 			}
 
-			if ($size[0] > $intMaxWidth || (!$size[0] && !$size[1] && $imgSize[0] > $intMaxWidth))
+			if ($size[0] > $intMaxWidth || (!$size[0] && !$size[1] && (!$imgSize[0] || $imgSize[0] > $intMaxWidth)))
 			{
 				// See #2268 (thanks to Thyon)
-				$ratio = ($size[0] && $size[1]) ? $size[1] / $size[0] : $imgSize[1] / $imgSize[0];
+				$ratio = ($size[0] && $size[1]) ? $size[1] / $size[0] : (($imgSize[0] && $imgSize[1]) ? $imgSize[1] / $imgSize[0] : 0);
 
 				$size[0] = $intMaxWidth;
 				$size[1] = floor($intMaxWidth * $ratio);
 			}
+		}
+
+		// Disable responsive images in the back end (see #7875)
+		if (TL_MODE == 'BE')
+		{
+			unset($size[2]);
 		}
 
 		try
@@ -1663,14 +1741,20 @@ abstract class Controller extends \System
 
 				$arrEnclosures[] = array
 				(
-					'link'      => $arrMeta['title'],
-					'filesize'  => static::getReadableSize($objFile->filesize),
+					'id'        => $objFiles->id,
+					'uuid'      => $objFiles->uuid,
+					'name'      => $objFile->basename,
 					'title'     => specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['download'], $objFile->basename)),
+					'link'      => $arrMeta['title'],
+					'caption'   => $arrMeta['caption'],
 					'href'      => $strHref,
-					'enclosure' => $objFiles->path,
-					'icon'      => TL_ASSETS_URL . 'assets/contao/images/' . $objFile->icon,
+					'filesize'  => static::getReadableSize($objFile->filesize),
+					'icon'      => \Image::getPath($objFile->icon),
 					'mime'      => $objFile->mime,
-					'meta'      => $arrMeta
+					'meta'      => $arrMeta,
+					'extension' => $objFile->extension,
+					'path'      => $objFile->dirname,
+					'enclosure' => $objFiles->path // backwards compatibility
 				);
 			}
 		}
@@ -1845,8 +1929,6 @@ abstract class Controller extends \System
 	 *
 	 * @param boolean $blnReturn If true, only return the finds and don't delete
 	 *
-	 * @return array An array of old XML files
-	 *
 	 * @deprecated Use Automator::purgeXmlFiles() instead
 	 */
 	protected function removeOldFeeds($blnReturn=false)
@@ -1878,11 +1960,11 @@ abstract class Controller extends \System
 	 *
 	 * @return string The string with the original entities
 	 *
-	 * @deprecated Use String::restoreBasicEntities() instead
+	 * @deprecated Use StringUtil::restoreBasicEntities() instead
 	 */
 	public static function restoreBasicEntities($strBuffer)
 	{
-		return \String::restoreBasicEntities($strBuffer);
+		return \StringUtil::restoreBasicEntities($strBuffer);
 	}
 
 
@@ -1975,11 +2057,11 @@ abstract class Controller extends \System
 	 *
 	 * @return string The text with the replaced tokens
 	 *
-	 * @deprecated Use String::parseSimpleTokens() instead
+	 * @deprecated Use StringUtil::parseSimpleTokens() instead
 	 */
 	protected function parseSimpleTokens($strBuffer, $arrData)
 	{
-		return \String::parseSimpleTokens($strBuffer, $arrData);
+		return \StringUtil::parseSimpleTokens($strBuffer, $arrData);
 	}
 
 

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -84,7 +84,7 @@ class ModulePersonalData extends \Module
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]();
+					$this->{$callback[0]}->{$callback[1]}();
 				}
 				elseif (is_callable($callback))
 				{
@@ -143,6 +143,12 @@ class ModulePersonalData extends \Module
 				$arrData['inputType'] = 'checkbox';
 			}
 
+			// Map fileTrees to upload widgets (see #8091)
+			if ($arrData['inputType'] == 'fileTree')
+			{
+				$arrData['inputType'] = 'upload';
+			}
+
 			/** @var \Widget $strClass */
 			$strClass = $GLOBALS['TL_FFL'][$arrData['inputType']];
 
@@ -186,7 +192,7 @@ class ModulePersonalData extends \Module
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$varValue = $this->$callback[0]->$callback[1]($varValue, $this->User, $this);
+						$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $this->User, $this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -196,7 +202,7 @@ class ModulePersonalData extends \Module
 			}
 
 			/** @var \Widget $objWidget */
-			$objWidget = new $strClass($strClass::getAttributesFromDca($arrData, $field, $varValue, '', '', $this));
+			$objWidget = new $strClass($strClass::getAttributesFromDca($arrData, $field, $varValue, $field, $strTable, $this));
 
 			$objWidget->storeValues = true;
 			$objWidget->rowClass = 'row_' . $row . (($row == 0) ? ' row_first' : '') . ((($row % 2) == 0) ? ' even' : ' odd');
@@ -250,7 +256,7 @@ class ModulePersonalData extends \Module
 							if (is_array($callback))
 							{
 								$this->import($callback[0]);
-								$varValue = $this->$callback[0]->$callback[1]($varValue, $this->User, $this);
+								$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $this->User, $this);
 							}
 							elseif (is_callable($callback))
 							{
@@ -321,7 +327,6 @@ class ModulePersonalData extends \Module
 			if ($GLOBALS['TL_DCA'][$strTable]['config']['enableVersioning'])
 			{
 				$objVersions->create();
-				$this->log('A new version of record "'.$strTable.'.id='.$objMember->id.'" has been created'.$this->getParentEntries($strTable, $objMember->id), __METHOD__, TL_GENERAL);
 			}
 		}
 
@@ -336,7 +341,7 @@ class ModulePersonalData extends \Module
 				foreach ($GLOBALS['TL_HOOKS']['updatePersonalData'] as $callback)
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($this->User, $_SESSION['FORM_DATA'], $this);
+					$this->{$callback[0]}->{$callback[1]}($this->User, $_SESSION['FORM_DATA'], $this);
 				}
 			}
 
@@ -348,7 +353,7 @@ class ModulePersonalData extends \Module
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($this->User, $this);
+						$this->{$callback[0]}->{$callback[1]}($this->User, $this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -363,6 +368,7 @@ class ModulePersonalData extends \Module
 				$this->jumpToOrReload($objJumpTo->row());
 			}
 
+			\Message::addConfirmation($GLOBALS['TL_LANG']['MSC']['savedData']);
 			$this->reload();
 		}
 
@@ -386,5 +392,6 @@ class ModulePersonalData extends \Module
 		$this->Template->action = \Environment::get('indexFreeRequest');
 		$this->Template->enctype = $hasUpload ? 'multipart/form-data' : 'application/x-www-form-urlencoded';
 		$this->Template->rowLast = 'row_' . $row . ((($row % 2) == 0) ? ' even' : ' odd');
+		$this->Template->message = \Message::generate(false, true);
 	}
 }

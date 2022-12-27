@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -51,6 +51,7 @@ class Search
 	{
 		$objDatabase = \Database::getInstance();
 
+		$arrSet['tstamp'] = time();
 		$arrSet['url'] = $arrData['url'];
 		$arrSet['title'] = $arrData['title'];
 		$arrSet['protected'] = $arrData['protected'];
@@ -66,7 +67,7 @@ class Search
 		}
 
 		// Replace special characters
-		$strContent = str_replace(array("\n", "\r", "\t", '&#160;', '&nbsp;'), ' ', $arrData['content']);
+		$strContent = str_replace(array("\n", "\r", "\t", '&#160;', '&nbsp;', '&shy;'), array(' ', ' ', ' ', ' ', ' ', ''), $arrData['content']);
 
 		// Strip script tags
 		while (($intStart = strpos($strContent, '<script')) !== false)
@@ -128,25 +129,12 @@ class Search
 		{
 			foreach ($GLOBALS['TL_HOOKS']['indexPage'] as $callback)
 			{
-				\System::importStatic($callback[0])->$callback[1]($strContent, $arrData, $arrSet);
+				\System::importStatic($callback[0])->{$callback[1]}($strContent, $arrData, $arrSet);
 			}
 		}
 
 		// Free the memory
 		unset($arrData['content']);
-
-		// Calculate the checksum (see #4179)
-		$arrSet['checksum'] = md5(preg_replace('/ +/', ' ', strip_tags($strContent)));
-
-		// Return if the page is indexed and up to date
-		$objIndex = $objDatabase->prepare("SELECT id, checksum FROM tl_search WHERE url=? AND pid=?")
-								->limit(1)
-								->execute($arrSet['url'], $arrSet['pid']);
-
-		if ($objIndex->numRows && $objIndex->checksum == $arrSet['checksum'])
-		{
-			return false;
-		}
 
 		$arrMatches = array();
 		preg_match('/<\/head>/', $strContent, $arrMatches, PREG_OFFSET_CAPTURE);
@@ -157,21 +145,22 @@ class Search
 		$strBody = substr($strContent, $intOffset);
 
 		unset($strContent);
+
 		$tags = array();
 
-		// Get description
+		// Get the description
 		if (preg_match('/<meta[^>]+name="description"[^>]+content="([^"]*)"[^>]*>/i', $strHead, $tags))
 		{
-			$arrData['description'] = trim(preg_replace('/ +/', ' ', \String::decodeEntities($tags[1])));
+			$arrData['description'] = trim(preg_replace('/ +/', ' ', \StringUtil::decodeEntities($tags[1])));
 		}
 
-		// Get keywords
+		// Get the keywords
 		if (preg_match('/<meta[^>]+name="keywords"[^>]+content="([^"]*)"[^>]*>/i', $strHead, $tags))
 		{
-			$arrData['keywords'] = trim(preg_replace('/ +/', ' ', \String::decodeEntities($tags[1])));
+			$arrData['keywords'] = trim(preg_replace('/ +/', ' ', \StringUtil::decodeEntities($tags[1])));
 		}
 
-		// Read title and alt attributes
+		// Read the title and alt attributes
 		if (preg_match_all('/<* (title|alt)="([^"]*)"[^>]*>/i', $strBody, $tags))
 		{
 			$arrData['keywords'] .= ' ' . implode(', ', array_unique($tags[2]));
@@ -183,11 +172,44 @@ class Search
 
 		// Put everything together
 		$arrSet['text'] = $arrData['title'] . ' ' . $arrData['description'] . ' ' . $strBody . ' ' . $arrData['keywords'];
-		$arrSet['text'] = trim(preg_replace('/ +/', ' ', \String::decodeEntities($arrSet['text'])));
+		$arrSet['text'] = trim(preg_replace('/ +/', ' ', \StringUtil::decodeEntities($arrSet['text'])));
 
-		$arrSet['tstamp'] = time();
+		// Calculate the checksum
+		$arrSet['checksum'] = md5($arrSet['text']);
 
-		// Update an existing old entry
+		$objIndex = $objDatabase->prepare("SELECT id, url FROM tl_search WHERE checksum=? AND pid=?")
+								->limit(1)
+								->execute($arrSet['checksum'], $arrSet['pid']);
+
+		// Update the URL if the new URL is shorter or the current URL is not canonical
+		if ($objIndex->numRows && $objIndex->url != $arrSet['url'])
+		{
+			if (strpos($arrSet['url'], '?') === false && strpos($objIndex->url, '?') !== false)
+			{
+				// The new URL is more canonical (no query string)
+				$objDatabase->prepare("DELETE FROM tl_search WHERE id=?")
+							->execute($objIndex->id);
+
+				$objDatabase->prepare("DELETE FROM tl_search_index WHERE pid=?")
+							->execute($objIndex->id);
+			}
+			elseif (substr_count($arrSet['url'], '/') > substr_count($objIndex->url, '/') || strpos($arrSet['url'], '?') !== false && strpos($objIndex->url, '?') === false || strlen($arrSet['url']) > strlen($objIndex->url))
+			{
+				// The current URL is more canonical (shorter and/or less fragments)
+				$arrSet['url'] = $objIndex->url;
+			}
+			else
+			{
+				// The same page has been indexed under a different URL already (see #8460)
+				return false;
+			}
+		}
+
+		$objIndex = $objDatabase->prepare("SELECT id FROM tl_search WHERE url=? AND pid=?")
+								->limit(1)
+								->execute($arrSet['url'], $arrSet['pid']);
+
+		// Add the page to the tl_search table
 		if ($objIndex->numRows)
 		{
 			$objDatabase->prepare("UPDATE tl_search %s WHERE id=?")
@@ -196,41 +218,18 @@ class Search
 
 			$intInsertId = $objIndex->id;
 		}
-
-		// Add a new entry
 		else
 		{
-			// Check for a duplicate record with the same checksum
-			$objDuplicates = $objDatabase->prepare("SELECT id, url FROM tl_search WHERE pid=? AND checksum=?")
-										 ->limit(1)
-										 ->execute($arrSet['pid'], $arrSet['checksum']);
+			$objInsertStmt = $objDatabase->prepare("INSERT INTO tl_search %s")
+										 ->set($arrSet)
+										 ->execute();
 
-			// Keep the existing record
-			if ($objDuplicates->numRows)
-			{
-				// Update the URL if the new URL is shorter or the current URL is not canonical
-				if (substr_count($arrSet['url'], '/') < substr_count($objDuplicates->url, '/') || strncmp($arrSet['url'] . '?', $objDuplicates->url, utf8_strlen($arrSet['url']) + 1) === 0)
-				{
-					$objDatabase->prepare("UPDATE tl_search SET url=? WHERE id=?")
-								->execute($arrSet['url'], $objDuplicates->id);
-				}
-
-				return false;
-			}
-
-			// Insert the new record if there is no duplicate
-			else
-			{
-				$objInsertStmt = $objDatabase->prepare("INSERT INTO tl_search %s")
-											 ->set($arrSet)
-											 ->execute();
-
-				$intInsertId = $objInsertStmt->insertId;
-			}
+			$intInsertId = $objInsertStmt->insertId;
 		}
 
 		// Remove quotes
 		$strText = str_replace(array('´', '`'), "'", $arrSet['text']);
+
 		unset($arrSet);
 
 		// Remove special characters
@@ -240,7 +239,7 @@ class Search
 		}
 		else
 		{
-			$strText = preg_replace(array('/- /', '/ -/', "/' /", "/ '/", '/\. /', '/\.$/', '/: /', '/:$/', '/, /', '/,$/', '/[^\pN\pL\'\.:,\+_-]/u'), ' ', $strText);
+			$strText = preg_replace(array('/- /', '/ -/', "/' /", "/ '/", '/\. /', '/\.$/', '/: /', '/:$/', '/, /', '/,$/', '/[^\w\'.:,+-]/u'), ' ', $strText);
 		}
 
 		// Split words
@@ -268,7 +267,7 @@ class Search
 				$strWord = substr($strWord, 1);
 			}
 
-			if (preg_match('/[\':,\.]$/', $strWord))
+			if (preg_match('/[\':,.]$/', $strWord))
 			{
 				$strWord = substr($strWord, 0, -1);
 			}
@@ -315,7 +314,7 @@ class Search
 	{
 		// Clean the keywords
 		$strKeywords = utf8_strtolower($strKeywords);
-		$strKeywords = \String::decodeEntities($strKeywords);
+		$strKeywords = \StringUtil::decodeEntities($strKeywords);
 
 		if (function_exists('mb_eregi_replace'))
 		{
@@ -323,7 +322,7 @@ class Search
 		}
 		else
 		{
-			$strKeywords = preg_replace(array('/\. /', '/\.$/', '/: /', '/:$/', '/, /', '/,$/', '/[^\pN\pL \*\+\'"\.:,_-]/u'), ' ', $strKeywords);
+			$strKeywords = preg_replace(array('/\. /', '/\.$/', '/: /', '/:$/', '/, /', '/,$/', '/[^\w\' *+".:,-]/u'), ' ', $strKeywords);
 		}
 
 		// Check keyword string

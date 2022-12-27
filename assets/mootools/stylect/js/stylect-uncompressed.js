@@ -1,26 +1,20 @@
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
 /**
  * Replace select menus with a nicer, JavaScript based solution.
  *
- * @author Leo Feyer <http://contao.org>
+ * @author Leo Feyer <https://contao.org>
  * @author Joe Ray Gregory <https://github.com/may17>
  */
 var Stylect =
 {
-	/**
-	 * Check for WebKit
-	 * @member {boolean}
- 	 */
-	isWebkit: (Browser.chrome || Browser.safari || navigator.userAgent.match(/(?:webkit|khtml)/i)),
-
 	/**
 	 * Create the div template
 	 * @member {string}
@@ -100,11 +94,6 @@ var Stylect =
 
 			// Hide the original select menu
 			el.setStyle('opacity', 0);
-
-			// Apply an extra bottom margin in WebKit
-			if (Stylect.isWebkit) {
-				el.setStyle('margin-bottom', '4px');
-			}
 
 			// Update the div onchange
 			el.addEvents({

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -39,6 +39,11 @@ class Idna
 	 */
 	public static function encode($strDomain)
 	{
+		if ($strDomain == '')
+		{
+			return '';
+		}
+
 		$objPunycode = new Punycode();
 
 		return $objPunycode->encode($strDomain);
@@ -54,6 +59,11 @@ class Idna
 	 */
 	public static function decode($strDomain)
 	{
+		if ($strDomain == '')
+		{
+			return '';
+		}
+
 		$objPunycode = new Punycode();
 
 		return $objPunycode->decode($strDomain);
@@ -79,9 +89,36 @@ class Idna
 			return $strEmail; // see #6241
 		}
 
-		list($strLocal, $strHost) = explode('@', $strEmail);
+		$arrChunks = explode('@', $strEmail);
+		$strHost = array_pop($arrChunks);
 
-		return $strLocal . '@' . static::encode($strHost);
+		return implode('@', $arrChunks) . '@' . static::encode($strHost);
+	}
+
+
+	/**
+	 * Decode the domain in an e-mail address
+	 *
+	 * @param string $strEmail The e-mail address
+	 *
+	 * @return string The decoded e-mail address
+	 */
+	public static function decodeEmail($strEmail)
+	{
+		if ($strEmail == '')
+		{
+			return '';
+		}
+
+		if (strpos($strEmail, '@') === false)
+		{
+			return $strEmail; // see #6241
+		}
+
+		$arrChunks = explode('@', $strEmail);
+		$strHost = array_pop($arrChunks);
+
+		return implode('@', $arrChunks) . '@' . static::decode($strHost);
 	}
 
 
@@ -123,14 +160,7 @@ class Idna
 		// Scheme
 		if (isset($arrUrl['scheme']))
 		{
-			if ($arrUrl['scheme'] == 'tel' || $arrUrl['scheme'] == 'sms')
-			{
-				$arrUrl['scheme'] .= ':'; // see #6148
-			}
-			else
-			{
-				$arrUrl['scheme'] .= '://';
-			}
+			$arrUrl['scheme'] .= ((substr($strUrl, strlen($arrUrl['scheme']), 3) == '://') ? '://' : ':');
 		}
 
 		// User

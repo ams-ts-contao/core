@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -87,7 +87,7 @@ abstract class Frontend extends \Controller
 		}
 
 		// Remove the URL suffix if not just a language root (e.g. en/) is requested
-		if ($strRequest != '' && (!\Config::get('addLanguageToUrl') || !preg_match('@^[a-z]{2}(\-[A-Z]{2})?/$@', $strRequest)))
+		if ($strRequest != '' && (!\Config::get('addLanguageToUrl') || !preg_match('@^[a-z]{2}(-[A-Z]{2})?/$@', $strRequest)))
 		{
 			$intSuffixLength = strlen(\Config::get('urlSuffix'));
 
@@ -109,7 +109,7 @@ abstract class Frontend extends \Controller
 			$arrMatches = array();
 
 			// Use the matches instead of substr() (thanks to Mario Müller)
-			if (preg_match('@^([a-z]{2}(\-[A-Z]{2})?)/(.*)$@', $strRequest, $arrMatches))
+			if (preg_match('@^([a-z]{2}(-[A-Z]{2})?)/(.*)$@', $strRequest, $arrMatches))
 			{
 				\Input::setGet('language', $arrMatches[1]);
 
@@ -237,7 +237,7 @@ abstract class Frontend extends \Controller
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getPageIdFromUrl'] as $callback)
 			{
-				$arrFragments = static::importStatic($callback[0])->$callback[1]($arrFragments);
+				$arrFragments = static::importStatic($callback[0])->{$callback[1]}($arrFragments);
 			}
 		}
 
@@ -299,7 +299,7 @@ abstract class Frontend extends \Controller
 			foreach ($GLOBALS['TL_HOOKS']['getRootPageFromUrl'] as $callback)
 			{
 				/** @var \PageModel $objRootPage */
-				if (is_object(($objRootPage = static::importStatic($callback[0])->$callback[1]())))
+				if (is_object(($objRootPage = static::importStatic($callback[0])->{$callback[1]}())))
 				{
 					return $objRootPage;
 				}
@@ -327,6 +327,12 @@ abstract class Frontend extends \Controller
 		{
 			$accept_language = \Environment::get('httpAcceptLanguage');
 
+			// Always load the language fall back root if "doNotRedirectEmpty" is enabled
+			if (\Config::get('addLanguageToUrl') && \Config::get('doNotRedirectEmpty'))
+			{
+				$accept_language = '-';
+			}
+
 			// Find the matching root pages (thanks to Andreas Schempp)
 			$objRootPage = \PageModel::findFirstPublishedRootByHostAndLanguage($host, $accept_language);
 
@@ -338,10 +344,21 @@ abstract class Frontend extends \Controller
 				die_nicely('be_no_root', 'No root page found');
 			}
 
-			// Redirect to the language root (e.g. en/)
-			if (\Config::get('addLanguageToUrl') && !\Config::get('doNotRedirectEmpty') && \Environment::get('request') == '')
+			// Redirect to the website root or language root (e.g. en/)
+			if (\Environment::get('request') == '')
 			{
-				static::redirect((!\Config::get('rewriteURL') ? 'index.php/' : '') . $objRootPage->language . '/', 301);
+				if (\Config::get('addLanguageToUrl') && !\Config::get('doNotRedirectEmpty'))
+				{
+					static::redirect((!\Config::get('rewriteURL') ? 'index.php/' : '') . $objRootPage->language . '/', 301);
+				}
+				elseif (($objPage = \PageModel::findFirstPublishedByPid($objRootPage->id)) !== null)
+				{
+					// Redirect if the page is not the language fall back or the alias is not "index" or "/" (see #8498 and #8560)
+					if (!$objRootPage->fallback || !in_array($objPage->alias, array('index', '/')))
+					{
+						static::redirect($objPage->getFrontendUrl(), 302);
+					}
+				}
 			}
 		}
 
@@ -411,7 +428,7 @@ abstract class Frontend extends \Controller
 			// Omit the key if it is an auto_item key (see #5037)
 			if (!\Config::get('disableAlias') && \Config::get('useAutoItem') && ($k == 'auto_item' || in_array($k, $GLOBALS['TL_AUTO_ITEM'])))
 			{
-				$strParams .= $strConnector . urlencode($v);
+				$strParams = $strConnector . urlencode($v) . $strParams;
 			}
 			else
 			{
@@ -457,6 +474,11 @@ abstract class Frontend extends \Controller
 	 */
 	protected function jumpToOrReload($intId, $strParams=null, $strForceLang=null)
 	{
+		if ($strForceLang !== null)
+		{
+			@trigger_error('Using Frontend::jumpToOrReload() with $strForceLang has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		}
+
 		/** @var \PageModel $objPage */
 		global $objPage;
 
@@ -469,7 +491,7 @@ abstract class Frontend extends \Controller
 			{
 				if ($intId['id'] != $objPage->id  || $blnForceRedirect)
 				{
-					$this->redirect($this->generateFrontendUrl($intId, $strParams, $strForceLang));
+					$this->redirect($this->generateFrontendUrl($intId, $strParams, $strForceLang, true));
 				}
 			}
 		}
@@ -479,7 +501,7 @@ abstract class Frontend extends \Controller
 			{
 				if (($objNextPage = \PageModel::findPublishedById($intId)) !== null)
 				{
-					$this->redirect($this->generateFrontendUrl($objNextPage->row(), $strParams, $strForceLang));
+					$this->redirect($objNextPage->getFrontendUrl($strParams, $strForceLang));
 				}
 			}
 		}
@@ -497,10 +519,17 @@ abstract class Frontend extends \Controller
 	 */
 	protected function getLoginStatus($strCookie)
 	{
+		$cookie = \Input::cookie($strCookie);
+
+		if ($cookie === null)
+		{
+			return false;
+		}
+
 		$hash = sha1(session_id() . (!\Config::get('disableIpCheck') ? \Environment::get('ip') : '') . $strCookie);
 
 		// Validate the cookie hash
-		if (\Input::cookie($strCookie) == $hash)
+		if ($cookie == $hash)
 		{
 			// Try to find the session
 			$objSession = \SessionModel::findByHashAndName($hash, $strCookie);
@@ -553,6 +582,11 @@ abstract class Frontend extends \Controller
 	 */
 	public static function getMetaData($strData, $strLanguage)
 	{
+		if (empty($strLanguage))
+		{
+			return array();
+		}
+
 		$arrData = deserialize($strData);
 
 		// Convert the language to a locale (see #5678)
@@ -622,10 +656,10 @@ abstract class Frontend extends \Controller
 	 */
 	protected function prepareMetaDescription($strText)
 	{
-		$strText = $this->replaceInsertTags($strText);
+		$strText = $this->replaceInsertTags($strText, false);
 		$strText = strip_tags($strText);
 		$strText = str_replace("\n", ' ', $strText);
-		$strText = \String::substr($strText, 180);
+		$strText = \StringUtil::substr($strText, 180);
 
 		return trim($strText);
 	}

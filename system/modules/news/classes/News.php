@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -160,7 +160,7 @@ class News extends \Frontend
 					}
 					else
 					{
-						$arrUrls[$jumpTo] = $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/items/%s'), $objParent->language);
+						$arrUrls[$jumpTo] = $objParent->getAbsoluteUrl((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/%s' : '/items/%s');
 					}
 				}
 
@@ -174,7 +174,7 @@ class News extends \Frontend
 				$objItem = new \FeedItem();
 
 				$objItem->title = $objArticle->headline;
-				$objItem->link = $this->getLink($objArticle, $strUrl, $strLink);
+				$objItem->link = $this->getLink($objArticle, $strUrl);
 				$objItem->published = $objArticle->date;
 				$objItem->author = $objArticle->authorName;
 
@@ -186,10 +186,16 @@ class News extends \Frontend
 
 					if ($objElement !== null)
 					{
+						// Overwrite the request (see #7756)
+						$strRequest = \Environment::get('request');
+						\Environment::set('request', $objItem->link);
+
 						while ($objElement->next())
 						{
 							$strDescription .= $this->getContentElement($objElement->current());
 						}
+
+						\Environment::set('request', $strRequest);
 					}
 				}
 				else
@@ -207,7 +213,7 @@ class News extends \Frontend
 
 					if ($objFile !== null)
 					{
-						$objItem->addEnclosure($objFile->path);
+						$objItem->addEnclosure($objFile->path, $strLink);
 					}
 				}
 
@@ -224,7 +230,7 @@ class News extends \Frontend
 						{
 							while ($objFile->next())
 							{
-								$objItem->addEnclosure($objFile->path);
+								$objItem->addEnclosure($objFile->path, $strLink);
 							}
 						}
 					}
@@ -297,17 +303,23 @@ class News extends \Frontend
 						continue;
 					}
 
-					// The target page is exempt from the sitemap (see #6418)
-					if ($blnIsSitemap && $objParent->sitemap == 'map_never')
+					if ($blnIsSitemap)
 					{
-						continue;
+						// The target page is protected (see #8416)
+						if ($objParent->protected)
+						{
+							continue;
+						}
+
+						// The target page is exempt from the sitemap (see #6418)
+						if ($objParent->sitemap == 'map_never')
+						{
+							continue;
+						}
 					}
 
-					// Set the domain (see #6421)
-					$domain = ($objParent->rootUseSSL ? 'https://' : 'http://') . ($objParent->domain ?: \Environment::get('host')) . TL_PATH . '/';
-
 					// Generate the URL
-					$arrProcessed[$objArchive->jumpTo] = $domain . $this->generateFrontendUrl($objParent->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/%s' : '/items/%s'), $objParent->language);
+					$arrProcessed[$objArchive->jumpTo] = $objParent->getAbsoluteUrl((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/%s' : '/items/%s');
 				}
 
 				$strUrl = $arrProcessed[$objArchive->jumpTo];
@@ -351,7 +363,8 @@ class News extends \Frontend
 			case 'internal':
 				if (($objTarget = $objItem->getRelated('jumpTo')) !== null)
 				{
-					return $strBase . $this->generateFrontendUrl($objTarget->row());
+					/** @var \PageModel $objTarget */
+					return $objTarget->getAbsoluteUrl();
 				}
 				break;
 
@@ -359,13 +372,20 @@ class News extends \Frontend
 			case 'article':
 				if (($objArticle = \ArticleModel::findByPk($objItem->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 				{
-					return $strBase . ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
+					/** @var \PageModel $objPid */
+					return ampersand($objPid->getAbsoluteUrl('/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
 				}
 				break;
 		}
 
+		// Backwards compatibility (see #8329)
+		if ($strBase != '' && !preg_match('#^https?://#', $strUrl))
+		{
+			$strUrl = $strBase . $strUrl;
+		}
+
 		// Link to the default page
-		return $strBase . sprintf($strUrl, (($objItem->alias != '' && !\Config::get('disableAlias')) ? $objItem->alias : $objItem->id));
+		return sprintf($strUrl, (($objItem->alias != '' && !\Config::get('disableAlias')) ? $objItem->alias : $objItem->id));
 	}
 
 

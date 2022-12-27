@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -322,6 +322,10 @@ $GLOBALS['TL_DCA']['tl_member'] = array
 			'flag'                    => 1,
 			'inputType'               => 'text',
 			'eval'                    => array('mandatory'=>true, 'unique'=>true, 'nullIfEmpty'=>true, 'rgxp'=>'extnd', 'nospace'=>true, 'maxlength'=>64, 'feEditable'=>true, 'feViewable'=>true, 'feGroup'=>'login'),
+			'save_callback' => array
+			(
+				array('tl_member', 'resetAutologin')
+			),
 			'sql'                     => "varchar(64) COLLATE utf8_bin NULL"
 		),
 		'password' => array
@@ -332,6 +336,7 @@ $GLOBALS['TL_DCA']['tl_member'] = array
 			'eval'                    => array('mandatory'=>true, 'preserveTags'=>true, 'minlength'=>Config::get('minPasswordLength'), 'feEditable'=>true, 'feGroup'=>'login'),
 			'save_callback' => array
 			(
+				array('tl_member', 'resetAutologin'),
 				array('tl_member', 'setNewPassword')
 			),
 			'sql'                     => "varchar(128) NOT NULL default ''"
@@ -379,15 +384,16 @@ $GLOBALS['TL_DCA']['tl_member'] = array
 		'dateAdded' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['dateAdded'],
+			'default'                 => time(),
 			'sorting'                 => true,
 			'flag'                    => 6,
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'lastLogin' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['lastLogin'],
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'currentLogin' => array
@@ -395,32 +401,34 @@ $GLOBALS['TL_DCA']['tl_member'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['currentLogin'],
 			'sorting'                 => true,
 			'flag'                    => 6,
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'loginCount' => array
 		(
+			'default'                 => 3,
+			'eval'                    => array('doNotCopy'=>true),
 			'sql'                     => "smallint(5) unsigned NOT NULL default '3'"
 		),
 		'locked' => array
 		(
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'session' => array
 		(
-			'eval'                    => array('doNotShow'=>true),
+			'eval'                    => array('doNotShow'=>true, 'doNotCopy'=>true),
 			'sql'                     => "blob NULL"
 		),
 		'autologin' => array
 		(
 			'default'                 => null,
 			'eval'                    => array('doNotCopy'=>true),
-			'sql'                     => "varchar(32) NULL"
+			'sql'                     => "varchar(64) NULL"
 		),
 		'createdOn' => array
 		(
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'activation' => array
@@ -488,18 +496,21 @@ class tl_member extends Backend
 	 * @param DataContainer $dc
 	 * @param array         $args
 	 *
-	 * @return string
+	 * @return array
 	 */
 	public function addIcon($row, $label, DataContainer $dc, $args)
 	{
 		$image = 'member';
+		$time = \Date::floorToMinute();
 
-		if ($row['disable'] || strlen($row['start']) && $row['start'] > time() || strlen($row['stop']) && $row['stop'] < time())
+		$disabled = $row['start'] !== '' && $row['start'] > $time || $row['stop'] !== '' && $row['stop'] < $time;
+
+		if ($row['disable'] || $disabled)
 		{
 			$image .= '_';
 		}
 
-		$args[0] = sprintf('<div class="list_icon_new" style="background-image:url(\'%ssystem/themes/%s/images/%s.gif\')">&nbsp;</div>', TL_ASSETS_URL, Backend::getTheme(), $image);
+		$args[0] = sprintf('<div class="list_icon_new" style="background-image:url(\'%ssystem/themes/%s/images/%s.gif\')" data-icon="%s.gif" data-icon-disabled="%s.gif">&nbsp;</div>', TL_ASSETS_URL, Backend::getTheme(), $image, $disabled ? $image : rtrim($image, '_'), rtrim($image, '_') . '_');
 
 		return $args;
 	}
@@ -523,14 +534,51 @@ class tl_member extends Backend
 			return '';
 		}
 
-		return '<a href="contao/preview.php?user='.$row['username'].'" target="_blank" title="'.specialchars($title).'">'.Image::getHtml($icon, $label).'</a> ';
+		return '<a href="contao/preview.php?user='.rawurlencode($row['username']).'" target="_blank" title="'.specialchars($title).'">'.Image::getHtml($icon, $label).'</a> ';
+	}
+
+
+	/**
+	 * Reset the autologin hash
+	 *
+	 * @param string        $varValue
+	 * @param DataContainer $dc
+	 *
+	 * @return string
+	 */
+	public function resetAutologin($varValue, $dc)
+	{
+		// Return if a user edits their own account in the front end
+		if (TL_MODE == 'FE')
+		{
+			return $varValue;
+		}
+
+		// Return if there is no user (e.g. upon registration)
+		if (!$dc)
+		{
+			return $varValue;
+		}
+
+		$objUser = $this->Database->prepare("SELECT * FROM tl_member WHERE id=?")
+								  ->limit(1)
+								  ->execute($dc->id);
+
+		// Reset the autologin hash
+		if ($varValue != $objUser->{$dc->field})
+		{
+			$this->Database->prepare("UPDATE tl_member SET autologin=NULL WHERE id=?")
+						   ->execute($dc->id);
+		}
+
+		return $varValue;
 	}
 
 
 	/**
 	 * Call the "setNewPassword" callback
 	 *
-	 * @param string $strPassword
+	 * @param string                    $strPassword
 	 * @param DataContainer|MemberModel $user
 	 *
 	 * @return string
@@ -555,10 +603,14 @@ class tl_member extends Backend
 				foreach ($GLOBALS['TL_HOOKS']['setNewPassword'] as $callback)
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($objUser, $strPassword);
+					$this->{$callback[0]}->{$callback[1]}($objUser, $strPassword);
 				}
 			}
 		}
+
+		// Invalidate the user sessions if the password changes
+		$this->Database->prepare("DELETE FROM tl_session WHERE name='FE_USER_AUTH' AND pid=? AND sessionID!=?")
+					   ->execute($user->id, session_id());
 
 		return $strPassword;
 	}
@@ -663,7 +715,7 @@ class tl_member extends Backend
 			$icon = 'invisible.gif';
 		}
 
-		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ';
+		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label, 'data-state="' . ($row['disable'] ? 0 : 1) . '"').'</a> ';
 	}
 
 
@@ -676,7 +728,16 @@ class tl_member extends Backend
 	 */
 	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
-		// Check permissions
+		// Set the ID and action
+		Input::setGet('id', $intId);
+		Input::setGet('act', 'toggle');
+
+		if ($dc)
+		{
+			$dc->id = $intId; // see #8043
+		}
+
+		// Check the field access
 		if (!$this->User->hasAccess('tl_member::disable', 'alexf'))
 		{
 			$this->log('Not enough permissions to activate/deactivate member ID "'.$intId.'"', __METHOD__, TL_ERROR);
@@ -694,7 +755,7 @@ class tl_member extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
+					$blnVisible = $this->{$callback[0]}->{$callback[1]}($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
@@ -710,7 +771,6 @@ class tl_member extends Backend
 					   ->execute($intId);
 
 		$objVersions->create();
-		$this->log('A new version of record "tl_member.id='.$intId.'" has been created'.$this->getParentEntries('tl_member', $intId), __METHOD__, TL_GENERAL);
 
 		// Remove the session if the user is disabled (see #5353)
 		if (!$blnVisible)

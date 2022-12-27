@@ -1,18 +1,18 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
 
 
 /**
- * Provide methods to handle input field "page tree".
+ * Provide methods to handle input field "file tree".
  *
  * @property string  $orderField
  * @property boolean $multiple
@@ -66,7 +66,7 @@ class FileTree extends \Widget
 			$this->strOrderName = $this->orderField . str_replace($this->strField, '', $this->strName);
 
 			// Retrieve the order value
-			$objRow = $this->Database->prepare("SELECT {$this->orderField} FROM {$this->strTable} WHERE id=?")
+			$objRow = $this->Database->prepare("SELECT ".\Database::quoteIdentifier($this->orderField)." FROM {$this->strTable} WHERE id=?")
 									 ->limit(1)
 									 ->execute($this->activeRecord->id);
 
@@ -88,12 +88,12 @@ class FileTree extends \Widget
 		// Store the order value
 		if ($this->orderField != '')
 		{
-			$arrNew = array_map('String::uuidToBin', explode(',', \Input::post($this->strOrderName)));
+			$arrNew = array_map('StringUtil::uuidToBin', explode(',', \Input::post($this->strOrderName)));
 
 			// Only proceed if the value has changed
 			if ($arrNew !== $this->{$this->orderField})
 			{
-				$this->Database->prepare("UPDATE {$this->strTable} SET tstamp=?, {$this->orderField}=? WHERE id=?")
+				$this->Database->prepare("UPDATE {$this->strTable} SET tstamp=?, ".\Database::quoteIdentifier($this->orderField)."=? WHERE id=?")
 							   ->execute(time(), serialize($arrNew), $this->activeRecord->id);
 
 				$this->objDca->createNewVersion = true; // see #6285
@@ -112,7 +112,7 @@ class FileTree extends \Widget
 		}
 		elseif (strpos($varInput, ',') === false)
 		{
-			$varInput = \String::uuidToBin($varInput);
+			$varInput = \StringUtil::uuidToBin($varInput);
 
 			return $this->multiple ? array($varInput) : $varInput;
 		}
@@ -120,7 +120,7 @@ class FileTree extends \Widget
 		{
 			$arrValue = array_filter(explode(',', $varInput));
 
-			return $this->multiple ? array_map('String::uuidToBin', $arrValue) : \String::uuidToBin($arrValue[0]);
+			return $this->multiple ? array_map('StringUtil::uuidToBin', $arrValue) : \StringUtil::uuidToBin($arrValue[0]);
 		}
 	}
 
@@ -169,7 +169,7 @@ class FileTree extends \Widget
 							{
 								$image = 'placeholder.png';
 
-								if ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth'))
+								if (($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth')) && $objFile->viewWidth && $objFile->viewHeight)
 								{
 									$image = \Image::get($objFiles->path, 80, 60, 'center_center');
 								}
@@ -213,7 +213,7 @@ class FileTree extends \Widget
 									{
 										$image = 'placeholder.png';
 
-										if ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth'))
+										if (($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth')) && $objFile->viewWidth && $objFile->viewHeight)
 										{
 											$image = \Image::get($objSubfiles->path, 80, 60, 'center_center');
 										}
@@ -243,7 +243,7 @@ class FileTree extends \Widget
 								{
 									$image = 'placeholder.png';
 
-									if ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth'))
+									if (($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth')) && $objFile->viewWidth && $objFile->viewHeight)
 									{
 										$image = \Image::get($objFiles->path, 80, 60, 'center_center');
 									}
@@ -269,7 +269,7 @@ class FileTree extends \Widget
 			{
 				$arrNew = array();
 
-				foreach ($this->{$this->orderField} as $i)
+				foreach ((array) $this->{$this->orderField} as $i)
 				{
 					if (isset($arrValues[$i]))
 					{
@@ -295,8 +295,8 @@ class FileTree extends \Widget
 		\Config::set('loadGoogleFonts', true);
 
 		// Convert the binary UUIDs
-		$strSet = implode(',', array_map('String::binToUuid', $arrSet));
-		$strOrder = $blnHasOrder ? implode(',', array_map('String::binToUuid', $this->{$this->orderField})) : '';
+		$strSet = implode(',', array_map('StringUtil::binToUuid', $arrSet));
+		$strOrder = $blnHasOrder ? implode(',', array_map('StringUtil::binToUuid', $this->{$this->orderField})) : '';
 
 		$return = '<input type="hidden" name="'.$this->strName.'" id="ctrl_'.$this->strId.'" value="'.$strSet.'">' . ($blnHasOrder ? '
   <input type="hidden" name="'.$this->strOrderName.'" id="ctrl_'.$this->strOrderId.'" value="'.$strOrder.'">' : '') . '
@@ -306,11 +306,11 @@ class FileTree extends \Widget
 
 		foreach ($arrValues as $k=>$v)
 		{
-			$return .= '<li data-id="'.\String::binToUuid($k).'">'.$v.'</li>';
+			$return .= '<li data-id="'.\StringUtil::binToUuid($k).'">'.$v.'</li>';
 		}
 
 		$return .= '</ul>
-    <p><a href="contao/file.php?do='.\Input::get('do').'&amp;table='.$this->strTable.'&amp;field='.$this->strField.'&amp;act=show&amp;id='.$this->activeRecord->id.'&amp;value='.implode(',', array_keys($arrSet)).'&amp;rt='.REQUEST_TOKEN.'" class="tl_submit" onclick="Backend.getScrollOffset();Backend.openModalSelector({\'width\':768,\'title\':\''.specialchars(str_replace("'", "\\'", $GLOBALS['TL_LANG']['MSC']['filepicker'])).'\',\'url\':this.href,\'id\':\''.$this->strId.'\'});return false">'.$GLOBALS['TL_LANG']['MSC']['changeSelection'].'</a></p>' . ($blnHasOrder ? '
+    <p><a href="contao/file.php?do='.\Input::get('do').'&amp;table='.$this->strTable.'&amp;field='.$this->strField.'&amp;act=show&amp;id='.$this->activeRecord->id.'&amp;value='.implode(',', array_keys($arrSet)).'&amp;rt='.REQUEST_TOKEN.'" class="tl_submit" onclick="Backend.getScrollOffset();Backend.openModalSelector({\'width\':768,\'title\':\''.specialchars(str_replace("'", "\\'", $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['label'][0])).'\',\'url\':this.href,\'id\':\''.$this->strId.'\'});return false">'.$GLOBALS['TL_LANG']['MSC']['changeSelection'].'</a></p>' . ($blnHasOrder ? '
     <script>Backend.makeMultiSrcSortable("sort_'.$this->strId.'", "ctrl_'.$this->strOrderId.'")</script>' : '') . '
   </div>';
 

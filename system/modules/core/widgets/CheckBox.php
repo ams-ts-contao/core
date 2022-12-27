@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -65,7 +65,7 @@ class CheckBox extends \Widget
 
 		if (!empty($varValue) && !$this->isValidOption($varValue))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalid'], (is_array($varValue) ? implode(', ', $varValue) : $varValue)));
+			$this->addError($GLOBALS['TL_LANG']['ERR']['invalid']);
 		}
 
 		parent::validate();
@@ -87,7 +87,7 @@ class CheckBox extends \Widget
 		}
 
 		// The "required" attribute only makes sense for single checkboxes
-		if (!$this->multiple && $this->mandatory)
+		if ($this->mandatory && !$this->multiple)
 		{
 			$this->arrAttributes['required'] = 'required';
 		}
@@ -126,12 +126,12 @@ class CheckBox extends \Widget
 				$display = 'block';
 			}
 
-			$arrOptions[] = '<div class="checkbox_toggler' . ($blnFirst ? '_first' : '') . '"><a href="' . $this->addToUrl('cbc=' . $id) . '" onclick="AjaxRequest.toggleCheckboxGroup(this,\'' . $id . '\');Backend.getScrollOffset();return false"><img src="' . TL_FILES_URL . 'system/themes/' . \Backend::getTheme() . '/images/' . $img . '.gif" width="18" height="18" alt="toggle checkbox group"></a>' . $i .	'</div><fieldset id="' . $id . '" class="tl_checkbox_container checkbox_options" style="display:' . $display . '"><input type="checkbox" id="check_all_' . $id . '" class="tl_checkbox" onclick="Backend.toggleCheckboxGroup(this, \'' . $id . '\')"> <label for="check_all_' . $id . '" style="color:#a6a6a6"><em>' . $GLOBALS['TL_LANG']['MSC']['selectAll'] . '</em></label>';
+			$arrOptions[] = '<div class="checkbox_toggler' . ($blnFirst ? '_first' : '') . '"><a href="' . $this->addToUrl('cbc=' . $id) . '" onclick="AjaxRequest.toggleCheckboxGroup(this,\'' . $id . '\');Backend.getScrollOffset();return false">' . \Image::getHtml($img . '.gif') . '</a>' . $i . '</div><fieldset id="' . $id . '" class="tl_checkbox_container checkbox_options" style="display:' . $display . '"><input type="checkbox" id="check_all_' . $id . '" class="tl_checkbox" onclick="Backend.toggleCheckboxGroup(this, \'' . $id . '\')"> <label for="check_all_' . $id . '" style="color:#a6a6a6"><em>' . $GLOBALS['TL_LANG']['MSC']['selectAll'] . '</em></label>';
 
 			// Multidimensional array
 			foreach ($arrOption as $k=>$v)
 			{
-				$arrOptions[] = $this->generateCheckbox($v, $i.'_'.$k);
+				$arrOptions[] = $this->generateCheckbox($v, standardize($i).'_'.$k);
 			}
 
 			$arrOptions[] = '</fieldset>';
@@ -151,7 +151,7 @@ class CheckBox extends \Widget
 			return sprintf('<fieldset id="ctrl_%s" class="tl_checkbox_container%s"><legend>%s%s%s%s</legend><input type="hidden" name="%s" value="">%s%s</fieldset>%s',
 							$this->strId,
 							(($this->strClass != '') ? ' ' . $this->strClass : ''),
-							($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
+							($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].' </span>' : ''),
 							$this->strLabel,
 							($this->mandatory ? '<span class="mandatory">*</span>' : ''),
 							$this->xlabel,
@@ -182,13 +182,15 @@ class CheckBox extends \Widget
 	 */
 	protected function generateCheckbox($arrOption, $i)
 	{
-		return sprintf('<input type="checkbox" name="%s" id="opt_%s" class="tl_checkbox" value="%s"%s%s onfocus="Backend.getScrollOffset()"> <label for="opt_%s">%s</label>',
+		return sprintf('<input type="checkbox" name="%s" id="opt_%s" class="tl_checkbox" value="%s"%s%s onfocus="Backend.getScrollOffset()"> <label for="opt_%s">%s%s%s</label>',
 						$this->strName . ($this->multiple ? '[]' : ''),
 						$this->strId.'_'.$i,
 						($this->multiple ? specialchars($arrOption['value']) : 1),
 						$this->isChecked($arrOption),
 						$this->getAttributes(),
 						$this->strId.'_'.$i,
-						$arrOption['label']);
+						($this->mandatory && !$this->multiple ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].' </span>' : ''),
+						$arrOption['label'],
+						($this->mandatory && !$this->multiple ? '<span class="mandatory">*</span>' : ''));
 	}
 }

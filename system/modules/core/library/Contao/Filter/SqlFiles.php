@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao\Filter;
@@ -31,9 +31,7 @@ class SqlFiles extends \RecursiveFilterIterator
 			return true;
 		}
 
-		$strExtension = pathinfo($this->current()->getFilename(), PATHINFO_EXTENSION);
-
-		if ($strExtension == 'sql')
+		if ($this->current()->getExtension() == 'sql')
 		{
 			return true;
 		}

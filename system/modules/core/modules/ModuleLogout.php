@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -65,7 +65,8 @@ class ModuleLogout extends \Module
 		// Redirect to jumpTo page
 		elseif ($this->jumpTo && ($objTarget = $this->objModel->getRelated('jumpTo')) !== null)
 		{
-			$strRedirect = $this->generateFrontendUrl($objTarget->row());
+			/** @var \PageModel $objTarget */
+			$strRedirect = $objTarget->getFrontendUrl();
 		}
 
 		// Log out and redirect

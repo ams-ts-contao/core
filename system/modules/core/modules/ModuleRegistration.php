@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -80,7 +80,7 @@ class ModuleRegistration extends \Module
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]();
+					$this->{$callback[0]}->{$callback[1]}();
 				}
 				elseif (is_callable($callback))
 				{
@@ -167,12 +167,19 @@ class ModuleRegistration extends \Module
 		{
 			$arrData = $GLOBALS['TL_DCA']['tl_member']['fields'][$field];
 
-			// Map checkboxWizard to regular checkbox widget
+			// Map checkboxWizards to regular checkbox widgets
 			if ($arrData['inputType'] == 'checkboxWizard')
 			{
 				$arrData['inputType'] = 'checkbox';
 			}
 
+			// Map fileTrees to upload widgets (see #8091)
+			if ($arrData['inputType'] == 'fileTree')
+			{
+				$arrData['inputType'] = 'upload';
+			}
+
+			/** @var \Widget $strClass */
 			$strClass = $GLOBALS['TL_FFL'][$arrData['inputType']];
 
 			// Continue if the class is not defined
@@ -202,7 +209,7 @@ class ModuleRegistration extends \Module
 				$varValue = $objWidget->value;
 
 				// Check whether the password matches the username
-				if ($objWidget instanceof \FormPassword && $varValue == \Input::post('username'))
+				if ($objWidget instanceof \FormPassword && password_verify(\Input::post('username'), $varValue))
 				{
 					$objWidget->addError($GLOBALS['TL_LANG']['ERR']['passwordName']);
 				}
@@ -239,7 +246,7 @@ class ModuleRegistration extends \Module
 							if (is_array($callback))
 							{
 								$this->import($callback[0]);
-								$varValue = $this->$callback[0]->$callback[1]($varValue, null);
+								$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, null);
 							}
 							elseif (is_callable($callback))
 							{
@@ -267,6 +274,13 @@ class ModuleRegistration extends \Module
 						$varValue = $objWidget->getEmptyValue();
 					}
 
+					// Encrypt the value (see #7815)
+					if ($arrData['eval']['encrypt'])
+					{
+						$varValue = \Encryption::encrypt($varValue);
+					}
+
+					// Set the new value
 					$arrUser[$field] = $varValue;
 				}
 			}
@@ -392,7 +406,7 @@ class ModuleRegistration extends \Module
 			$objEmail->from = $GLOBALS['TL_ADMIN_EMAIL'];
 			$objEmail->fromName = $GLOBALS['TL_ADMIN_NAME'];
 			$objEmail->subject = sprintf($GLOBALS['TL_LANG']['MSC']['emailSubject'], \Idna::decode(\Environment::get('host')));
-			$objEmail->text = \String::parseSimpleTokens($this->reg_text, $arrTokenData);
+			$objEmail->text = \StringUtil::parseSimpleTokens($this->reg_text, $arrTokenData);
 			$objEmail->sendTo($arrData['email']);
 		}
 
@@ -441,7 +455,7 @@ class ModuleRegistration extends \Module
 			foreach ($GLOBALS['TL_HOOKS']['createNewUser'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objNewUser->id, $arrData, $this);
+				$this->{$callback[0]}->{$callback[1]}($objNewUser->id, $arrData, $this);
 			}
 		}
 
@@ -480,7 +494,7 @@ class ModuleRegistration extends \Module
 
 		$this->Template = $objTemplate;
 
-		$objMember = \MemberModel::findByActivation(\Input::get('token'));
+		$objMember = \MemberModel::findOneByActivation(\Input::get('token'));
 
 		if ($objMember === null)
 		{
@@ -501,17 +515,18 @@ class ModuleRegistration extends \Module
 			foreach ($GLOBALS['TL_HOOKS']['activateAccount'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objMember, $this);
+				$this->{$callback[0]}->{$callback[1]}($objMember, $this);
 			}
 		}
 
 		// Log activity
-		$this->log('User account ID ' . $objMember->id . ' (' . $objMember->email . ') has been activated', __METHOD__, TL_ACCESS);
+		$this->log('User account ID ' . $objMember->id . ' (' . \Idna::decodeEmail($objMember->email) . ') has been activated', __METHOD__, TL_ACCESS);
 
 		// Redirect to the jumpTo page
 		if (($objTarget = $this->objModel->getRelated('reg_jumpTo')) !== null)
 		{
-			$this->redirect($this->generateFrontendUrl($objTarget->row()));
+			/** @var \PageModel $objTarget */
+			$this->redirect($objTarget->getFrontendUrl());
 		}
 
 		// Confirm activation

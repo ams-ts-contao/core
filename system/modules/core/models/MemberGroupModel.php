@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -23,37 +23,37 @@ namespace Contao;
  * @property string  $start
  * @property string  $stop
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByName()
- * @method static $this findOneByRedirect()
- * @method static $this findOneByJumpTo()
- * @method static $this findOneByDisable()
- * @method static $this findOneByStart()
- * @method static $this findOneByStop()
+ * @method static \MemberGroupModel|null findById($id, $opt=array())
+ * @method static \MemberGroupModel|null findByPk($id, $opt=array())
+ * @method static \MemberGroupModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \MemberGroupModel|null findOneBy($col, $val, $opt=array())
+ * @method static \MemberGroupModel|null findOneByTstamp($val, $opt=array())
+ * @method static \MemberGroupModel|null findOneByName($val, $opt=array())
+ * @method static \MemberGroupModel|null findOneByRedirect($val, $opt=array())
+ * @method static \MemberGroupModel|null findOneByJumpTo($val, $opt=array())
+ * @method static \MemberGroupModel|null findOneByDisable($val, $opt=array())
+ * @method static \MemberGroupModel|null findOneByStart($val, $opt=array())
+ * @method static \MemberGroupModel|null findOneByStop($val, $opt=array())
  *
- * @method static \Model\Collection|\MemberGroupModel findByTstamp()
- * @method static \Model\Collection|\MemberGroupModel findByName()
- * @method static \Model\Collection|\MemberGroupModel findByRedirect()
- * @method static \Model\Collection|\MemberGroupModel findByJumpTo()
- * @method static \Model\Collection|\MemberGroupModel findByDisable()
- * @method static \Model\Collection|\MemberGroupModel findByStart()
- * @method static \Model\Collection|\MemberGroupModel findByStop()
- * @method static \Model\Collection|\MemberGroupModel findMultipleByIds()
- * @method static \Model\Collection|\MemberGroupModel findBy()
- * @method static \Model\Collection|\MemberGroupModel findAll()
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findByName($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findByRedirect($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findByJumpTo($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findByDisable($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findByStart($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findByStop($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByTstamp()
- * @method static integer countByName()
- * @method static integer countByRedirect()
- * @method static integer countByJumpTo()
- * @method static integer countByDisable()
- * @method static integer countByStart()
- * @method static integer countByStop()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countByRedirect($val, $opt=array())
+ * @method static integer countByJumpTo($val, $opt=array())
+ * @method static integer countByDisable($val, $opt=array())
+ * @method static integer countByStart($val, $opt=array())
+ * @method static integer countByStop($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -73,7 +73,7 @@ class MemberGroupModel extends \Model
 	 * @param integer $intId      The member group ID
 	 * @param array   $arrOptions An optional options array
 	 *
-	 * @return static The model or null if there is no member group
+	 * @return \MemberGroupModel|null The model or null if there is no member group
 	 */
 	public static function findPublishedById($intId, array $arrOptions=array())
 	{
@@ -95,7 +95,7 @@ class MemberGroupModel extends \Model
 	 *
 	 * @param string $arrIds An array of member group IDs
 	 *
-	 * @return static The model or null if there is no matching member group
+	 * @return \MemberGroupModel|null The model or null if there is no matching member group
 	 */
 	public static function findFirstActiveWithJumpToByIds($arrIds)
 	{
@@ -126,7 +126,7 @@ class MemberGroupModel extends \Model
 	 *
 	 * @param array $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\MemberGroupModel|null A collection of models or null if there are no member groups
+	 * @return \Model\Collection|\MemberGroupModel[]|\MemberGroupModel|null A collection of models or null if there are no member groups
 	 */
 	public static function findAllActive(array $arrOptions=array())
 	{

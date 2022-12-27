@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -129,10 +129,10 @@ class ModuleNewsletterReader extends \Module
 
 		// Parse simple tokens and insert tags
 		$strContent = $this->replaceInsertTags($strContent);
-		$strContent = \String::parseSimpleTokens($strContent, array());
+		$strContent = \StringUtil::parseSimpleTokens($strContent, array());
 
 		// Encode e-mail addresses
-		$strContent = \String::encodeEmail($strContent);
+		$strContent = \StringUtil::encodeEmail($strContent);
 
 		$this->Template->content = $strContent;
 		$this->Template->subject = $objNewsletter->subject;

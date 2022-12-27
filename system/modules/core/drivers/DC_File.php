@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -47,7 +47,7 @@ class DC_File extends \DataContainer implements \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($this);
+					$this->{$callback[0]}->{$callback[1]}($this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -156,7 +156,6 @@ class DC_File extends \DataContainer implements \editable
 			// Render boxes
 			$class = 'tl_tbox';
 			$fs = $this->Session->get('fieldset_states');
-			$blnIsFirst = true;
 
 			foreach ($boxes as $k=>$v)
 			{
@@ -233,13 +232,6 @@ class DC_File extends \DataContainer implements \editable
 						}
 					}
 
-					// Autofocus the first field
-					if ($blnIsFirst && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'text')
-					{
-						$GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['autofocus'] = 'autofocus';
-						$blnIsFirst = false;
-					}
-
 					// Call load_callback
 					if (is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback']))
 					{
@@ -248,7 +240,7 @@ class DC_File extends \DataContainer implements \editable
 							if (is_array($callback))
 							{
 								$this->import($callback[0]);
-								$this->varValue = $this->$callback[0]->$callback[1]($this->varValue, $this);
+								$this->varValue = $this->{$callback[0]}->{$callback[1]}($this->varValue, $this);
 							}
 							elseif (is_callable($callback))
 							{
@@ -287,7 +279,7 @@ class DC_File extends \DataContainer implements \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
+					$arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -307,13 +299,7 @@ class DC_File extends \DataContainer implements \editable
 </div>
 
 </div>
-</form>
-
-<script>
-  window.addEvent(\'domready\', function() {
-    Theme.focusInput("'.$this->strTable.'");
-  });
-</script>';
+</form>';
 
 		// Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
 		$return = '
@@ -341,7 +327,7 @@ class DC_File extends \DataContainer implements \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($this);
+						$this->{$callback[0]}->{$callback[1]}($this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -406,11 +392,11 @@ class DC_File extends \DataContainer implements \editable
 
 				if (!is_array($varValue))
 				{
-					$varValue = \String::binToUuid($varValue);
+					$varValue = \StringUtil::binToUuid($varValue);
 				}
 				else
 				{
-					$varValue = serialize(array_map('String::binToUuid', $varValue));
+					$varValue = serialize(array_map('StringUtil::binToUuid', $varValue));
 				}
 			}
 
@@ -428,11 +414,11 @@ class DC_File extends \DataContainer implements \editable
 
 				if (!is_array($varValue))
 				{
-					$varValue = \String::restoreBasicEntities($varValue);
+					$varValue = \StringUtil::restoreBasicEntities($varValue);
 				}
 				else
 				{
-					$varValue = serialize(array_map('String::restoreBasicEntities', $varValue));
+					$varValue = serialize(array_map('StringUtil::restoreBasicEntities', $varValue));
 				}
 			}
 		}
@@ -445,7 +431,7 @@ class DC_File extends \DataContainer implements \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$varValue = $this->$callback[0]->$callback[1]($varValue, $this);
+					$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $this);
 				}
 				elseif (is_callable($callback))
 				{

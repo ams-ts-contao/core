@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -186,14 +186,14 @@ abstract class System
 		}
 
 		\Database::getInstance()->prepare("INSERT INTO tl_log (tstamp, source, action, username, text, func, ip, browser) VALUES(?, ?, ?, ?, ?, ?, ?, ?)")
-							   ->execute(time(), (TL_MODE == 'FE' ? 'FE' : 'BE'), $strCategory, ($GLOBALS['TL_USERNAME'] ? $GLOBALS['TL_USERNAME'] : ''), specialchars($strText), $strFunction, $strIp, $strUa);
+							   ->execute(time(), (TL_MODE == 'FE' ? 'FE' : 'BE'), $strCategory, ($GLOBALS['TL_USERNAME'] ? $GLOBALS['TL_USERNAME'] : ''), specialchars($strText), $strFunction, $strIp, specialchars($strUa));
 
 		// HOOK: allow to add custom loggers
 		if (isset($GLOBALS['TL_HOOKS']['addLogEntry']) && is_array($GLOBALS['TL_HOOKS']['addLogEntry']))
 		{
 			foreach ($GLOBALS['TL_HOOKS']['addLogEntry'] as $callback)
 			{
-				static::importStatic($callback[0])->$callback[1]($strText, $strFunction, $strCategory);
+				static::importStatic($callback[0])->{$callback[1]}($strText, $strFunction, $strCategory);
 			}
 		}
 	}
@@ -337,7 +337,7 @@ abstract class System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['loadLanguageFile'] as $callback)
 			{
-				static::importStatic($callback[0])->$callback[1]($strName, $strLanguage, $strCacheKey);
+				static::importStatic($callback[0])->{$callback[1]}($strName, $strLanguage, $strCacheKey);
 			}
 		}
 
@@ -404,7 +404,7 @@ abstract class System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getCountries'] as $callback)
 			{
-				static::importStatic($callback[0])->$callback[1]($return, $countries);
+				static::importStatic($callback[0])->{$callback[1]}($return, $countries);
 			}
 		}
 
@@ -457,7 +457,7 @@ abstract class System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getLanguages'] as $callback)
 			{
-				static::importStatic($callback[0])->$callback[1]($return, $languages, $langsNative, $blnInstalledOnly);
+				static::importStatic($callback[0])->{$callback[1]}($return, $languages, $langsNative, $blnInstalledOnly);
 			}
 		}
 
@@ -567,7 +567,7 @@ abstract class System
 		{
 			foreach ($GLOBALS['TL_HOOKS']['setCookie'] as $callback)
 			{
-				$objCookie = static::importStatic($callback[0])->$callback[1]($objCookie);
+				$objCookie = static::importStatic($callback[0])->{$callback[1]}($objCookie);
 			}
 		}
 
@@ -645,11 +645,12 @@ abstract class System
 	/**
 	 * Read the contents of a PHP file, stripping the opening and closing PHP tags
 	 *
-	 * @param string $strName The name of the PHP file
+	 * @param string  $strName         The name of the PHP file
+	 * @param boolean $blnAddNamespace Wrap the content into a namespace declaration
 	 *
 	 * @return string The PHP code without the PHP tags
 	 */
-	protected static function readPhpFileWithoutTags($strName)
+	protected static function readPhpFileWithoutTags($strName, $blnAddNamespace=false)
 	{
 		$strCode = rtrim(file_get_contents(TL_ROOT . '/' . $strName));
 
@@ -671,7 +672,19 @@ abstract class System
 			$strCode = substr($strCode, 0, -2);
 		}
 
-		return rtrim($strCode);
+		if ($blnAddNamespace)
+		{
+			$arrMatches = array();
+
+			if (preg_match('/^namespace ([A-Za-z0-9_\\\\]+);/m', $strCode, $arrMatches))
+			{
+				return sprintf("\nnamespace %s {%s\n\n}", $arrMatches[1], rtrim(preg_replace('/(\n|^)namespace [A-Za-z0-9_\\\\]+;\n?/m', '', $strCode)));
+			}
+
+			return sprintf("\nnamespace {%s\n\n}", rtrim($strCode));
+		}
+
+		return rtrim($strCode)."\n";
 	}
 
 
@@ -694,7 +707,40 @@ abstract class System
 		$xml->loadXML(file_get_contents(TL_ROOT . '/' . $strName));
 
 		$return = "\n// $strName\n";
-		$units = $xml->getElementsByTagName('trans-unit');
+		$objFileNodes = $xml->getElementsByTagName('file');
+		$strLanguage = strtolower($strLanguage);
+
+		/** @var \DOMElement[] $objFileNodes */
+		foreach ($objFileNodes as $objFileNode)
+		{
+			$strTagName = 'target';
+
+			// Use the source tag if the source language matches
+			if (strtolower($objFileNode->getAttribute('source-language')) === $strLanguage)
+			{
+				$strTagName = 'source';
+			}
+
+			$return .= self::getPhpFromFileNode($objFileNode, $strTagName, $blnLoad);
+		}
+
+		return rtrim($return);
+	}
+
+
+	/**
+	 * Convert a file node into a PHP language file
+	 *
+	 * @param \DOMElement $objFileNode The .xlf file node
+	 * @param string      $strTagName  The name of the tag to read
+	 * @param boolean     $blnLoad     Add the labels to the global language array
+	 *
+	 * @return string The PHP code
+	 */
+	protected static function getPhpFromFileNode(\DOMElement $objFileNode, $strTagName, $blnLoad=false)
+	{
+		$return = '';
+		$units = $objFileNode->getElementsByTagName('trans-unit');
 
 		// Set up the quotekey function
 		$quotekey = function($key)
@@ -731,7 +777,7 @@ abstract class System
 		/** @var \DOMElement[] $units */
 		foreach ($units as $unit)
 		{
-			$node = ($strLanguage == 'en') ? $unit->getElementsByTagName('source') : $unit->getElementsByTagName('target');
+			$node = $unit->getElementsByTagName($strTagName);
 
 			if ($node === null || $node->item(0) === null)
 			{
@@ -786,7 +832,7 @@ abstract class System
 			}
 		}
 
-		return rtrim($return);
+		return $return;
 	}
 
 
@@ -1092,11 +1138,11 @@ abstract class System
 	 *
 	 * @return array An array with name and e-mail address
 	 *
-	 * @deprecated Use String::splitFriendlyEmail() instead
+	 * @deprecated Use StringUtil::splitFriendlyEmail() instead
 	 */
 	public static function splitFriendlyName($strEmail)
 	{
-		return \String::splitFriendlyEmail($strEmail);
+		return \StringUtil::splitFriendlyEmail($strEmail);
 	}
 
 

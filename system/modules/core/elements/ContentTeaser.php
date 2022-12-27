@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -27,13 +27,13 @@ class ContentTeaser extends \ContentElement
 
 	/**
 	 * Article object
-	 * @var object
+	 * @var \ArticleModel
 	 */
 	protected $objArticle;
 
 	/**
 	 * Parent page object
-	 * @var object
+	 * @var \PageModel
 	 */
 	protected $objParent;
 
@@ -84,16 +84,17 @@ class ContentTeaser extends \ContentElement
 		}
 
 		$link .= ($objArticle->alias != '' && !\Config::get('disableAlias')) ? $objArticle->alias : $objArticle->id;
-		$this->Template->href = $this->generateFrontendUrl($this->objParent->row(), $link);
+
+		$this->Template->href = $this->objParent->getFrontendUrl($link);
 
 		// Clean the RTE output
 		if ($objPage->outputFormat == 'xhtml')
 		{
-			$this->Template->text = \String::toXhtml($objArticle->teaser);
+			$this->Template->text = \StringUtil::toXhtml($objArticle->teaser);
 		}
 		else
 		{
-			$this->Template->text = \String::toHtml5($objArticle->teaser);
+			$this->Template->text = \StringUtil::toHtml5($objArticle->teaser);
 		}
 
 		$this->Template->headline = $objArticle->title;

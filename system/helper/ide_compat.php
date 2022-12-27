@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 /**
@@ -147,6 +147,7 @@ namespace  {
 	class Idna extends \Contao\Idna {}
 	class Image extends \Contao\Image {}
 	class Input extends \Contao\Input {}
+	class InsertTags extends \Contao\InsertTags {}
 	class Message extends \Contao\Message {}
 	abstract class Model extends \Contao\Model {}
 	class ModuleLoader extends \Contao\ModuleLoader {}
@@ -157,7 +158,9 @@ namespace  {
 	class Search extends \Contao\Search {}
 	class Session extends \Contao\Session {}
 	class SortedIterator extends \Contao\SortedIterator {}
+	/** @deprecated Use the StringUtil class instead */
 	class String extends \Contao\String {}
+	class StringUtil extends \Contao\StringUtil {}
 	abstract class System extends \Contao\System {}
 	abstract class Template extends \Contao\Template {}
 	class TemplateLoader extends \Contao\TemplateLoader {}

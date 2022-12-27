@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -25,43 +25,43 @@ namespace Contao;
  * @property string  $ip
  * @property string  $token
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByPid()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByEmail()
- * @method static $this findOneByActive()
- * @method static $this findOneBySource()
- * @method static $this findOneByAddedOn()
- * @method static $this findOneByConfirmed()
- * @method static $this findOneByIp()
- * @method static $this findOneByToken()
+ * @method static \NewsletterRecipientsModel|null findById($id, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findByPk($id, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneBy($col, $val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByPid($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByTstamp($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByEmail($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByActive($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneBySource($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByAddedOn($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByConfirmed($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByIp($val, $opt=array())
+ * @method static \NewsletterRecipientsModel|null findOneByToken($val, $opt=array())
  *
- * @method static \Model\Collection|\NewsletterRecipientsModel findByPid()
- * @method static \Model\Collection|\NewsletterRecipientsModel findByTstamp()
- * @method static \Model\Collection|\NewsletterRecipientsModel findByEmail()
- * @method static \Model\Collection|\NewsletterRecipientsModel findByActive()
- * @method static \Model\Collection|\NewsletterRecipientsModel findBySource()
- * @method static \Model\Collection|\NewsletterRecipientsModel findByAddedOn()
- * @method static \Model\Collection|\NewsletterRecipientsModel findByConfirmed()
- * @method static \Model\Collection|\NewsletterRecipientsModel findByIp()
- * @method static \Model\Collection|\NewsletterRecipientsModel findByToken()
- * @method static \Model\Collection|\NewsletterRecipientsModel findMultipleByIds()
- * @method static \Model\Collection|\NewsletterRecipientsModel findBy()
- * @method static \Model\Collection|\NewsletterRecipientsModel findAll()
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByPid($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByEmail($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByActive($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findBySource($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByAddedOn($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByConfirmed($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByIp($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findByToken($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByPid()
- * @method static integer countByTstamp()
- * @method static integer countByEmail()
- * @method static integer countByActive()
- * @method static integer countBySource()
- * @method static integer countByAddedOn()
- * @method static integer countByConfirmed()
- * @method static integer countByIp()
- * @method static integer countByToken()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByPid($val, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByEmail($val, $opt=array())
+ * @method static integer countByActive($val, $opt=array())
+ * @method static integer countBySource($val, $opt=array())
+ * @method static integer countByAddedOn($val, $opt=array())
+ * @method static integer countByConfirmed($val, $opt=array())
+ * @method static integer countByIp($val, $opt=array())
+ * @method static integer countByToken($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -82,7 +82,7 @@ class NewsletterRecipientsModel extends \Model
 	 * @param array  $arrPids    An array of newsletter channel IDs
 	 * @param array  $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\NewsletterRecipientsModel|null A collection of models or null if there are no recipients
+	 * @return \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null A collection of models or null if there are no recipients
 	 */
 	public static function findByEmailAndPids($strEmail, $arrPids, array $arrOptions=array())
 	{
@@ -94,5 +94,27 @@ class NewsletterRecipientsModel extends \Model
 		$t = static::$strTable;
 
 		return static::findBy(array("$t.email=? AND $t.pid IN(" . implode(',', array_map('intval', $arrPids)) . ")"), $strEmail, $arrOptions);
+	}
+
+
+	/**
+	 * Find old subscriptions by e-mail address and channels
+	 *
+	 * @param string $strEmail   The e-mail address
+	 * @param array  $arrPids    An array of newsletter channel IDs
+	 * @param array  $arrOptions An optional options array
+	 *
+	 * @return \Model\Collection|\NewsletterRecipientsModel[]|\NewsletterRecipientsModel|null A collection of models or null if there are no recipients
+	 */
+	public static function findOldSubscriptionsByEmailAndPids($strEmail, $arrPids, array $arrOptions=array())
+	{
+		if (empty($arrPids) || !is_array($arrPids))
+		{
+			return null;
+		}
+
+		$t = static::$strTable;
+
+		return static::findBy(array("$t.email=? AND $t.pid IN(" . implode(',', array_map('intval', $arrPids)) . ") AND $t.active=''"), $strEmail, $arrOptions);
 	}
 }

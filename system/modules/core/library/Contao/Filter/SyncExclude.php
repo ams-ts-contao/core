@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao\Filter;
@@ -38,9 +38,7 @@ class SyncExclude extends \RecursiveFilterIterator
 	{
 		if (\Config::get('fileSyncExclude') != '')
 		{
-			$this->arrExempt = array_map(function($e) {
-				return \Config::get('uploadPath') . '/' . $e;
-			}, trimsplit(',', \Config::get('fileSyncExclude')));
+			$this->arrExempt = array_map(function ($e) { return \Config::get('uploadPath') . '/' . $e; }, trimsplit(',', \Config::get('fileSyncExclude')));
 		}
 
 		parent::__construct($iterator);

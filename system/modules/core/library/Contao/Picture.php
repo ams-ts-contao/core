@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -230,6 +230,7 @@ class Picture
 		array_unshift($densities, 1);
 		$densities = array_values(array_unique($densities));
 
+		$file1x = null;
 		$attributes = array();
 		$srcset = array();
 
@@ -237,8 +238,8 @@ class Picture
 		{
 			$imageObj = clone $this->image;
 
-			$src = $imageObj->setTargetWidth($imageSize->width * $density)
-							->setTargetHeight($imageSize->height * $density)
+			$src = $imageObj->setTargetWidth((int) $imageSize->width * $density)
+							->setTargetHeight((int) $imageSize->height * $density)
 							->setResizeMode($imageSize->resizeMode)
 							->setZoomLevel($imageSize->zoom)
 							->executeResize()
@@ -251,23 +252,34 @@ class Picture
 				$attributes['src'] = htmlspecialchars(TL_FILES_URL . $src, ENT_QUOTES);
 				$attributes['width'] = $fileObj->width;
 				$attributes['height'] = $fileObj->height;
+				$file1x = $fileObj;
 			}
+
+			$descriptor = '1x';
 
 			if (count($densities) > 1)
 			{
 				// Use pixel density descriptors if the sizes attribute is empty
 				if (empty($imageSize->sizes))
 				{
-					$src .= ' ' . $density . 'x';
+					if ($fileObj->width && $file1x->width)
+					{
+						$descriptor = rtrim(sprintf('%.3F', $fileObj->width / $file1x->width), '.0') . 'x';
+					}
 				}
 				// Otherwise use width descriptors
 				else
 				{
-					$src .= ' ' . $fileObj->width . 'w';
+					$descriptor = $fileObj->width . 'w';
 				}
+
+				$src .= ' ' . $descriptor;
 			}
 
-			$srcset[] = TL_FILES_URL . $src;
+			if (!isset($srcset[$descriptor]))
+			{
+				$srcset[$descriptor] = TL_FILES_URL . $src;
+			}
 		}
 
 		$attributes['srcset'] = htmlspecialchars(implode(', ', $srcset), ENT_QUOTES);

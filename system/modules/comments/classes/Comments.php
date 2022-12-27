@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -110,11 +110,11 @@ class Comments extends \Frontend
 				// Clean the RTE output
 				if ($objPage->outputFormat == 'xhtml')
 				{
-					$objPartial->comment = \String::toXhtml($objComments->comment);
+					$objPartial->comment = \StringUtil::toXhtml($objComments->comment);
 				}
 				else
 				{
-					$objPartial->comment = \String::toHtml5($objComments->comment);
+					$objPartial->comment = \StringUtil::toHtml5($objComments->comment);
 				}
 
 				$objPartial->comment = trim(str_replace(array('{{', '}}'), array('&#123;&#123;', '&#125;&#125;'), $objPartial->comment));
@@ -141,11 +141,11 @@ class Comments extends \Frontend
 						// Clean the RTE output
 						if ($objPage->outputFormat == 'xhtml')
 						{
-							$objPartial->reply = \String::toXhtml($objPartial->reply);
+							$objPartial->reply = \StringUtil::toXhtml($objPartial->reply);
 						}
 						else
 						{
-							$objPartial->reply = \String::toHtml5($objPartial->reply);
+							$objPartial->reply = \StringUtil::toHtml5($objPartial->reply);
 						}
 					}
 				}
@@ -369,7 +369,7 @@ class Comments extends \Frontend
 				foreach ($GLOBALS['TL_HOOKS']['addComment'] as $callback)
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($objComment->id, $arrSet, $this);
+					$this->{$callback[0]}->{$callback[1]}($objComment->id, $arrSet, $this);
 				}
 			}
 
@@ -381,7 +381,7 @@ class Comments extends \Frontend
 
 			// Convert the comment to plain text
 			$strComment = strip_tags($strComment);
-			$strComment = \String::decodeEntities($strComment);
+			$strComment = \StringUtil::decodeEntities($strComment);
 			$strComment = str_replace(array('[&]', '[lt]', '[gt]'), array('&', '<', '>'), $strComment);
 
 			// Add the comment details
@@ -479,7 +479,7 @@ class Comments extends \Frontend
 		// Encode e-mail addresses
 		if (strpos($strComment, 'mailto:') !== false)
 		{
-			$strComment = \String::encodeEmail($strComment);
+			$strComment = \StringUtil::encodeEmail($strComment);
 		}
 
 		return $strComment;

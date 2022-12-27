@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -58,11 +58,11 @@ class FormExplanation extends \Widget
 		// Clean RTE output
 		if ($objPage->outputFormat == 'xhtml')
 		{
-			$this->text = \String::toXhtml($this->text);
+			$this->text = \StringUtil::toXhtml($this->text);
 		}
 		else
 		{
-			$this->text = \String::toHtml5($this->text);
+			$this->text = \StringUtil::toHtml5($this->text);
 		}
 
 		// Add the static files URL to images
@@ -72,6 +72,6 @@ class FormExplanation extends \Widget
 			$this->text = str_replace(' src="' . $path, ' src="' . TL_FILES_URL . $path, $this->text);
 		}
 
-		return \String::encodeEmail($this->text);
+		return \StringUtil::encodeEmail($this->text);
 	}
 }

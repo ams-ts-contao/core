@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -175,7 +175,7 @@ class Ajax extends \Backend
 					foreach ($GLOBALS['TL_HOOKS']['executePreActions'] as $callback)
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($this->strAction);
+						$this->{$callback[0]}->{$callback[1]}($this->strAction);
 					}
 				}
 				break;
@@ -213,26 +213,62 @@ class Ajax extends \Backend
 
 			// Load nodes of the page tree
 			case 'loadPagetree':
+				$varValue = null;
 				$strField = $dc->field = \Input::post('name');
+
+				// Call the load_callback
+				if (is_array($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField]['load_callback']))
+				{
+					foreach ($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField]['load_callback'] as $callback)
+					{
+						if (is_array($callback))
+						{
+							$this->import($callback[0]);
+							$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $dc);
+						}
+						elseif (is_callable($callback))
+						{
+							$varValue = $callback($varValue, $dc);
+						}
+					}
+				}
 
 				/** @var \PageSelector $strClass */
 				$strClass = $GLOBALS['BE_FFL']['pageSelector'];
 
 				/** @var \PageSelector $objWidget */
-				$objWidget = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField], $dc->field, null, $strField, $dc->table, $dc));
+				$objWidget = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField], $dc->field, $varValue, $strField, $dc->table, $dc));
 
 				echo $objWidget->generateAjax($this->strAjaxId, \Input::post('field'), intval(\Input::post('level')));
 				exit; break;
 
 			// Load nodes of the file tree
 			case 'loadFiletree':
+				$varValue = null;
 				$strField = $dc->field = \Input::post('name');
+
+				// Call the load_callback
+				if (is_array($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField]['load_callback']))
+				{
+					foreach ($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField]['load_callback'] as $callback)
+					{
+						if (is_array($callback))
+						{
+							$this->import($callback[0]);
+							$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $dc);
+						}
+						elseif (is_callable($callback))
+						{
+							$varValue = $callback($varValue, $dc);
+						}
+					}
+				}
 
 				/** @var \FileSelector $strClass */
 				$strClass = $GLOBALS['BE_FFL']['fileSelector'];
 
 				/** @var \FileSelector $objWidget */
-				$objWidget = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField], $dc->field, null, $strField, $dc->table, $dc));
+				$objWidget = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$dc->table]['fields'][$strField], $dc->field, $varValue, $strField, $dc->table, $dc));
 
 				// Load a particular node
 				if (\Input::post('folder', true) != '')
@@ -270,25 +306,28 @@ class Ajax extends \Backend
 				$varValue = null;
 
 				// Load the value
-				if ($GLOBALS['TL_DCA'][$dc->table]['config']['dataContainer'] == 'File')
+				if (\Input::get('act') != 'overrideAll')
 				{
-					$varValue = \Config::get($strField);
-				}
-				elseif ($intId > 0 && $this->Database->tableExists($dc->table))
-				{
-					$objRow = $this->Database->prepare("SELECT * FROM " . $dc->table . " WHERE id=?")
-											 ->execute($intId);
-
-					// The record does not exist
-					if ($objRow->numRows < 1)
+					if ($GLOBALS['TL_DCA'][$dc->table]['config']['dataContainer'] == 'File')
 					{
-						$this->log('A record with the ID "' . $intId . '" does not exist in table "' . $dc->table . '"', __METHOD__, TL_ERROR);
-						header('HTTP/1.1 400 Bad Request');
-						die('Bad Request');
+						$varValue = \Config::get($strField);
 					}
+					elseif ($intId > 0 && $this->Database->tableExists($dc->table))
+					{
+						$objRow = $this->Database->prepare("SELECT * FROM " . $dc->table . " WHERE id=?")
+												 ->execute($intId);
 
-					$varValue = $objRow->$strField;
-					$dc->activeRecord = $objRow;
+						// The record does not exist
+						if ($objRow->numRows < 1)
+						{
+							$this->log('A record with the ID "' . $intId . '" does not exist in table "' . $dc->table . '"', __METHOD__, TL_ERROR);
+							header('HTTP/1.1 400 Bad Request');
+							die('Bad Request');
+						}
+
+						$varValue = $objRow->$strField;
+						$dc->activeRecord = $objRow;
+					}
 				}
 
 				// Call the load_callback
@@ -299,7 +338,7 @@ class Ajax extends \Backend
 						if (is_array($callback))
 						{
 							$this->import($callback[0]);
-							$varValue = $this->$callback[0]->$callback[1]($varValue, $dc);
+							$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $dc);
 						}
 						elseif (is_callable($callback))
 						{
@@ -322,7 +361,10 @@ class Ajax extends \Backend
 					{
 						foreach ($varValue as $k=>$v)
 						{
-							$varValue[$k] = \Dbafs::addResource($v)->uuid;
+							if (\Dbafs::shouldBeSynchronized($v))
+							{
+								$varValue[$k] = \Dbafs::addResource($v)->uuid;
+							}
 						}
 					}
 
@@ -423,7 +465,7 @@ class Ajax extends \Backend
 			foreach ($GLOBALS['TL_HOOKS']['executePostActions'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($this->strAction, $dc);
+				$this->{$callback[0]}->{$callback[1]}($this->strAction, $dc);
 			}
 		}
 	}

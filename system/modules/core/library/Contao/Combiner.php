@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -263,13 +263,19 @@ class Combiner extends \System
 		{
 			$content = file_get_contents(TL_ROOT . '/' . $arrFile['name']);
 
+			// Remove UTF-8 BOM
+			if (strncmp($content, "\xEF\xBB\xBF", 3) === 0)
+			{
+				$content = substr($content, 3);
+			}
+
 			// HOOK: modify the file content
 			if (isset($GLOBALS['TL_HOOKS']['getCombinedFile']) && is_array($GLOBALS['TL_HOOKS']['getCombinedFile']))
 			{
 				foreach ($GLOBALS['TL_HOOKS']['getCombinedFile'] as $callback)
 				{
 					$this->import($callback[0]);
-					$content = $this->$callback[0]->$callback[1]($content, $strKey, $this->strMode, $arrFile);
+					$content = $this->{$callback[0]}->{$callback[1]}($content, $strKey, $this->strMode, $arrFile);
 				}
 			}
 
@@ -350,11 +356,13 @@ class Combiner extends \System
 
 			$arrOptions = array
 			(
+				'strictMath' => true,
 				'compress' => !\Config::get('debugMode'),
 				'import_dirs' => array(TL_ROOT . '/' . $strPath => $strPath)
 			);
 
-			$objParser = new \Less_Parser($arrOptions);
+			$objParser = new \Less_Parser();
+			$objParser->SetOptions($arrOptions);
 			$objParser->parse($content);
 
 			return $this->fixPaths($objParser->getCss(), $arrFile);
@@ -376,19 +384,19 @@ class Combiner extends \System
 		$strGlue = ($strDirname != '.') ? $strDirname . '/' : '';
 
 		$strBuffer = '';
-		$chunks = preg_split('/url\(["\']??(.+)["\']??\)/U', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
+		$chunks = preg_split('/url\((["\']?+)(.+?)\1\)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
 
 		// Check the URLs
-		for ($i=0, $c=count($chunks); $i<$c; $i=$i+2)
+		for ($i=0, $c=count($chunks); $i<$c; $i=$i+3)
 		{
 			$strBuffer .= $chunks[$i];
 
-			if (!isset($chunks[$i+1]))
+			if (!isset($chunks[$i+2]))
 			{
 				break;
 			}
 
-			$strData = $chunks[$i+1];
+			$strData = $chunks[$i+2];
 
 			// Skip absolute links and embedded images (see #5082)
 			if (strncmp($strData, 'data:', 5) !== 0 && strncmp($strData, 'http://', 7) !== 0 && strncmp($strData, 'https://', 8) !== 0 && strncmp($strData, '/', 1) !== 0 && strncmp($strData, 'assets/css3pie/', 15) !== 0)
@@ -414,7 +422,7 @@ class Combiner extends \System
 				}
 			}
 
-			$strBuffer .= 'url("' . $strData . '")';
+			$strBuffer .= 'url(' . $chunks[$i+1] . $strData . $chunks[$i+1] . ')';
 		}
 
 		return $strBuffer;

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -113,7 +113,7 @@ class Image
 		}
 
 		$this->fileObj = $file;
-		$arrAllowedTypes = array_map('trim', explode(',', \Config::get('validImageTypes')));
+		$arrAllowedTypes = trimsplit(',', strtolower(\Config::get('validImageTypes')));
 
 		// Check the file type
 		if (!in_array($this->fileObj->extension, $arrAllowedTypes))
@@ -169,12 +169,12 @@ class Image
 
 			$this->importantPart = array
 			(
-				'x' => max(0, min($this->fileObj->width - 1, (int) $importantPart['x'])),
-				'y' => max(0, min($this->fileObj->height - 1, (int) $importantPart['y'])),
+				'x' => max(0, min($this->fileObj->viewWidth - 1, (int) $importantPart['x'])),
+				'y' => max(0, min($this->fileObj->viewHeight - 1, (int) $importantPart['y'])),
 			);
 
-			$this->importantPart['width'] = max(1, min($this->fileObj->width - $this->importantPart['x'], (int) $importantPart['width']));
-			$this->importantPart['height'] = max(1, min($this->fileObj->height - $this->importantPart['y'], (int) $importantPart['height']));
+			$this->importantPart['width'] = max(1, min($this->fileObj->viewWidth - $this->importantPart['x'], (int) $importantPart['width']));
+			$this->importantPart['height'] = max(1, min($this->fileObj->viewHeight - $this->importantPart['y'], (int) $importantPart['height']));
 
 		}
 		else
@@ -198,7 +198,7 @@ class Image
 			return $this->importantPart;
 		}
 
-		return array('x'=>0, 'y'=>0, 'width'=>$this->fileObj->width, 'height'=>$this->fileObj->height,);
+		return array('x'=>0, 'y'=>0, 'width'=>$this->fileObj->viewWidth, 'height'=>$this->fileObj->viewHeight);
 	}
 
 
@@ -402,7 +402,7 @@ class Image
 		{
 			foreach ($GLOBALS['TL_HOOKS']['executeResize'] as $callback)
 			{
-				$return = \System::importStatic($callback[0])->$callback[1]($this);
+				$return = \System::importStatic($callback[0])->{$callback[1]}($this);
 
 				if (is_string($return))
 				{
@@ -417,7 +417,7 @@ class Image
 
 		$widthMatches = ($this->fileObj->width == $this->getTargetWidth() || !$this->getTargetWidth());
 		$heightMatches = ($this->fileObj->height == $this->getTargetHeight() || !$this->getTargetHeight());
-		$zoomMatches = (($importantPart['x'] === 0 && $importantPart['y'] === 0 && $importantPart['width'] === $this->fileObj->width && $importantPart['height'] === $this->fileObj->height) || !$this->getZoomLevel());
+		$zoomMatches = (($importantPart['x'] === 0 && $importantPart['y'] === 0 && $importantPart['width'] === $this->fileObj->viewWidth && $importantPart['height'] === $this->fileObj->viewHeight) || !$this->getZoomLevel());
 
 		// No resizing required
 		if ($widthMatches && $heightMatches && $zoomMatches)
@@ -449,7 +449,7 @@ class Image
 			{
 				if (file_exists(TL_ROOT . '/' . $this->getTargetPath()) && $this->fileObj->mtime <= filemtime(TL_ROOT . '/' . $this->getTargetPath()))
 				{
-					$this->resizedPath = \System::urlEncode($this->getOriginalPath());
+					$this->resizedPath = \System::urlEncode($this->getTargetPath());
 
 					return $this;
 				}
@@ -478,7 +478,7 @@ class Image
 		{
 			foreach ($GLOBALS['TL_HOOKS']['getImage'] as $callback)
 			{
-				$return = \System::importStatic($callback[0])->$callback[1]($this->getOriginalPath(), $this->getTargetWidth(), $this->getTargetHeight(), $this->getResizeMode(), $this->getCacheName(), $this->fileObj, $this->getTargetPath(), $this);
+				$return = \System::importStatic($callback[0])->{$callback[1]}($this->getOriginalPath(), $this->getTargetWidth(), $this->getTargetHeight(), $this->getResizeMode(), $this->getCacheName(), $this->fileObj, $this->getTargetPath(), $this);
 
 				if (is_string($return))
 				{
@@ -489,7 +489,7 @@ class Image
 			}
 		}
 
-		$svgNotPossible = ($this->fileObj->isSvgImage && !extension_loaded('dom'));
+		$svgNotPossible = ($this->fileObj->isSvgImage && (!extension_loaded('dom') || !$this->fileObj->viewWidth || !$this->fileObj->viewHeight));
 		$gdNotPossible = ($this->fileObj->isGdImage && (!extension_loaded('gd') || $this->fileObj->width > \Config::get('gdMaxImgWidth') || $this->fileObj->height > \Config::get('gdMaxImgHeight') || $this->getTargetWidth() > \Config::get('gdMaxImgWidth') || $this->getTargetHeight() > \Config::get('gdMaxImgHeight')));
 
 		// Return the path to the original image if it cannot be handled
@@ -533,8 +533,6 @@ class Image
 
 	/**
 	 * Resize an GD image
-	 *
-	 * @return boolean False if the target image cannot be created, otherwise true
 	 */
 	protected function executeResizeGd()
 	{
@@ -558,11 +556,16 @@ class Image
 
 		if ($this->fileObj->extension == 'svgz')
 		{
-			$doc->loadXML(gzdecode($this->fileObj->getContent()));
+			$status = $doc->loadXML(gzdecode($this->fileObj->getContent()), LIBXML_NOERROR);
 		}
 		else
 		{
-			$doc->loadXML($this->fileObj->getContent());
+			$status = $doc->loadXML($this->fileObj->getContent(), LIBXML_NOERROR);
+		}
+
+		if ($status !== true)
+		{
+			return;
 		}
 
 		$svgElement = $doc->documentElement;
@@ -570,10 +573,13 @@ class Image
 		// Set the viewBox attribute from the original dimensions
 		if (!$svgElement->hasAttribute('viewBox'))
 		{
-			$origWidth = $svgElement->getAttribute('width');
-			$origHeight = $svgElement->getAttribute('height');
+			$origWidth = floatval($svgElement->getAttribute('width'));
+			$origHeight = floatval($svgElement->getAttribute('height'));
 
-			$svgElement->setAttribute('viewBox', '0 0 ' . floatval($origWidth) . ' ' . floatval($origHeight));
+			if ($origWidth && $origHeight)
+			{
+				$svgElement->setAttribute('viewBox', '0 0 ' . $origWidth . ' ' . $origHeight);
+			}
 		}
 
 		$coordinates = $this->computeResize();
@@ -615,8 +621,8 @@ class Image
 	{
 		$width = $this->getTargetWidth();
 		$height = $this->getTargetHeight();
-		$originalWidth = $this->fileObj->width;
-		$originalHeight = $this->fileObj->height;
+		$originalWidth = $this->fileObj->viewWidth;
+		$originalHeight = $this->fileObj->viewHeight;
 		$mode = $this->getResizeMode();
 		$zoom = $this->getZoomLevel();
 		$importantPart = $this->getImportantPart();
@@ -801,6 +807,36 @@ class Image
 
 
 	/**
+	 * Get the relative path to an image
+	 *
+	 * @param string $src The image name or path
+	 *
+	 * @return string The relative path
+	 */
+	public static function getPath($src)
+	{
+		if ($src == '')
+		{
+			return '';
+		}
+
+		$src = rawurldecode($src);
+
+		if (strpos($src, '/') !== false)
+		{
+			return $src;
+		}
+
+		if (strncmp($src, 'icon', 4) === 0)
+		{
+			return 'assets/contao/images/' . $src;
+		}
+
+		return 'system/themes/' . \Backend::getTheme() . '/images/' . $src;
+	}
+
+
+	/**
 	 * Generate an image tag and return it as string
 	 *
 	 * @param string $src        The image path
@@ -811,28 +847,15 @@ class Image
 	 */
 	public static function getHtml($src, $alt='', $attributes='')
 	{
-		$static = TL_FILES_URL;
-		$src = rawurldecode($src);
+		$src = static::getPath($src);
 
-		if (strpos($src, '/') === false)
-		{
-			if (strncmp($src, 'icon', 4) === 0)
-			{
-				$static = TL_ASSETS_URL;
-				$src = 'assets/contao/images/' . $src;
-			}
-			else
-			{
-				$src = 'system/themes/' . \Backend::getTheme() . '/images/' . $src;
-			}
-		}
-
-		if (!file_exists(TL_ROOT .'/'. $src))
+		if ($src == '' || !is_file(TL_ROOT . '/' . $src))
 		{
 			return '';
 		}
 
 		$objFile = new \File($src, true);
+		$static = (strncmp($src, 'assets/', 7) === 0) ? TL_ASSETS_URL : TL_FILES_URL;
 
 		return '<img src="' . $static . \System::urlEncode($src) . '" width="' . $objFile->width . '" height="' . $objFile->height . '" alt="' . specialchars($alt) . '"' . (($attributes != '') ? ' ' . $attributes : '') . '>';
 	}
@@ -939,19 +962,22 @@ class Image
 			$imageObj->setTargetPath($target);
 			$imageObj->setForceOverride($force);
 
-			return $imageObj->executeResize()->getResizedPath() ?: null;
+			if ($path = $imageObj->executeResize()->getResizedPath())
+			{
+				return $path;
+			}
 		}
 		catch (\Exception $e)
 		{
 			\System::log('Image "' . $image . '" could not be processed: ' . $e->getMessage(), __METHOD__, TL_ERROR);
-
-			return null;
 		}
+
+		return null;
 	}
 
 
 	/**
-	 * Convert sizes like 2em, 10% or 12pt to pixels
+	 * Convert sizes like 2em, 10cm or 12pt to pixels
 	 *
 	 * @param string $size The size string
 	 *
@@ -959,10 +985,10 @@ class Image
 	 */
 	public static function getPixelValue($size)
 	{
-		$value = preg_replace('/[^0-9\.-]+/', '', $size);
+		$value = preg_replace('/[^0-9.-]+/', '', $size);
 		$unit = preg_replace('/[^acehimnprtvwx%]/', '', $size);
 
-		// Convert 12pt = 16px = 1em = 100%
+		// Convert 16px = 1em = 2ex = 12pt = 1pc = 1/6in = 2.54/6cm = 25.4/6mm = 100%
 		switch ($unit)
 		{
 			case '':
@@ -974,12 +1000,34 @@ class Image
 				return (int) round($value * 16);
 				break;
 
+			case 'ex':
+				return (int) round($value * 16 / 2);
+				break;
+
 			case 'pt':
-				return (int) round($value * (16 / 12));
+				return (int) round($value * 16 / 12);
+				break;
+
+			case 'pc':
+				return (int) round($value * 16);
+				break;
+
+			case 'in':
+				return (int) round($value * 16 * 6);
+				break;
+
+			case 'cm':
+				return (int) round($value * 16 / (2.54 / 6));
+				break;
+
+			case 'mm':
+				return (int) round($value * 16 / (25.4 / 6));
 				break;
 
 			case '%':
-				return (int) round($value * (16 / 100));
+				@trigger_error('Using Image::getPixelValue() with a percentage value has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+
+				return (int) round($value * 16 / 100);
 				break;
 		}
 

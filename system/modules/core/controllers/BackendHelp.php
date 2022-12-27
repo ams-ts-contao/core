@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -58,65 +58,24 @@ class BackendHelp extends \Backend
 
 		$arrData = $GLOBALS['TL_DCA'][$table]['fields'][$field];
 
-		// Back end modules
-		if ($table == 'tl_user_group' && $field == 'modules')
-		{
-			$rows = array();
-
-			foreach (array_keys($GLOBALS['BE_MOD']) as $group)
-			{
-				$rows[] = array('headspan', $arrData['reference'][$group]);
-
-				foreach ($GLOBALS['BE_MOD'][$group] as $module=>$class)
-				{
-					$rows[] = $arrData['reference'][$module];
-				}
-			}
-
-			$objTemplate->rows = $rows;
-		}
-
-		// Front end modules
-		elseif ($table == 'tl_module' && $field == 'type')
-		{
-			$rows = array();
-
-			foreach (array_keys($GLOBALS['FE_MOD']) as $group)
-			{
-				$rows[] = array('headspan', $arrData['reference'][$group]);
-
-				foreach ($GLOBALS['FE_MOD'][$group] as $module=>$class)
-				{
-					$rows[] = $arrData['reference'][$module];
-				}
-			}
-
-			$objTemplate->rows = $rows;
-		}
-
-		// Content elements
-		elseif ($table == 'tl_content' && $field == 'type')
-		{
-			$rows = array();
-
-			foreach (array_keys($GLOBALS['TL_CTE']) as $group)
-			{
-				$rows[] = array('headspan', $arrData['reference'][$group]);
-
-				foreach ($GLOBALS['TL_CTE'][$group] as $element=>$class)
-				{
-					$rows[] = $arrData['reference'][$element];
-				}
-			}
-
-			$objTemplate->rows = $rows;
-		}
-
 		// Add the reference
-		elseif (!empty($arrData['reference']))
+		if (!empty($arrData['reference']))
 		{
 			$rows = array();
-			$options = is_array($arrData['options']) ? $arrData['options'] : array_keys($arrData['reference']);
+
+			if (is_array($arrData['options']))
+			{
+				$options = $arrData['options'];
+			}
+			elseif (is_array($arrData['options_callback']))
+			{
+				$this->import($arrData['options_callback'][0]);
+				$options = $this->{$arrData['options_callback'][0]}->{$arrData['options_callback'][1]}(new \DC_Table($table));
+			}
+			else
+			{
+				$options = array_keys($arrData['reference']);
+			}
 
 			// Unset the predefined image sizes
 			unset($options['image_sizes']);
@@ -141,7 +100,11 @@ class BackendHelp extends \Backend
 				}
 				else
 				{
-					if (!is_array($arrData['reference'][$option]))
+					if (isset($arrData['reference'][$key]))
+					{
+						$rows[] = $arrData['reference'][$key];
+					}
+					elseif (!is_array($arrData['reference'][$option]))
 					{
 						$rows[] = array('headspan', $arrData['reference'][$option]);
 					}

@@ -35,11 +35,18 @@ nbproject/
 /vendor/
 
 # AMS
-.svn
+.svn/
 .transifexrc
 assets/html5shiv
 contao-check*
+statistik/
 system/modules/*
 templates/*
 tl_files
+virtwelt/
+wartung/
+xml-schemata/
+AM-SoFT2.crt
+AM-Soft.crt
 googlefabb*.html
+fernwartung.exe

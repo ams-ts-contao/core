@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -14,6 +14,10 @@ namespace Contao;
 /**
  * Parent class for objects that can be modules or content elements.
  *
+ * @property string $headline
+ * @property string $cssID
+ * @property string $space
+ * @property string $typePrefix
  * @property string $hl
  *
  * @author Leo Feyer <https://github.com/leofeyer>
@@ -81,13 +85,17 @@ abstract class Hybrid extends \Frontend
 		parent::__construct();
 
 		// Store the parent element (see #4556)
-		if ($objElement instanceof \Model)
+		if ($objElement instanceof \Model || $objElement instanceof \Model\Collection)
 		{
-			$this->objParent = $objElement;
-		}
-		elseif ($objElement instanceof \Model\Collection)
-		{
-			$this->objParent = $objElement->current();
+			/** @var \ContentModel|\ModuleModel|\FormModel $objModel */
+			$objModel = $objElement;
+
+			if ($objModel instanceof \Model\Collection)
+			{
+				$objModel = $objModel->current();
+			}
+
+			$this->objParent = $objModel;
 		}
 
 		if ($this->strKey == '' || $this->strTable == '')

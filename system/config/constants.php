@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -13,7 +13,7 @@
  * Core version
  */
 define('VERSION', '3.5');
-define('BUILD', '0');
+define('BUILD', '40');
 define('LONG_TERM_SUPPORT', true);
 
 
@@ -23,7 +23,7 @@ define('LONG_TERM_SUPPORT', true);
  * Version numbers are added to style sheets and JavaScript files to make
  * the web browser reload those resources after a Contao update.
  */
-define('ACE', '1.1.8');
+define('ACE', '1.1.9');
 define('CSS3PIE', '1.0.0');
 define('DROPZONE', '3.12.0');
 define('HIGHLIGHTER', '3.0.83');
@@ -33,9 +33,9 @@ define('SWIPE', '2.0');
 define('JQUERY', '1.11.3');
 define('JQUERY_UI', '1.11.4');
 define('COLORBOX', '1.6.1');
-define('MEDIAELEMENT', '2.16.4');
+define('MEDIAELEMENT', '2.21.2');
 define('TABLESORTER', '2.0.5');
-define('MOOTOOLS', '1.5.1');
+define('MOOTOOLS', '1.5.2');
 define('COLORPICKER', '1.4');
 define('DATEPICKER', '2.2.0');
 define('MEDIABOX', '1.4.6');

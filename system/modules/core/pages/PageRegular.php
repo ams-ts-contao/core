@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -44,7 +44,7 @@ class PageRegular extends \Frontend
 			foreach ($GLOBALS['TL_HOOKS']['getPageLayout'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objPage, $objLayout, $this);
+				$this->{$callback[0]}->{$callback[1]}($objPage, $objLayout, $this);
 			}
 		}
 
@@ -130,7 +130,7 @@ class PageRegular extends \Frontend
 						continue;
 					}
 
-					$this->Template->$arrModule['col'] .= $this->getFrontendModule($arrModule['mod'], $arrModule['col']);
+					$this->Template->{$arrModule['col']} .= $this->getFrontendModule($arrModule['mod'], $arrModule['col']);
 				}
 				else
 				{
@@ -153,7 +153,7 @@ class PageRegular extends \Frontend
 			foreach ($GLOBALS['TL_HOOKS']['generatePage'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objPage, $objLayout, $this);
+				$this->{$callback[0]}->{$callback[1]}($objPage, $objLayout, $this);
 			}
 		}
 
@@ -387,7 +387,7 @@ class PageRegular extends \Frontend
 		{
 			if ($objLayout->jSource == 'j_googleapis' || $objLayout->jSource == 'j_fallback')
 			{
-				$this->Template->mooScripts .= \Template::generateScriptTag('//code.jquery.com/jquery-' . $GLOBALS['TL_ASSETS']['JQUERY'] . '.min.js', $blnXhtml) . "\n";
+				$this->Template->mooScripts .= \Template::generateScriptTag('https://code.jquery.com/jquery-' . $GLOBALS['TL_ASSETS']['JQUERY'] . '.min.js', $blnXhtml) . "\n";
 
 				// Local fallback (thanks to DyaGa)
 				if ($objLayout->jSource == 'j_fallback')
@@ -406,7 +406,14 @@ class PageRegular extends \Frontend
 		{
 			if ($objLayout->mooSource == 'moo_googleapis' || $objLayout->mooSource == 'moo_fallback')
 			{
-				$this->Template->mooScripts .= \Template::generateScriptTag('//ajax.googleapis.com/ajax/libs/mootools/' . $GLOBALS['TL_ASSETS']['MOOTOOLS'] . '/mootools-yui-compressed.js', $blnXhtml) . "\n";
+				if (version_compare($GLOBALS['TL_ASSETS']['MOOTOOLS'], '1.5.1', '>'))
+				{
+					$this->Template->mooScripts .= \Template::generateScriptTag('https://ajax.googleapis.com/ajax/libs/mootools/' . $GLOBALS['TL_ASSETS']['MOOTOOLS'] . '/mootools.min.js', $blnXhtml) . "\n";
+				}
+				else
+				{
+					$this->Template->mooScripts .= \Template::generateScriptTag('https://ajax.googleapis.com/ajax/libs/mootools/' . $GLOBALS['TL_ASSETS']['MOOTOOLS'] . '/mootools-yui-compressed.js', $blnXhtml) . "\n";
+				}
 
 				// Local fallback (thanks to DyaGa)
 				if ($objLayout->mooSource == 'moo_fallback')
@@ -424,7 +431,7 @@ class PageRegular extends \Frontend
 		}
 
 		// Load MooTools core for the debug bar (see #5195)
-		if (\Config::get('debugMode') && !$objLayout->addMooTools)
+		if (\Config::get('debugMode') && !\Config::get('hideDebugBar') && !$objLayout->addMooTools)
 		{
 			$GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/core/' . $GLOBALS['TL_ASSETS']['MOOTOOLS'] . '/mootools-core.js|static';
 		}
@@ -480,7 +487,7 @@ class PageRegular extends \Frontend
 		// Google web fonts
 		if ($objLayout->webfonts != '')
 		{
-			$strStyleSheets .= \Template::generateStyleTag('//fonts.googleapis.com/css?family=' . str_replace('|', '%7C', $objLayout->webfonts), 'all', $blnXhtml) . "\n";
+			$strStyleSheets .= \Template::generateStyleTag('https://fonts.googleapis.com/css?family=' . str_replace('|', '%7C', $objLayout->webfonts), 'all', $blnXhtml) . "\n";
 		}
 
 		// Add the Contao CSS framework style sheets
@@ -585,7 +592,7 @@ class PageRegular extends \Frontend
 				if (!empty($tmp) && is_array($tmp))
 				{
 					// Remove all values
-					$arrOrder = array_map(function(){}, array_flip($tmp));
+					$arrOrder = array_map(function () {}, array_flip($tmp));
 
 					// Move the matching elements to their position in $arrOrder
 					foreach ($arrExternal as $k=>$v)
@@ -640,7 +647,7 @@ class PageRegular extends \Frontend
 		$strStyleSheets .= '[[TL_CSS]]';
 
 		// Add the debug style sheet
-		if (\Config::get('debugMode'))
+		if (\Config::get('debugMode') && !\Config::get('hideDebugBar'))
 		{
 			$strStyleSheets .= \Template::generateStyleTag($this->addStaticUrlTo('assets/contao/css/debug.css'), 'all', $blnXhtml) . "\n";
 		}

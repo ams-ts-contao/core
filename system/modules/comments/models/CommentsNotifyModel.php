@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -26,46 +26,46 @@ namespace Contao;
  * @property string  $tokenConfirm
  * @property string  $tokenRemove
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByTstamp()
- * @method static $this findOneBySource()
- * @method static $this findOneByParent()
- * @method static $this findOneByName()
- * @method static $this findOneByEmail()
- * @method static $this findOneByUrl()
- * @method static $this findOneByAddedOn()
- * @method static $this findOneByIp()
- * @method static $this findOneByTokenConfirm()
- * @method static $this findOneByTokenRemove()
+ * @method static \CommentsNotifyModel|null findById($id, $opt=array())
+ * @method static \CommentsNotifyModel|null findByPk($id, $opt=array())
+ * @method static \CommentsNotifyModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneBy($col, $val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByTstamp($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneBySource($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByParent($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByName($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByEmail($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByUrl($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByAddedOn($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByIp($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByTokenConfirm($val, $opt=array())
+ * @method static \CommentsNotifyModel|null findOneByTokenRemove($val, $opt=array())
  *
- * @method static \Model\Collection|\CommentsNotifyModel findByTstamp()
- * @method static \Model\Collection|\CommentsNotifyModel findBySource()
- * @method static \Model\Collection|\CommentsNotifyModel findByParent()
- * @method static \Model\Collection|\CommentsNotifyModel findByName()
- * @method static \Model\Collection|\CommentsNotifyModel findByEmail()
- * @method static \Model\Collection|\CommentsNotifyModel findByUrl()
- * @method static \Model\Collection|\CommentsNotifyModel findByAddedOn()
- * @method static \Model\Collection|\CommentsNotifyModel findByIp()
- * @method static \Model\Collection|\CommentsNotifyModel findByTokenConfirm()
- * @method static \Model\Collection|\CommentsNotifyModel findByTokenRemove()
- * @method static \Model\Collection|\CommentsNotifyModel findMultipleByIds()
- * @method static \Model\Collection|\CommentsNotifyModel findBy()
- * @method static \Model\Collection|\CommentsNotifyModel findAll()
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findBySource($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByParent($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByName($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByEmail($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByUrl($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByAddedOn($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByIp($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByTokenConfirm($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findByTokenRemove($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByTstamp()
- * @method static integer countBySource()
- * @method static integer countByParent()
- * @method static integer countByName()
- * @method static integer countByEmail()
- * @method static integer countByUrl()
- * @method static integer countByAddedOn()
- * @method static integer countByIp()
- * @method static integer countByTokenConfirm()
- * @method static integer countByTokenRemove()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countBySource($val, $opt=array())
+ * @method static integer countByParent($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countByEmail($val, $opt=array())
+ * @method static integer countByUrl($val, $opt=array())
+ * @method static integer countByAddedOn($val, $opt=array())
+ * @method static integer countByIp($val, $opt=array())
+ * @method static integer countByTokenConfirm($val, $opt=array())
+ * @method static integer countByTokenRemove($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -85,7 +85,7 @@ class CommentsNotifyModel extends \Model
 	 * @param string $strToken   The token string
 	 * @param array  $arrOptions An optional options array
 	 *
-	 * @return static The subscription model or null
+	 * @return \CommentsNotifyModel|null The model or null if there are no subscriptions
 	 */
 	public static function findByTokens($strToken, array $arrOptions=array())
 	{
@@ -103,7 +103,7 @@ class CommentsNotifyModel extends \Model
 	 * @param string  $strEmail   The e-mail address
 	 * @param array   $arrOptions An optional options array
 	 *
-	 * @return static The subscription model or null
+	 * @return \CommentsNotifyModel|null The model or null if there are no subscriptions
 	 */
 	public static function findBySourceParentAndEmail($strSource, $intParent, $strEmail, array $arrOptions=array())
 	{
@@ -120,7 +120,7 @@ class CommentsNotifyModel extends \Model
 	 * @param integer $intParent  The parent ID
 	 * @param array   $arrOptions An optional options array
 	 *
-	 * @return \Model\Collection|\CommentsNotifyModel|null A collection of models or null if there are no active subscriptions
+	 * @return \Model\Collection|\CommentsNotifyModel[]|\CommentsNotifyModel|null A collection of models or null if there are no active subscriptions
 	 */
 	public static function findActiveBySourceAndParent($strSource, $intParent, array $arrOptions=array())
 	{

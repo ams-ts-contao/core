@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -23,36 +23,36 @@ namespace Contao;
  * @property string  $ip
  * @property boolean $su
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findByHash()
- * @method static $this findOneByPid()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByName()
- * @method static $this findOneBySessionID()
- * @method static $this findOneByIp()
- * @method static $this findOneBySu()
+ * @method static \SessionModel|null findById($id, $opt=array())
+ * @method static \SessionModel|null findByPk($id, $opt=array())
+ * @method static \SessionModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \SessionModel|null findOneBy($col, $val, $opt=array())
+ * @method static \SessionModel|null findByHash($val, $opt=array())
+ * @method static \SessionModel|null findOneByPid($val, $opt=array())
+ * @method static \SessionModel|null findOneByTstamp($val, $opt=array())
+ * @method static \SessionModel|null findOneByName($val, $opt=array())
+ * @method static \SessionModel|null findOneBySessionID($val, $opt=array())
+ * @method static \SessionModel|null findOneByIp($val, $opt=array())
+ * @method static \SessionModel|null findOneBySu($val, $opt=array())
  *
- * @method static \Model\Collection|\SessionModel findByPid()
- * @method static \Model\Collection|\SessionModel findByTstamp()
- * @method static \Model\Collection|\SessionModel findByName()
- * @method static \Model\Collection|\SessionModel findBySessionID()
- * @method static \Model\Collection|\SessionModel findByIp()
- * @method static \Model\Collection|\SessionModel findBySu()
- * @method static \Model\Collection|\SessionModel findMultipleByIds()
- * @method static \Model\Collection|\SessionModel findBy()
- * @method static \Model\Collection|\SessionModel findAll()
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findByPid($val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findByName($val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findBySessionID($val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findByIp($val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findBySu($val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\SessionModel[]|\SessionModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByPid()
- * @method static integer countByTstamp()
- * @method static integer countByName()
- * @method static integer countBySessionID()
- * @method static integer countByHash()
- * @method static integer countByIp()
- * @method static integer countBySu()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByPid($val, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByName($val, $opt=array())
+ * @method static integer countBySessionID($val, $opt=array())
+ * @method static integer countByHash($val, $opt=array())
+ * @method static integer countByIp($val, $opt=array())
+ * @method static integer countBySu($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -73,7 +73,7 @@ class SessionModel extends \Model
 	 * @param string $strName    The session name
 	 * @param array  $arrOptions An optional options array
 	 *
-	 * @return static The model or null if there is no session
+	 * @return \SessionModel|null The model or null if there is no session
 	 */
 	public static function findByHashAndName($strHash, $strName, array $arrOptions=array())
 	{

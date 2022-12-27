@@ -13,13 +13,6 @@ select.chzn-select {
   margin:1px 0; /* PATCH */
   background-color:#fff; /* PATCH */
 }
-/* PATCH */
-.firefox .chzn-container {
-  position:relative;
-  top:2px;
-  margin:-1px 0 0;
-}
-/* PATCH EOF */
 .chzn-container .chzn-drop {
   background: #fff;
   border: 1px solid #aaa;
@@ -75,11 +68,7 @@ select.chzn-select {
 }
 /* PATCH */
 .firefox .chzn-container-single .chzn-single {
-  height:21px;
-}
-.win.firefox .chzn-container-single .chzn-single {
-  height:22px;
-  line-height:21px;
+  top:1px;
 }
 /* PATCH EOF */
 .chzn-container-single .chzn-single > span { /* PATCH see 3835 */
@@ -96,10 +85,11 @@ select.chzn-select {
   /* PATCH EOF */
 }
 .chzn-container-single .chzn-single div {
-  /* PATCH: 3px instead of 4px */
+  /* PATCH
   -webkit-border-radius: 0 3px 3px 0;
   -moz-border-radius   : 0 3px 3px 0;
   border-radius        : 0 3px 3px 0;
+  */
   -moz-background-clip   : padding;
   -webkit-background-clip: padding-box;
   background-clip        : padding-box;
@@ -267,7 +257,7 @@ select.chzn-select {
 /* @group Results */
 .chzn-container .chzn-results {
   margin: 0 4px 4px 0;
-  max-height: 228px; /* PATCH: 228px instead of 190px */
+  max-height: 192px; /* PATCH: 192px instead of 190px (.chzn-results li == 16px) */
   padding: 0 0 0 4px;
   position: relative;
   overflow-x: hidden;
@@ -278,7 +268,7 @@ select.chzn-select {
   padding: 0;
 }
 .chzn-container .chzn-results li {
-  line-height: 1.2; /* PATCH: 1.2 instead of 80% */
+  line-height: 13px; /* PATCH: 13px instead of 80% */
   padding: 1px 7px 2px; /* PATCH: 1px 7px 2px instead of 7px 7px 8px */
   margin: 0;
   list-style: none;

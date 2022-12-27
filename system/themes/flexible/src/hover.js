@@ -1,9 +1,9 @@
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 var Theme = {
@@ -13,17 +13,6 @@ var Theme = {
 	 * @member {boolean}
  	 */
 	isWebkit: (Browser.chrome || Browser.safari || navigator.userAgent.match(/(?:webkit|khtml)/i)),
-
-	/**
-	 * Autofocus the first text field or textarea
-	 *
-	 * @param {string} id The ID of the parent element
-	 */
-	focusInput: function(id) {
-		if (id == '') return;
-		var el = $$('#'+id+' input[class^="tl_text"],#'+id+' textarea');
-		if (el && el.length > 0) el[0].focus();
-	},
 
 	/**
 	 * Colorize a table row when hovering over it
@@ -105,7 +94,7 @@ var Theme = {
 			if (Browser.Features.Touch) {
 				el.addEvent('click', function() {
 					if (!el.getAttribute('data-visited')) {
-						el.setAttribute('data-visited', 1);
+						el.setAttribute('data-visited', '1');
 					} else {
 						el.getElements('a').each(function(a) {
 							if (a.hasClass('edit')) {

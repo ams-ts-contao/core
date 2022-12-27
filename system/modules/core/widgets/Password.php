@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -133,7 +133,7 @@ class Password extends \Widget
 			$this->blnSubmitInput = true;
 			\Message::addConfirmation($GLOBALS['TL_LANG']['MSC']['pw_changed']);
 
-			return \Encryption::hash($varInput);
+			return password_hash($varInput, PASSWORD_DEFAULT);
 		}
 
 		return '';
@@ -168,7 +168,7 @@ class Password extends \Widget
 		return sprintf('<label for="ctrl_%s_confirm" class="confirm%s">%s%s%s</label>',
 						$this->strId,
 						(strlen($this->strClass) ? ' ' . $this->strClass : ''),
-						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].'</span> ' : ''),
+						($this->mandatory ? '<span class="invisible">'.$GLOBALS['TL_LANG']['MSC']['mandatory'].' </span>' : ''),
 						$GLOBALS['TL_LANG']['MSC']['confirm'][0],
 						($this->mandatory ? '<span class="mandatory">*</span>' : ''));
 	}

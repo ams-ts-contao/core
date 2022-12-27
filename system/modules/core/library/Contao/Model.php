@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -136,6 +136,11 @@ abstract class Model
 				}
 			}
 
+			$objRegistry = \Model\Registry::getInstance();
+
+			$this->setRow($arrData); // see #5439
+			$objRegistry->register($this);
+
 			// Create the related models
 			foreach ($arrRelated as $key=>$row)
 			{
@@ -152,7 +157,7 @@ abstract class Model
 				}
 				else
 				{
-					$objRelated = \Model\Registry::getInstance()->fetch($table, $row[$intPk]);
+					$objRelated = $objRegistry->fetch($table, $row[$intPk]);
 
 					if ($objRelated !== null)
 					{
@@ -163,14 +168,13 @@ abstract class Model
 						/** @var static $objRelated */
 						$objRelated = new $strClass();
 						$objRelated->setRow($row);
+
+						$objRegistry->register($objRelated);
 					}
 
 					$this->arrRelated[$key] = $objRelated;
 				}
 			}
-
-			$this->setRow($arrData); // see #5439
-			\Model\Registry::getInstance()->register($this);
 		}
 	}
 
@@ -466,7 +470,7 @@ abstract class Model
 			}
 
 			// Update the row
-			$objDatabase->prepare("UPDATE " . static::$strTable . " %s WHERE " . static::$strPk . "=?")
+			$objDatabase->prepare("UPDATE " . static::$strTable . " %s WHERE " . \Database::quoteIdentifier(static::$strPk) . "=?")
 						->set($arrSet)
 						->execute($intPk);
 
@@ -559,7 +563,7 @@ abstract class Model
 		}
 
 		// Delete the row
-		$intAffected = \Database::getInstance()->prepare("DELETE FROM " . static::$strTable . " WHERE " . static::$strPk . "=?")
+		$intAffected = \Database::getInstance()->prepare("DELETE FROM " . static::$strTable . " WHERE " . \Database::quoteIdentifier(static::$strPk) . "=?")
 											   ->execute($intPk)
 											   ->affectedRows;
 
@@ -620,10 +624,10 @@ abstract class Model
 		elseif ($arrRelation['type'] == 'hasMany' || $arrRelation['type'] == 'belongsToMany')
 		{
 			$arrValues = deserialize($this->$strKey, true);
-			$strField = $arrRelation['table'] . '.' . $arrRelation['field'];
+			$strField = $arrRelation['table'] . '.' . \Database::quoteIdentifier($arrRelation['field']);
 
 			// Handle UUIDs (see #6525)
-			if ($strField == 'tl_files.uuid')
+			if ($arrRelation['table'] == 'tl_files' && $arrRelation['field'] == 'uuid')
 			{
 				/** @var \FilesModel $strClass */
 				$objModel = $strClass::findMultipleByUuids($arrValues, $arrOptions);
@@ -664,7 +668,7 @@ abstract class Model
 		}
 
 		// Reload the database record
-		$res = \Database::getInstance()->prepare("SELECT * FROM " . static::$strTable . " WHERE " . static::$strPk . "=?")
+		$res = \Database::getInstance()->prepare("SELECT * FROM " . static::$strTable . " WHERE " . \Database::quoteIdentifier(static::$strPk) . "=?")
 									   ->execute($intPk);
 
 		$this->setRow($res->row());
@@ -678,7 +682,14 @@ abstract class Model
 	 */
 	public function detach($blnKeepClone=true)
 	{
-		\Model\Registry::getInstance()->unregister($this);
+		$registry = \Model\Registry::getInstance();
+
+		if (!$registry->isRegistered($this))
+		{
+			return;
+		}
+
+		$registry->unregister($this);
 
 		if ($blnKeepClone)
 		{
@@ -699,7 +710,7 @@ abstract class Model
 	/**
 	 * Called when the model is attached to the model registry
 	 *
-	 * @param \Model\Registry
+	 * @param \Model\Registry|\Contao\Model\Registry $registry The model registry
 	 */
 	public function onRegister(\Model\Registry $registry)
 	{
@@ -719,7 +730,7 @@ abstract class Model
 	/**
 	 * Called when the model is detached from the model registry
 	 *
-	 * @param \Model\Registry
+	 * @param \Model\Registry|\Contao\Model\Registry $registry The model registry
 	 */
 	public function onUnregister(\Model\Registry $registry)
 	{
@@ -847,14 +858,12 @@ abstract class Model
 		// Search for registered models
 		foreach ($arrIds as $intId)
 		{
-			$arrRegistered[$intId] = null;
-
 			if (empty($arrOptions))
 			{
 				$arrRegistered[$intId] = \Model\Registry::getInstance()->fetch(static::$strTable, $intId);
 			}
 
-			if ($arrRegistered[$intId] === null)
+			if (!isset($arrRegistered[$intId]))
 			{
 				$arrUnregistered[] = $intId;
 			}
@@ -1043,14 +1052,20 @@ abstract class Model
 		{
 			$arrColumn = (array) $arrOptions['column'];
 
-			if (count($arrColumn) == 1 && ($arrColumn[0] == static::$strPk || in_array($arrColumn[0], static::getUniqueFields())))
+			if (\count($arrColumn) == 1)
 			{
-				$varKey = is_array($arrOptions['value']) ? $arrOptions['value'][0] : $arrOptions['value'];
-				$objModel = \Model\Registry::getInstance()->fetch(static::$strTable, $varKey, $arrColumn[0]);
+				// Support table prefixes
+				$arrColumn[0] = preg_replace('/^' . preg_quote(static::getTable(), '/') . '\./', '', $arrColumn[0]);
 
-				if ($objModel !== null)
+				if ($arrColumn[0] == static::$strPk || \in_array($arrColumn[0], static::getUniqueFields()))
 				{
-					return $objModel;
+					$varKey = \is_array($arrOptions['value']) ? $arrOptions['value'][0] : $arrOptions['value'];
+					$objModel = \Model\Registry::getInstance()->fetch(static::$strTable, $varKey, $arrColumn[0]);
+
+					if ($objModel !== null)
+					{
+						return $objModel;
+					}
 				}
 			}
 		}

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -248,14 +248,12 @@ abstract class User extends \System
 			return false;
 		}
 
-		$objSession = $this->Database->prepare("SELECT * FROM tl_session WHERE hash=? AND name=?")
-									 ->execute($this->strHash, $this->strCookie);
+		$objSession = $this->Database->prepare("SELECT * FROM tl_session WHERE hash=?")
+									 ->execute($this->strHash);
 
 		// Try to find the session in the database
 		if ($objSession->numRows < 1)
 		{
-			$this->log('Could not find the session record', __METHOD__, TL_ACCESS);
-
 			return false;
 		}
 
@@ -264,8 +262,6 @@ abstract class User extends \System
 		// Validate the session
 		if ($objSession->sessionID != session_id() || (!\Config::get('disableIpCheck') && $objSession->ip != $this->strIp) || $objSession->hash != $this->strHash || ($objSession->tstamp + \Config::get('sessionTimeout')) < $time)
 		{
-			$this->log('Could not verify the session', __METHOD__, TL_ACCESS);
-
 			return false;
 		}
 
@@ -274,16 +270,14 @@ abstract class User extends \System
 		// Load the user object
 		if ($this->findBy('id', $this->intId) == false)
 		{
-			$this->log('Could not find the session user', __METHOD__, TL_ACCESS);
-
 			return false;
 		}
 
 		$this->setUserFromDb();
 
 		// Update session
-		$this->Database->prepare("UPDATE tl_session SET tstamp=$time WHERE sessionID=?")
-					   ->execute(session_id());
+		$this->Database->prepare("UPDATE tl_session SET tstamp=$time WHERE hash=?")
+					   ->execute($this->strHash);
 
 		$this->setCookie($this->strCookie, $this->strHash, ($time + \Config::get('sessionTimeout')), null, null, false, true);
 
@@ -293,7 +287,7 @@ abstract class User extends \System
 			foreach ($GLOBALS['TL_HOOKS']['postAuthenticate'] as $callback)
 			{
 				$this->import($callback[0], 'objAuth', true);
-				$this->objAuth->$callback[1]($this);
+				$this->objAuth->{$callback[1]}($this);
 			}
 		}
 
@@ -327,7 +321,7 @@ abstract class User extends \System
 				foreach ($GLOBALS['TL_HOOKS']['importUser'] as $callback)
 				{
 					$this->import($callback[0], 'objImport', true);
-					$blnLoaded = $this->objImport->$callback[1](\Input::post('username', true), \Input::postUnsafeRaw('password'), $this->strTable);
+					$blnLoaded = $this->objImport->{$callback[1]}(\Input::post('username', true), \Input::postUnsafeRaw('password'), $this->strTable);
 
 					// Load successfull
 					if ($blnLoaded === true)
@@ -384,21 +378,13 @@ abstract class User extends \System
 			return false;
 		}
 
-		// The password has been generated with crypt()
-		if (\Encryption::test($this->password))
-		{
-			$blnAuthenticated = \Encryption::verify(\Input::postUnsafeRaw('password'), $this->password);
-		}
-		else
-		{
-			list($strPassword, $strSalt) = explode(':', $this->password);
-			$blnAuthenticated = ($strSalt == '') ? ($strPassword === sha1(\Input::postUnsafeRaw('password'))) : ($strPassword === sha1($strSalt . \Input::postUnsafeRaw('password')));
+		$blnAuthenticated = password_verify(\Input::postUnsafeRaw('password'), $this->password);
+		$blnNeedsRehash = password_needs_rehash($this->password, PASSWORD_DEFAULT);
 
-			// Store a SHA-512 encrpyted version of the password
-			if ($blnAuthenticated)
-			{
-				$this->password = \Encryption::hash(\Input::postUnsafeRaw('password'));
-			}
+		// Re-hash the password if the algorithm has changed
+		if ($blnAuthenticated && $blnNeedsRehash)
+		{
+			$this->password = password_hash(\Input::postUnsafeRaw('password'), PASSWORD_DEFAULT);
 		}
 
 		// HOOK: pass credentials to callback functions
@@ -407,7 +393,7 @@ abstract class User extends \System
 			foreach ($GLOBALS['TL_HOOKS']['checkCredentials'] as $callback)
 			{
 				$this->import($callback[0], 'objAuth', true);
-				$blnAuthenticated = $this->objAuth->$callback[1](\Input::post('username', true), \Input::postUnsafeRaw('password'), $this);
+				$blnAuthenticated = $this->objAuth->{$callback[1]}(\Input::post('username', true), \Input::postUnsafeRaw('password'), $this);
 
 				// Authentication successfull
 				if ($blnAuthenticated === true)
@@ -438,7 +424,9 @@ abstract class User extends \System
 		$this->save();
 
 		// Generate the session
+		session_regenerate_id();
 		$this->generateSession();
+
 		$this->log('User "' . $this->username . '" has logged in', __METHOD__, TL_ACCESS);
 
 		// HOOK: post login callback
@@ -447,7 +435,7 @@ abstract class User extends \System
 			foreach ($GLOBALS['TL_HOOKS']['postLogin'] as $callback)
 			{
 				$this->import($callback[0], 'objLogin', true);
-				$this->objLogin->$callback[1]($this);
+				$this->objLogin->{$callback[1]}($this);
 			}
 		}
 
@@ -526,7 +514,7 @@ abstract class User extends \System
 	 */
 	public function findBy($strColumn, $varValue)
 	{
-		$objResult = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . $strColumn . "=?")
+		$objResult = $this->Database->prepare("SELECT * FROM " . $this->strTable . " WHERE " . \Database::quoteIdentifier($strColumn) . "=?")
 									->limit(1)
 									->execute($varValue);
 
@@ -594,9 +582,9 @@ abstract class User extends \System
 		$intUserid = null;
 
 		// Find the session
-		$objSession = $this->Database->prepare("SELECT * FROM tl_session WHERE hash=? AND name=?")
+		$objSession = $this->Database->prepare("SELECT * FROM tl_session WHERE hash=?")
 									 ->limit(1)
-									 ->execute($this->strHash, $this->strCookie);
+									 ->execute($this->strHash);
 
 		if ($objSession->numRows)
 		{
@@ -639,7 +627,7 @@ abstract class User extends \System
 			foreach ($GLOBALS['TL_HOOKS']['postLogout'] as $callback)
 			{
 				$this->import($callback[0], 'objLogout', true);
-				$this->objLogout->$callback[1]($this);
+				$this->objLogout->{$callback[1]}($this);
 			}
 		}
 

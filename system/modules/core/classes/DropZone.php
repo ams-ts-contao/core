@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -27,7 +27,7 @@ class DropZone extends \FileUpload
 	public function generateMarkup()
 	{
 		// Maximum file size in MB
-		$intMaxSize = ($this->getMaximumUploadSize() / 1024 / 1024);
+		$intMaxSize = round($this->getMaximumUploadSize() / 1024 / 1024);
 
 		// String of accepted file extensions
 		$strAccepted = implode(',', array_map(function($a) { return '.' . $a; }, trimsplit(',', strtolower(\Config::get('uploadTypes')))));
@@ -56,7 +56,7 @@ class DropZone extends \FileUpload
         acceptedFiles: "' . $strAccepted . '",
         previewsContainer: ".dropzone-previews",
         uploadMultiple: true
-      }).on("processing", function() {
+      }).on("drop", function() {
         $$(".dz-message").setStyle("padding", "12px 18px 0");
       });
       $$("div.tl_formbody_submit").setStyle("display", "none");

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -94,7 +94,7 @@ class SelectMenu extends \Widget
 
 		if (!empty($varValue) && !$this->isValidOption($varValue))
 		{
-			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['invalid'], (is_array($varValue) ? implode(', ', $varValue) : $varValue)));
+			$this->addError($GLOBALS['TL_LANG']['ERR']['invalid']);
 		}
 
 		parent::validate();
@@ -118,7 +118,7 @@ class SelectMenu extends \Widget
 		}
 
 		// Add an empty option (XHTML) if there are none
-		if (empty($this->arrOptions))
+		if (empty($this->arrOptions) || !is_array($this->arrOptions))
 		{
 			$this->arrOptions = array(array('value'=>'', 'label'=>'-'));
 		}
@@ -154,7 +154,8 @@ class SelectMenu extends \Widget
 			$strClass .= ' tl_chosen';
 		}
 
-		return sprintf('<select name="%s" id="ctrl_%s" class="%s%s"%s onfocus="Backend.getScrollOffset()">%s</select>%s',
+		return sprintf('%s<select name="%s" id="ctrl_%s" class="%s%s"%s onfocus="Backend.getScrollOffset()">%s</select>%s',
+						($this->multiple ? '<input type="hidden" name="'. rtrim($this->strName, '[]') .'" value="">' : ''),
 						$this->strName,
 						$this->strId,
 						$strClass,

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -67,7 +67,7 @@ class Validator
 		}
 		else
 		{
-			return preg_match('/^[\pL \.-]+$/u', $varValue);
+			return preg_match('/^[\pL .-]+$/u', $varValue);
 		}
 	}
 
@@ -87,13 +87,13 @@ class Validator
 		}
 		else
 		{
-			return preg_match('/^[\pN\pL \._-]+$/u', $varValue);
+			return preg_match('/^[\w .-]+$/u', $varValue);
 		}
 	}
 
 
 	/**
-	 * Characters that are usually encoded by class Input [=<>()#/])
+	 * Characters that are usually encoded by class Input: #<>()\=
 	 *
 	 * @param mixed $varValue The value to be validated
 	 *
@@ -101,7 +101,7 @@ class Validator
 	 */
 	public static function isExtendedAlphanumeric($varValue)
 	{
-		return !preg_match('/[#\(\)\/<=>]/', $varValue);
+		return !preg_match('/[#<>()\\\\=]/', $varValue);
 	}
 
 
@@ -153,7 +153,20 @@ class Validator
 	 */
 	public static function isEmail($varValue)
 	{
-		return preg_match('/^(\w+[!#\$%&\'\*\+\-\/=\?^_`\.\{\|\}~]*)+(?<!\.)@\w+([_\.-]*\w+)*\.[A-Za-z]{2,13}$/', \Idna::encodeEmail($varValue));
+		/*
+		 * The regex below is based on a regex by Michael Rushton adjusted by
+		 * Rasmus Lerdorf to to only consider routeable addresses as valid. We
+		 * have also added Unicode support for the local part.
+		 *
+		 * Michael's regex carries this copyright:
+		 *
+		 * Copyright © Michael Rushton 2009-10
+		 * http://squiloople.com/
+		 * Feel free to use and redistribute this code. But please keep this copyright notice.
+		 *
+		 * @see https://github.com/php/php-src/blob/master/ext/filter/logical_filters.c#L601
+		 */
+		return preg_match('/^(?!(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?)){255,})(?!(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?)){65,}@)(?:(?:[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x5E-\x7E\pL\pN]+)|(?:\x22(?:[\x01-\x08\x0B\x0C\x0E-\x1F\x21\x23-\x5B\x5D-\x7F\pL\pN]|(?:\x5C[\x00-\x7F]))*\x22))(?:\.(?:(?:[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x5E-\x7E\pL\pN]+)|(?:\x22(?:[\x01-\x08\x0B\x0C\x0E-\x1F\x21\x23-\x5B\x5D-\x7F\pL\pN]|(?:\x5C[\x00-\x7F]))*\x22)))*@(?:(?:(?!.*[^.]{64,})(?:(?:(?:xn--)?[a-z0-9]+(?:-+[a-z0-9]+)*\.){1,126}){1,}(?:(?:[a-z][a-z0-9]*)|(?:(?:xn--)[a-z0-9]+))(?:-+[a-z0-9]+)*)|(?:\[(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){7})|(?:(?!(?:.*[a-f0-9][:\]]){7,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?)))|(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){5}:)|(?:(?!(?:.*[a-f0-9]:){5,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3}:)?)))?(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))(?:\.(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))){3}))\]))$/iDu', \Idna::encodeEmail($varValue));
 	}
 
 
@@ -168,11 +181,11 @@ class Validator
 	{
 		if (function_exists('mb_eregi'))
 		{
-			return mb_eregi('^[[:alnum:]\.\*\+\/\?\$#%:,;\{\}\(\)\[\]@&!=~_-]+$', \Idna::encodeUrl($varValue));
+			return mb_eregi('^[[:alnum:]\.\*\+\/\?\$#%:,;\{\}\(\)\[\]@&!=~|_-]+$', \Idna::encodeUrl($varValue));
 		}
 		else
 		{
-			return preg_match('/^[\pN\pL\.\*\+\/\?\$#%:,;\{\}\(\)\[\]@&!=~_-]+$/u', \Idna::encodeUrl($varValue));
+			return preg_match('/^[\w\/.*+?$#%:,;{}()[\]@&!=~|-]+$/u', \Idna::encodeUrl($varValue));
 		}
 	}
 
@@ -192,7 +205,7 @@ class Validator
 		}
 		else
 		{
-			return preg_match('/^[\pN\pL\._-]+$/u', $varValue);
+			return preg_match('/^[\w.-]+$/u', $varValue);
 		}
 	}
 
@@ -212,7 +225,7 @@ class Validator
 		}
 		else
 		{
-			return preg_match('/^[\pN\pL\/\._-]+$/u', $varValue);
+			return preg_match('/^[\w\/.-]+$/u', $varValue);
 		}
 	}
 
@@ -265,7 +278,7 @@ class Validator
 	 */
 	public static function isLanguage($varValue)
 	{
-		return preg_match('/^[a-z]{2}(\-[A-Z]{2})?$/', $varValue);
+		return preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $varValue);
 	}
 
 
@@ -317,7 +330,7 @@ class Validator
 	{
 		if (strlen($varValue) == 36)
 		{
-			return preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-1[a-f0-9]{3}\-[89ab][a-f0-9]{3}\-[a-f0-9]{12}$/', $varValue);
+			return preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-1[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/', $varValue);
 		}
 
 		return false;
@@ -333,7 +346,7 @@ class Validator
 	 */
 	public static function isGooglePlusId($varValue)
 	{
-		return preg_match('/^([0-9]{21}|\+[\pN\pL_-]+)$/u', $varValue);
+		return preg_match('/^([0-9]{21}|\+[\w-]+)$/u', $varValue);
 	}
 
 
@@ -423,5 +436,18 @@ class Validator
 		}
 
 		return true;
+	}
+
+
+	/**
+	 * Valid form field name
+	 *
+	 * @param mixed $strName The form field name
+	 *
+	 * @return boolean True if the form field name is valid
+	 */
+	public static function isFieldName($strName)
+	{
+		return preg_match('/^[A-Za-z0-9[\]_-]+$/', $strName);
 	}
 }

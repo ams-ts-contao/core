@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -114,9 +114,13 @@ class FormTextField extends \Widget
 		{
 			case 'value':
 				// Hide the Punycode format (see #2750)
-				if ($this->rgxp == 'email' || $this->rgxp == 'friendly' || $this->rgxp == 'url')
+				if ($this->rgxp == 'url')
 				{
 					return \Idna::decode($this->varValue);
+				}
+				elseif ($this->rgxp == 'email' || $this->rgxp == 'friendly')
+				{
+					return \Idna::decodeEmail($this->varValue);
 				}
 				else
 				{

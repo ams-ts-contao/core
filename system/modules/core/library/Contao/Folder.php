@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -26,6 +26,8 @@ namespace Contao;
  * @property string  $hash     The MD5 hash
  * @property string  $name     The folder name
  * @property string  $basename Alias of $name
+ * @property string  $dirname  The path of the parent folder
+ * @property string  $filename The folder name
  * @property string  $path     The folder path
  * @property string  $value    Alias of $path
  * @property integer $size     The folder size
@@ -48,10 +50,10 @@ class Folder extends \System
 	protected $objModel;
 
 	/**
-	 * Synchronize the database
-	 * @var boolean
+	 * Pathinfo
+	 * @var array
 	 */
-	protected $blnSyncDb = false;
+	protected $arrPathinfo = array();
 
 
 	/**
@@ -63,6 +65,8 @@ class Folder extends \System
 	 */
 	public function __construct($strFolder)
 	{
+		// No parent::__construct() here
+
 		// Handle open_basedir restrictions
 		if ($strFolder == '.')
 		{
@@ -78,26 +82,6 @@ class Folder extends \System
 		$this->import('Files');
 		$this->strFolder = $strFolder;
 
-		// Check whether we need to sync the database
-		$this->blnSyncDb = (\Config::get('uploadPath') != 'templates' && strncmp($strFolder . '/', \Config::get('uploadPath') . '/', strlen(\Config::get('uploadPath')) + 1) === 0);
-
-		// Check the excluded folders
-		if ($this->blnSyncDb && \Config::get('fileSyncExclude') != '')
-		{
-			$arrExempt = array_map(function($e) {
-				return \Config::get('uploadPath') . '/' . $e;
-			}, trimsplit(',', \Config::get('fileSyncExclude')));
-
-			foreach ($arrExempt as $strExempt)
-			{
-				if (strncmp($strExempt . '/', $strFolder . '/', strlen($strExempt) + 1) === 0)
-				{
-					$this->blnSyncDb = false;
-					break;
-				}
-			}
-		}
-
 		// Create the folder if it does not exist
 		if (!is_dir(TL_ROOT . '/' . $this->strFolder))
 		{
@@ -112,7 +96,7 @@ class Folder extends \System
 			}
 
 			// Update the database
-			if ($this->blnSyncDb)
+			if (\Dbafs::shouldBeSynchronized($this->strFolder))
 			{
 				$this->objModel = \Dbafs::addResource($this->strFolder);
 			}
@@ -137,7 +121,20 @@ class Folder extends \System
 
 			case 'name':
 			case 'basename':
-				return basename($this->strFolder);
+				if (!isset($this->arrPathinfo[$strKey]))
+				{
+					$this->arrPathinfo = $this->getPathinfo();
+				}
+				return $this->arrPathinfo['basename'];
+				break;
+
+			case 'dirname':
+			case 'filename':
+				if (!isset($this->arrPathinfo[$strKey]))
+				{
+					$this->arrPathinfo = $this->getPathinfo();
+				}
+				return $this->arrPathinfo[$strKey];
 				break;
 
 			case 'path':
@@ -147,6 +144,18 @@ class Folder extends \System
 
 			case 'size':
 				return $this->getSize();
+				break;
+
+			case 'ctime':
+				return filectime(TL_ROOT . '/' . $this->strFolder);
+				break;
+
+			case 'mtime':
+				return filemtime(TL_ROOT . '/' . $this->strFolder);
+				break;
+
+			case 'atime':
+				return fileatime(TL_ROOT . '/' . $this->strFolder);
 				break;
 
 			default:
@@ -175,7 +184,7 @@ class Folder extends \System
 		$this->Files->rrdir($this->strFolder, true);
 
 		// Update the database
-		if ($this->blnSyncDb)
+		if (\Dbafs::shouldBeSynchronized($this->strFolder))
 		{
 			$objFiles = \FilesModel::findMultipleByBasepath($this->strFolder . '/');
 
@@ -211,7 +220,7 @@ class Folder extends \System
 		$this->Files->rrdir($this->strFolder);
 
 		// Update the database
-		if ($this->blnSyncDb)
+		if (\Dbafs::shouldBeSynchronized($this->strFolder))
 		{
 			\Dbafs::deleteResource($this->strFolder);
 		}
@@ -251,9 +260,21 @@ class Folder extends \System
 		$return = $this->Files->rename($this->strFolder, $strNewName);
 
 		// Update the database AFTER the folder has been renamed
-		if ($this->blnSyncDb)
+		$syncSource = \Dbafs::shouldBeSynchronized($this->strFolder);
+		$syncTarget = \Dbafs::shouldBeSynchronized($strNewName);
+
+		// Synchronize the database
+		if ($syncSource && $syncTarget)
 		{
 			$this->objModel = \Dbafs::moveResource($this->strFolder, $strNewName);
+		}
+		elseif ($syncSource)
+		{
+			$this->objModel = \Dbafs::deleteResource($this->strFolder);
+		}
+		elseif ($syncTarget)
+		{
+			$this->objModel = \Dbafs::addResource($strNewName);
 		}
 
 		// Reset the object AFTER the database has been updated
@@ -286,9 +307,16 @@ class Folder extends \System
 		$this->Files->rcopy($this->strFolder, $strNewName);
 
 		// Update the database AFTER the folder has been renamed
-		if ($this->blnSyncDb)
+		$syncSource = \Dbafs::shouldBeSynchronized($this->strFolder);
+		$syncTarget = \Dbafs::shouldBeSynchronized($strNewName);
+
+		if ($syncSource && $syncTarget)
 		{
-			$this->objModel = \Dbafs::copyResource($this->strFolder, $strNewName);
+			\Dbafs::copyResource($this->strFolder, $strNewName);
+		}
+		elseif ($syncTarget)
+		{
+			\Dbafs::addResource($strNewName);
 		}
 
 		return true;
@@ -327,7 +355,7 @@ class Folder extends \System
 	 */
 	public function getModel()
 	{
-		if ($this->blnSyncDb && $this->objModel === null)
+		if ($this->objModel === null && \Dbafs::shouldBeSynchronized($this->strFolder))
 		{
 			$this->objModel = \FilesModel::findByPath($this->strFolder);
 		}
@@ -340,9 +368,13 @@ class Folder extends \System
 	 * Return the MD5 hash of the folder
 	 *
 	 * @return string The MD5 has
+	 *
+	 * @deprecated Use Dbafs::getFolderHash() instead
 	 */
 	protected function getHash()
 	{
+		@trigger_error('Using Folder::getHash() has been deprecated and will no longer work in Contao 5.0. Use Dbafs::getFolderHash() instead.', E_USER_DEPRECATED);
+
 		$arrFiles = array();
 
 		/** @var \SplFileInfo[] $it */
@@ -394,5 +426,47 @@ class Folder extends \System
 		}
 
 		return $intSize;
+	}
+
+
+	/**
+	 * Check if the folder should be synchronized with the database
+	 *
+	 * @return bool True if the folder needs to be synchronized with the database
+	 *
+	 * @deprecated Use Dbafs::shouldBeSynchronized() instead
+	 */
+	public function shouldBeSynchronized()
+	{
+		return \Dbafs::shouldBeSynchronized($this->strFolder);
+	}
+
+
+	/**
+	 * Return the path info (binary-safe)
+	 *
+	 * @return array The path info
+	 *
+	 * @see https://github.com/PHPMailer/PHPMailer/blob/master/class.phpmailer.php#L3520
+	 */
+	protected function getPathinfo()
+	{
+		$matches = array();
+		$return = array('dirname'=>'', 'basename'=>'', 'extension'=>'', 'filename'=>'');
+
+		preg_match('%^^(.*?)[\\\\/]*([^/\\\\]*?)[\\\\/\.]*$%im', $this->strFolder, $matches);
+
+		if (isset($matches[1]))
+		{
+			$return['dirname'] = TL_ROOT . '/' . $matches[1]; // see #8325
+		}
+
+		if (isset($matches[2]))
+		{
+			$return['basename'] = $matches[2];
+			$return['filename'] = $matches[2];
+		}
+
+		return $return;
 	}
 }

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -51,7 +51,7 @@ class FrontendTemplate extends \Template
 			foreach ($GLOBALS['TL_HOOKS']['parseFrontendTemplate'] as $callback)
 			{
 				$this->import($callback[0]);
-				$strBuffer = $this->$callback[0]->$callback[1]($strBuffer, $this->strTemplate);
+				$strBuffer = $this->{$callback[0]}->{$callback[1]}($strBuffer, $this->strTemplate);
 			}
 		}
 
@@ -86,7 +86,7 @@ class FrontendTemplate extends \Template
 			foreach ($GLOBALS['TL_HOOKS']['outputFrontendTemplate'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->strBuffer = $this->$callback[0]->$callback[1]($this->strBuffer, $this->strTemplate);
+				$this->strBuffer = $this->{$callback[0]}->{$callback[1]}($this->strBuffer, $this->strTemplate);
 			}
 		}
 
@@ -107,7 +107,7 @@ class FrontendTemplate extends \Template
 			foreach ($GLOBALS['TL_HOOKS']['modifyFrontendPage'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->strBuffer = $this->$callback[0]->$callback[1]($this->strBuffer, $this->strTemplate);
+				$this->strBuffer = $this->{$callback[0]}->{$callback[1]}($this->strBuffer, $this->strTemplate);
 			}
 		}
 
@@ -213,7 +213,7 @@ class FrontendTemplate extends \Template
 			// If the request string is empty, use a special cache tag which considers the page language
 			if (\Environment::get('request') == '' || \Environment::get('request') == 'index.php')
 			{
-				$strCacheKey = \Environment::get('host') . '/empty.' . $objPage->language;
+				$strCacheKey = ($objPage->domain ?: '*') . '/empty.' . $objPage->language;
 			}
 			else
 			{
@@ -226,7 +226,7 @@ class FrontendTemplate extends \Template
 				foreach ($GLOBALS['TL_HOOKS']['getCacheKey'] as $callback)
 				{
 					$this->import($callback[0]);
-					$strCacheKey = $this->$callback[0]->$callback[1]($strCacheKey);
+					$strCacheKey = $this->{$callback[0]}->{$callback[1]}($strCacheKey);
 				}
 			}
 
@@ -247,10 +247,22 @@ class FrontendTemplate extends \Template
 			$strBuffer = $this->replaceInsertTags($this->strBuffer);
 			$strBuffer = $this->replaceDynamicScriptTags($strBuffer); // see #4203
 
+			// Add the cache file header
+			$strHeader = sprintf
+			(
+				"<?php \$cacheKey = %s; \$expire = %d; \$content = %s; \$type = %s; \$files = %s; \$assets = %s; ?>\n",
+				var_export($strCacheKey, true),
+				(int) $intCache,
+				var_export($this->strContentType, true),
+				var_export($objPage->type, true),
+				var_export(TL_FILES_URL, true),
+				var_export(TL_ASSETS_URL, true)
+			);
+
 			// Create the cache file
 			$strMd5CacheKey = md5($strCacheKey);
 			$objFile = new \File('system/cache/html/' . substr($strMd5CacheKey, 0, 1) . '/' . $strMd5CacheKey . '.html', true);
-			$objFile->write('<?php' . " /* $strCacheKey */ \$expire = $intCache; \$content = '{$this->strContentType}'; \$type = '{$objPage->type}'; ?>\n");
+			$objFile->write($strHeader);
 			$objFile->append($this->minifyHtml($strBuffer), '');
 			$objFile->close();
 		}
@@ -306,7 +318,7 @@ class FrontendTemplate extends \Template
 				{
 					$arrData = array
 					(
-						'url' => \Environment::get('request'),
+						'url' => \Environment::get('base') . \Environment::get('request'),
 						'content' => $this->strBuffer,
 						'title' => $objPage->pageTitle ?: $objPage->title,
 						'protected' => ($objPage->protected ? '1' : ''),

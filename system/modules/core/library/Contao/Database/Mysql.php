@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao\Database;
@@ -95,9 +95,11 @@ class Mysql extends \Database
 	 */
 	protected function find_in_set($strKey, $varSet, $blnIsField=false)
 	{
+		$strKey = static::quoteIdentifier($strKey);
+
 		if ($blnIsField)
 		{
-			return "FIND_IN_SET(" . $strKey . ", " . $varSet . ")";
+			return "FIND_IN_SET(" . $strKey . ", " . static::quoteIdentifier($varSet) . ")";
 		}
 		else
 		{
@@ -133,7 +135,7 @@ class Mysql extends \Database
 		while ($objFields->next())
 		{
 			$arrTmp = array();
-			$arrChunks = preg_split('/(\([^\)]+\))/', $objFields->Type, -1, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
+			$arrChunks = preg_split('/(\([^)]+\))/', $objFields->Type, -1, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
 
 			$arrTmp['name'] = $objFields->Field;
 			$arrTmp['type'] = $arrChunks[0];

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao\Database;
@@ -57,9 +57,9 @@ class Updater extends \Controller
 		$strGroups = serialize($objGroups->fetchEach('id'));
 
 		// Update protected elements
-		$this->Database->prepare("UPDATE tl_page SET groups=? WHERE protected=1 AND groups=''")->execute($strGroups);
-		$this->Database->prepare("UPDATE tl_content SET groups=? WHERE protected=1 AND groups=''")->execute($strGroups);
-		$this->Database->prepare("UPDATE tl_module SET groups=? WHERE protected=1 AND groups=''")->execute($strGroups);
+		$this->Database->prepare("UPDATE tl_page SET `groups`=? WHERE protected=1 AND `groups`=''")->execute($strGroups);
+		$this->Database->prepare("UPDATE tl_content SET `groups`=? WHERE protected=1 AND `groups`=''")->execute($strGroups);
+		$this->Database->prepare("UPDATE tl_module SET `groups`=? WHERE protected=1 AND `groups`=''")->execute($strGroups);
 
 		// Update layouts
 		$objLayout = $this->Database->execute("SELECT id, mootools FROM tl_layout");
@@ -627,13 +627,12 @@ class Updater extends \Controller
 		// Folders
 		foreach ($arrFolders as $strFolder)
 		{
-			$objFolder = new \Folder($strFolder);
 			$strUuid = $this->Database->getUuid();
 
-			$this->Database->prepare("INSERT INTO tl_files (pid, tstamp, uuid, name, type, path, hash) VALUES (?, ?, ?, ?, 'folder', ?, ?)")
-						   ->execute($pid, time(), $strUuid, basename($strFolder), $strFolder, $objFolder->hash);
-
 			$this->scanUploadFolder($strFolder, $strUuid);
+
+			$this->Database->prepare("INSERT INTO tl_files (pid, tstamp, uuid, name, type, path, hash) VALUES (?, ?, ?, ?, 'folder', ?, ?)")
+						   ->execute($pid, time(), $strUuid, basename($strFolder), $strFolder, \Dbafs::getFolderHash($strFolder));
 		}
 
 		// Files
@@ -718,6 +717,12 @@ class Updater extends \Controller
 				$this->loadDataContainer($strTable);
 			}
 			catch (\Exception $e)
+			{
+				continue;
+			}
+
+			// Make sure the table exists (see #8304)
+			if (!$this->Database->tableExists($strTable, null, true))
 			{
 				continue;
 			}
@@ -953,7 +958,7 @@ class Updater extends \Controller
 		}
 		else
 		{
-			$return->value = array_map(function($var) { return rtrim($var, "\x00"); }, $value);
+			$return->value = array_map(function ($var) { return rtrim($var, "\x00"); }, $value);
 			$return->isUuid = (strlen($value[0]) == 16 && !is_numeric($return->value[0]) && strncmp($return->value[0], \Config::get('uploadPath') . '/', strlen(\Config::get('uploadPath')) + 1) !== 0);
 			$return->isNumeric = (is_numeric($return->value[0]) && $return->value[0] > 0);
 		}

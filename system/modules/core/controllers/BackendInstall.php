@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -30,6 +30,8 @@ class BackendInstall extends \Backend
 	 */
 	public function __construct()
 	{
+		// No parent::__construct() here
+
 		$this->import('Config');
 		$this->import('Session');
 
@@ -110,6 +112,10 @@ class BackendInstall extends \Backend
 		{
 			$this->setAuthCookie();
 		}
+
+		// Only show error messages to authenticated users (see #8666)
+		@ini_set('display_errors', 1);
+		error_reporting(Config::get('errorReporting'));
 
 		// Store the relative path
 		$this->storeRelativePath();
@@ -334,33 +340,21 @@ class BackendInstall extends \Backend
 		$_SESSION['TL_INSTALL_AUTH'] = '';
 		$_SESSION['TL_INSTALL_EXPIRE'] = 0;
 
-		// The password has been generated with crypt()
-		if (\Encryption::test(\Config::get('installPassword')))
-		{
-			if (\Encryption::verify(\Input::postUnsafeRaw('password'), \Config::get('installPassword')))
-			{
-				$this->setAuthCookie();
-				\Config::persist('installCount', 0);
+		$blnAuthenticated = password_verify(\Input::postUnsafeRaw('password'), \Config::get('installPassword'));
+		$blnNeedsRehash = password_needs_rehash(\Config::get('installPassword'), PASSWORD_DEFAULT);
 
-				$this->reload();
-			}
+		// Re-hash the password if the algorithm has changed
+		if ($blnAuthenticated && $blnNeedsRehash)
+		{
+			\Config::persist('installPassword', password_hash(\Input::postUnsafeRaw('password'), PASSWORD_DEFAULT));
 		}
-		else
+
+		if ($blnAuthenticated)
 		{
-			list($strPassword, $strSalt) = explode(':', \Config::get('installPassword'));
-			$blnAuthenticated = ($strSalt == '') ? ($strPassword === sha1(\Input::postUnsafeRaw('password'))) : ($strPassword === sha1($strSalt . \Input::postUnsafeRaw('password')));
+			$this->setAuthCookie();
+			\Config::persist('installCount', 0);
 
-			if ($blnAuthenticated)
-			{
-				// Store a crypt() version of the password
-				$strPassword = \Encryption::hash(\Input::postUnsafeRaw('password'));
-				\Config::persist('installPassword', $strPassword);
-
-				$this->setAuthCookie();
-				\Config::persist('installCount', 0);
-
-				$this->reload();
-			}
+			$this->reload();
 		}
 
 		// Increase the login count if we get here
@@ -392,7 +386,7 @@ class BackendInstall extends \Backend
 		// Save the password
 		else
 		{
-			$strPassword = \Encryption::hash($strPassword);
+			$strPassword = password_hash($strPassword, PASSWORD_DEFAULT);
 			\Config::persist('installPassword', $strPassword);
 
 			$this->reload();
@@ -447,12 +441,18 @@ class BackendInstall extends \Backend
 		{
 			foreach (preg_grep('/^db/', array_keys($_POST)) as $strKey)
 			{
-				if ($strKey == 'dbPass' && \Input::post($strKey, true) == '*****')
+				if ($strKey == 'dbPass' && \Input::postUnsafeRaw($strKey) == '*****')
 				{
 					continue;
 				}
 
-				\Config::persist($strKey, \Input::post($strKey, true));
+				// The port number must not be empty (see #7950)
+				if ($strKey == 'dbPort' && \Input::post($strKey, true) == '')
+				{
+					\Input::setPost($strKey, 3306);
+				}
+
+				\Config::persist($strKey, ($strKey == 'dbPass' ? \Input::postUnsafeRaw($strKey) : \Input::post($strKey, true)));
 			}
 
 			$this->reload();
@@ -723,7 +723,7 @@ class BackendInstall extends \Backend
 			elseif (\Input::post('FORM_SUBMIT') == 'tl_admin')
 			{
 				// Do not allow special characters in usernames
-				if (preg_match('/[#\(\)\/<=>]/', \Input::post('username', true)))
+				if (preg_match('/[#()\/<=>]/', \Input::post('username', true)))
 				{
 					$this->Template->usernameError = $GLOBALS['TL_LANG']['ERR']['extnd'];
 				}
@@ -738,17 +738,17 @@ class BackendInstall extends \Backend
 					$this->Template->emailError = $GLOBALS['TL_LANG']['ERR']['email'];
 				}
 				// The passwords do not match
-				elseif (\Input::post('pass', true) != \Input::post('confirm_pass', true))
+				elseif (\Input::postUnsafeRaw('pass') != \Input::postUnsafeRaw('confirm_pass'))
 				{
 					$this->Template->passwordError = $GLOBALS['TL_LANG']['ERR']['passwordMatch'];
 				}
 				// The password is too short
-				elseif (utf8_strlen(\Input::post('pass', true)) < \Config::get('minPasswordLength'))
+				elseif (utf8_strlen(\Input::postUnsafeRaw('pass')) < \Config::get('minPasswordLength'))
 				{
 					$this->Template->passwordError = sprintf($GLOBALS['TL_LANG']['ERR']['passwordLength'], \Config::get('minPasswordLength'));
 				}
 				// Password and username are the same
-				elseif (\Input::post('pass', true) == \Input::post('username', true))
+				elseif (\Input::postUnsafeRaw('pass') == \Input::post('username', true))
 				{
 					$this->Template->passwordError = $GLOBALS['TL_LANG']['ERR']['passwordName'];
 				}
@@ -756,7 +756,7 @@ class BackendInstall extends \Backend
 				elseif (\Input::post('name') != '' && \Input::post('email', true) != '' && \Input::post('username', true) != '')
 				{
 					$time = time();
-					$strPassword = \Encryption::hash(\Input::post('pass', true));
+					$strPassword = password_hash(\Input::postUnsafeRaw('pass'), PASSWORD_DEFAULT);
 
 					$this->Database->prepare("INSERT INTO tl_user (tstamp, name, email, username, password, language, backendTheme, admin, showHelp, useRTE, useCE, thumbnails, dateAdded) VALUES ($time, ?, ?, ?, ?, ?, ?, 1, 1, 1, 1, 1, $time)")
 								   ->execute(\Input::post('name'), \Input::post('email', true), \Input::post('username', true), $strPassword, str_replace('-', '_', $GLOBALS['TL_LANGUAGE']), \Config::get('backendTheme'));
@@ -857,7 +857,7 @@ class BackendInstall extends \Backend
 		$this->Template->base = \Environment::get('base');
 		$this->Template->language = $GLOBALS['TL_LANGUAGE'];
 		$this->Template->charset = \Config::get('characterSet');
-		$this->Template->pageOffset = \Input::cookie('BE_PAGE_OFFSET');
+		$this->Template->pageOffset = (int) \Input::cookie('BE_PAGE_OFFSET');
 		$this->Template->action = ampersand(\Environment::get('request'));
 		$this->Template->noCookies = $GLOBALS['TL_LANG']['MSC']['noCookies'];
 		$this->Template->title = specialchars($GLOBALS['TL_LANG']['tl_install']['installTool'][0]);
@@ -865,7 +865,6 @@ class BackendInstall extends \Backend
 		$this->Template->collapseNode = $GLOBALS['TL_LANG']['MSC']['collapseNode'];
 		$this->Template->loadingData = $GLOBALS['TL_LANG']['MSC']['loadingData'];
 		$this->Template->ie6warning = sprintf($GLOBALS['TL_LANG']['ERR']['ie6warning'], '<a href="http://ie6countdown.com">', '</a>');
-		$this->Template->hasComposer = is_dir(TL_ROOT . '/system/modules/!composer');
 
 		$this->Template->output();
 		exit;

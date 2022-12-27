@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -17,6 +17,7 @@ if (Input::get('do') == 'news')
 	$GLOBALS['TL_DCA']['tl_content']['config']['ptable'] = 'tl_news';
 	$GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'][] = array('tl_content_news', 'checkPermission');
 	$GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'][] = array('tl_content_news', 'generateFeed');
+	$GLOBALS['TL_DCA']['tl_content']['list']['operations']['toggle']['button_callback'] = array('tl_content_news', 'toggleIcon');
 }
 
 
@@ -61,11 +62,8 @@ class tl_content_news extends Backend
 		// Check the current action
 		switch (Input::get('act'))
 		{
-			case 'paste':
-				// Allow
-				break;
-
 			case '': // empty
+			case 'paste':
 			case 'create':
 			case 'select':
 				// Check access to the news item
@@ -181,5 +179,121 @@ class tl_content_news extends Backend
 		$this->Automator->generateSitemap();
 
 		$this->Session->set('news_feed_updater', null);
+	}
+
+
+	/**
+	 * Return the "toggle visibility" button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
+	 * @return string
+	 */
+	public function toggleIcon($row, $href, $label, $title, $icon, $attributes)
+	{
+		if (strlen(Input::get('tid')))
+		{
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
+			$this->redirect($this->getReferer());
+		}
+
+		// Check permissions AFTER checking the tid, so hacking attempts are logged
+		if (!$this->User->hasAccess('tl_content::invisible', 'alexf'))
+		{
+			return '';
+		}
+
+		$href .= '&amp;id='.Input::get('id').'&amp;tid='.$row['id'].'&amp;state='.$row['invisible'];
+
+		if ($row['invisible'])
+		{
+			$icon = 'invisible.gif';
+		}
+
+		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label, 'data-state="' . ($row['invisible'] ? 0 : 1) . '"').'</a> ';
+	}
+
+
+	/**
+	 * Toggle the visibility of an element
+	 *
+	 * @param integer       $intId
+	 * @param boolean       $blnVisible
+	 * @param DataContainer $dc
+	 */
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
+	{
+		// Set the ID and action
+		Input::setGet('id', $intId);
+		Input::setGet('act', 'toggle');
+
+		if ($dc)
+		{
+			$dc->id = $intId; // see #8043
+		}
+
+		$this->checkPermission();
+
+		// Check the field access
+		if (!$this->User->hasAccess('tl_content::invisible', 'alexf'))
+		{
+			$this->log('Not enough permissions to publish/unpublish content element ID "'.$intId.'"', __METHOD__, TL_ERROR);
+			$this->redirect('contao/main.php?act=error');
+		}
+
+		// The onload_callbacks vary depending on the dynamic parent table (see #4894)
+		if (is_array($GLOBALS['TL_DCA']['tl_content']['config']['onload_callback']))
+		{
+			foreach ($GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'] as $callback)
+			{
+				if (is_array($callback))
+				{
+					$this->import($callback[0]);
+					$this->{$callback[0]}->{$callback[1]}(($dc ?: $this));
+				}
+				elseif (is_callable($callback))
+				{
+					$callback(($dc ?: $this));
+				}
+			}
+		}
+
+		// Check permissions to publish
+		if (!$this->User->hasAccess('tl_content::invisible', 'alexf'))
+		{
+			$this->log('Not enough permissions to show/hide content element ID "'.$intId.'"', __METHOD__, TL_ERROR);
+			$this->redirect('contao/main.php?act=error');
+		}
+
+		$objVersions = new Versions('tl_content', $intId);
+		$objVersions->initialize();
+
+		// Trigger the save_callback
+		if (is_array($GLOBALS['TL_DCA']['tl_content']['fields']['invisible']['save_callback']))
+		{
+			foreach ($GLOBALS['TL_DCA']['tl_content']['fields']['invisible']['save_callback'] as $callback)
+			{
+				if (is_array($callback))
+				{
+					$this->import($callback[0]);
+					$blnVisible = $this->{$callback[0]}->{$callback[1]}($blnVisible, ($dc ?: $this));
+				}
+				elseif (is_callable($callback))
+				{
+					$blnVisible = $callback($blnVisible, ($dc ?: $this));
+				}
+			}
+		}
+
+		// Update the database
+		$this->Database->prepare("UPDATE tl_content SET tstamp=". time() .", invisible='" . ($blnVisible ? '' : 1) . "' WHERE id=?")
+					   ->execute($intId);
+
+		$objVersions->create();
 	}
 }

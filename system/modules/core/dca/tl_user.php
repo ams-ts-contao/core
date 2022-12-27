@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -242,6 +242,10 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'exclude'                 => true,
 			'inputType'               => 'password',
 			'eval'                    => array('mandatory'=>true, 'preserveTags'=>true, 'minlength'=>Config::get('minPasswordLength')),
+			'save_callback' => array
+			(
+				array('tl_user', 'invalidateSessions')
+			),
 			'sql'                     => "varchar(128) NOT NULL default ''"
 		),
 		'pwChange' => array
@@ -385,7 +389,6 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'inputType'               => 'text',
 			'eval'                    => array('rgxp'=>'datim', 'datepicker'=>true, 'tl_class'=>'w50 wizard'),
 			'sql'                     => "varchar(10) NOT NULL default ''"
-
 		),
 		'stop' => array
 		(
@@ -400,20 +403,21 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['tl_user']['session'],
 			'exclude'                 => true,
 			'input_field_callback'    => array('tl_user', 'sessionField'),
-			'eval'                    => array('doNotShow'=>true),
+			'eval'                    => array('doNotShow'=>true, 'doNotCopy'=>true),
 			'sql'                     => "blob NULL"
 		),
 		'dateAdded' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['dateAdded'],
+			'default'                 => time(),
 			'sorting'                 => true,
 			'flag'                    => 6,
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'lastLogin' => array
 		(
-			'eval'                    => array('rgxp'=>'datim', 'doNotShow'=>true),
+			'eval'                    => array('rgxp'=>'datim', 'doNotShow'=>true, 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'currentLogin' => array
@@ -421,16 +425,18 @@ $GLOBALS['TL_DCA']['tl_user'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['MSC']['lastLogin'],
 			'sorting'                 => true,
 			'flag'                    => 6,
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		),
 		'loginCount' => array
 		(
+			'default'                 => 3,
+			'eval'                    => array('doNotCopy'=>true),
 			'sql'                     => "smallint(5) unsigned NOT NULL default '3'"
 		),
 		'locked' => array
 		(
-			'eval'                    => array('rgxp'=>'datim'),
+			'eval'                    => array('rgxp'=>'datim', 'doNotCopy'=>true),
 			'sql'                     => "int(10) unsigned NOT NULL default '0'"
 		)
 	)
@@ -522,13 +528,16 @@ class tl_user extends Backend
 	public function addIcon($row, $label, DataContainer $dc, $args)
 	{
 		$image = $row['admin'] ? 'admin' :  'user';
+		$time = \Date::floorToMinute();
 
-		if ($row['disable'] || strlen($row['start']) && $row['start'] > time() || strlen($row['stop']) && $row['stop'] < time())
+		$disabled = $row['start'] !== '' && $row['start'] > $time || $row['stop'] !== '' && $row['stop'] < $time;
+
+		if ($row['disable'] || $disabled)
 		{
 			$image .= '_';
 		}
 
-		$args[0] = sprintf('<div class="list_icon_new" style="background-image:url(\'%ssystem/themes/%s/images/%s.gif\')">&nbsp;</div>', TL_ASSETS_URL, Backend::getTheme(), $image);
+		$args[0] = sprintf('<div class="list_icon_new" style="background-image:url(\'%ssystem/themes/%s/images/%s.gif\')" data-icon="%s.gif" data-icon-disabled="%s.gif">&nbsp;</div>', TL_ASSETS_URL, Backend::getTheme(), $image, $disabled ? $image : rtrim($image, '_'), rtrim($image, '_') . '_');
 
 		return $args;
 	}
@@ -624,8 +633,8 @@ class tl_user extends Backend
 				throw new Exception('Invalid user ID ' . Input::get('id'));
 			}
 
-			$this->Database->prepare("UPDATE tl_session SET pid=?, su=1 WHERE pid=?")
-						   ->execute($objUser->id, $this->User->id);
+			$this->Database->prepare("UPDATE tl_session SET pid=?, su=1 WHERE hash=?")
+						   ->execute($objUser->id, sha1(session_id() . (!\Config::get('disableIpCheck') ? \Environment::get('ip') : '') . 'BE_USER_AUTH'));
 
 			$this->log('User "' . $this->User->username . '" has switched to user "' . $objUser->username . '"', __METHOD__, TL_ACCESS);
 
@@ -722,6 +731,26 @@ class tl_user extends Backend
 		{
 			$varValue = 1;
 		}
+
+		return $varValue;
+	}
+
+
+	/**
+	 * Invalidate the user sessions if the password changes
+	 *
+	 * The password widget only triggers the save_callback if the password has actually
+	 * changed, therefore we do not need to check the active record here.
+	 *
+	 * @param mixed         $varValue
+	 * @param DataContainer $dc
+	 *
+	 * @return mixed
+	 */
+	public function invalidateSessions($varValue, DataContainer $dc)
+	{
+		$this->Database->prepare("DELETE FROM tl_session WHERE name='BE_USER_AUTH' AND pid=? AND sessionID!=?")
+					   ->execute($dc->id, session_id());
 
 		return $varValue;
 	}
@@ -850,7 +879,7 @@ class tl_user extends Backend
 			return Image::getHtml($icon) . ' ';
 		}
 
-		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ';
+		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label, 'data-state="' . ($row['disable'] ? 0 : 1) . '"').'</a> ';
 	}
 
 
@@ -863,9 +892,15 @@ class tl_user extends Backend
 	 */
 	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
-		// Check admin accounts
+		// Set the ID and action
 		Input::setGet('id', $intId);
 		Input::setGet('act', 'toggle');
+
+		if ($dc)
+		{
+			$dc->id = $intId; // see #8043
+		}
+
 		$this->checkPermission();
 
 		// Protect own account
@@ -874,7 +909,7 @@ class tl_user extends Backend
 			return;
 		}
 
-		// Check permissions
+		// Check the field access
 		if (!$this->User->hasAccess('tl_user::disable', 'alexf'))
 		{
 			$this->log('Not enough permissions to activate/deactivate user ID "'.$intId.'"', __METHOD__, TL_ERROR);
@@ -892,7 +927,7 @@ class tl_user extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
+					$blnVisible = $this->{$callback[0]}->{$callback[1]}($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
@@ -906,7 +941,6 @@ class tl_user extends Backend
 					   ->execute($intId);
 
 		$objVersions->create();
-		$this->log('A new version of record "tl_user.id='.$intId.'" has been created'.$this->getParentEntries('tl_user', $intId), __METHOD__, TL_GENERAL);
 
 		// Remove the session if the user is disabled (see #5353)
 		if (!$blnVisible)

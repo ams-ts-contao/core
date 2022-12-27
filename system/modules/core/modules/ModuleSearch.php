@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -96,7 +96,8 @@ class ModuleSearch extends \Module
 		// Redirect page
 		if ($this->jumpTo && ($objTarget = $this->objModel->getRelated('jumpTo')) !== null)
 		{
-			$objFormTemplate->action = $this->generateFrontendUrl($objTarget->row());
+			/** @var \PageModel $objTarget */
+			$objFormTemplate->action = $objTarget->getFrontendUrl();
 		}
 
 		$this->Template->form = $objFormTemplate->parse();
@@ -126,7 +127,7 @@ class ModuleSearch extends \Module
 				foreach ($GLOBALS['TL_HOOKS']['customizeSearch'] as $callback)
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($arrPages, $strKeywords, $strQueryType, $blnFuzzy);
+					$this->{$callback[0]}->{$callback[1]}($arrPages, $strKeywords, $strQueryType, $blnFuzzy, $this);
 				}
 			}
 
@@ -260,20 +261,21 @@ class ModuleSearch extends \Module
 				$objTemplate->url = $arrResult[$i]['url'];
 				$objTemplate->link = $arrResult[$i]['title'];
 				$objTemplate->href = $arrResult[$i]['url'];
-				$objTemplate->title = specialchars($arrResult[$i]['title']);
+				$objTemplate->title = specialchars(strip_insert_tags($arrResult[$i]['title']));
 				$objTemplate->class = (($i == ($from - 1)) ? 'first ' : '') . (($i == ($to - 1) || $i == ($count - 1)) ? 'last ' : '') . (($i % 2 == 0) ? 'even' : 'odd');
 				$objTemplate->relevance = sprintf($GLOBALS['TL_LANG']['MSC']['relevance'], number_format($arrResult[$i]['relevance'] / $arrResult[0]['relevance'] * 100, 2) . '%');
 				$objTemplate->filesize = $arrResult[$i]['filesize'];
 				$objTemplate->matches = $arrResult[$i]['matches'];
 
 				$arrContext = array();
+				$strText = strip_insert_tags($arrResult[$i]['text']);
 				$arrMatches = trimsplit(',', $arrResult[$i]['matches']);
 
 				// Get the context
 				foreach ($arrMatches as $strWord)
 				{
 					$arrChunks = array();
-					preg_match_all('/(^|\b.{0,'.$this->contextLength.'}\PL)' . str_replace('+', '\\+', $strWord) . '(\PL.{0,'.$this->contextLength.'}\b|$)/ui', $arrResult[$i]['text'], $arrChunks);
+					preg_match_all('/(^|\b.{0,'.$this->contextLength.'}\PL)' . str_replace('+', '\\+', $strWord) . '(\PL.{0,'.$this->contextLength.'}\b|$)/ui', $strText, $arrChunks);
 
 					foreach ($arrChunks[0] as $strContext)
 					{
@@ -284,7 +286,7 @@ class ModuleSearch extends \Module
 				// Shorten the context and highlight all keywords
 				if (!empty($arrContext))
 				{
-					$objTemplate->context = trim(\String::substrHtml(implode('…', $arrContext), $this->totalLength));
+					$objTemplate->context = trim(\StringUtil::substrHtml(implode('…', $arrContext), $this->totalLength));
 					$objTemplate->context = preg_replace('/(\PL)(' . implode('|', $arrMatches) . ')(\PL)/ui', '$1<span class="highlight">$2</span>$3', $objTemplate->context);
 
 					$objTemplate->hasContext = true;

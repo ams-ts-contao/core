@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -159,7 +159,23 @@ class PageSelector extends \Widget
 			// Root nodes (breadcrumb menu)
 			if (!empty($GLOBALS['TL_DCA']['tl_page']['list']['sorting']['root']))
 			{
-				$nodes = $this->eliminateNestedPages($GLOBALS['TL_DCA']['tl_page']['list']['sorting']['root']);
+				$root = $GLOBALS['TL_DCA']['tl_page']['list']['sorting']['root'];
+
+				// Allow only those roots that are allowed in root nodes
+				if (is_array($this->rootNodes))
+				{
+					$root = array_intersect(array_merge($this->rootNodes, $this->Database->getChildRecords($this->rootNodes, 'tl_page')), $root);
+
+					if (empty($root))
+					{
+						$root = $this->rootNodes;
+
+						// Hide the breadcrumb
+						$GLOBALS['TL_DCA']['tl_page']['list']['sorting']['breadcrumb'] = '';
+					}
+				}
+
+				$nodes = $this->eliminateNestedPages($root);
 
 				foreach ($nodes as $node)
 				{
@@ -255,7 +271,7 @@ class PageSelector extends \Widget
 					break;
 				}
 
-				$objField = $this->Database->prepare("SELECT " . $this->strField . " FROM " . $this->strTable . " WHERE id=?")
+				$objField = $this->Database->prepare("SELECT " . \Database::quoteIdentifier($this->strField) . " FROM " . $this->strTable . " WHERE id=?")
 										   ->limit(1)
 										   ->execute($this->strId);
 
@@ -358,7 +374,7 @@ class PageSelector extends \Widget
 		// Add the current page
 		if (!empty($childs))
 		{
-			$return .= \Image::getHtml($this->getPageStatusIcon($objPage), '', $folderAttribute).' <a href="' . $this->addToUrl('node='.$objPage->id) . '" title="'.specialchars($objPage->title . ' (' . $objPage->alias . \Config::get('urlSuffix') . ')').'">'.(($objPage->type == 'root') ? '<strong>' : '').$objPage->title.(($objPage->type == 'root') ? '</strong>' : '').'</a></div> <div class="tl_right">';
+			$return .= \Image::getHtml($this->getPageStatusIcon($objPage), '', $folderAttribute).' <a href="' . $this->addToUrl('pn='.$objPage->id) . '" title="'.specialchars($objPage->title . ' (' . $objPage->alias . \Config::get('urlSuffix') . ')').'">'.(($objPage->type == 'root') ? '<strong>' : '').$objPage->title.(($objPage->type == 'root') ? '</strong>' : '').'</a></div> <div class="tl_right">';
 		}
 		else
 		{

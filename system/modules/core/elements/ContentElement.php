@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -100,6 +100,7 @@ namespace Contao;
  * @property integer $origId
  * @property string  $origSpace
  * @property string  $origCssID
+ * @property string  $hl
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -120,7 +121,7 @@ abstract class ContentElement extends \Frontend
 
 	/**
 	 * Model
-	 * @var \ContentElement
+	 * @var \ContentModel
 	 */
 	protected $objModel;
 
@@ -151,13 +152,17 @@ abstract class ContentElement extends \Frontend
 	 */
 	public function __construct($objElement, $strColumn='main')
 	{
-		if ($objElement instanceof \Model)
+		if ($objElement instanceof \Model || $objElement instanceof \Model\Collection)
 		{
-			$this->objModel = $objElement;
-		}
-		elseif ($objElement instanceof \Model\Collection)
-		{
-			$this->objModel = $objElement->current();
+			/** @var \ContentModel $objModel */
+			$objModel = $objElement;
+
+			if ($objModel instanceof \Model\Collection)
+			{
+				$objModel = $objModel->current();
+			}
+
+			$this->objModel = $objModel;
 		}
 
 		parent::__construct();

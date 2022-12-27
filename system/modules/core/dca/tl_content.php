@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -117,7 +117,7 @@ $GLOBALS['TL_DCA']['tl_content'] = array
 		'accordionStop'               => '{type_legend},type;{moo_legend},mooClasses;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests;{invisible_legend:hide},invisible,start,stop',
 		'accordionSingle'             => '{type_legend},type;{moo_legend},mooHeadline,mooStyle,mooClasses;{text_legend},text;{image_legend},addImage;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space;{invisible_legend:hide},invisible,start,stop',
 		'sliderStart'                 => '{type_legend},type,headline;{slider_legend},sliderDelay,sliderSpeed,sliderStartSlide,sliderContinuous;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space;{invisible_legend:hide},invisible,start,stop',
-		'sliderStop'                  => '{type_legend},type,headline;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests;{invisible_legend:hide},invisible,start,stop',
+		'sliderStop'                  => '{type_legend},type;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests;{invisible_legend:hide},invisible,start,stop',
 		'code'                        => '{type_legend},type,headline;{text_legend},highlight,shClass,code;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space;{invisible_legend:hide},invisible,start,stop',
 		'markdown'                    => '{type_legend},type,headline;{text_legend},code;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space;{invisible_legend:hide},invisible,start,stop',
 		'hyperlink'                   => '{type_legend},type,headline;{link_legend},url,target,linkTitle,embed,titleText,rel;{imglink_legend:hide},useImage;{template_legend:hide},customTpl;{protected_legend:hide},protected;{expert_legend:hide},guests,cssID,space;{invisible_legend:hide},invisible,start,stop',
@@ -177,7 +177,7 @@ $GLOBALS['TL_DCA']['tl_content'] = array
 			'options_callback'        => array('tl_content', 'getContentElements'),
 			'reference'               => &$GLOBALS['TL_LANG']['CTE'],
 			'eval'                    => array('helpwizard'=>true, 'chosen'=>true, 'submitOnChange'=>true),
-			'sql'                     => "varchar(32) NOT NULL default ''"
+			'sql'                     => "varchar(64) NOT NULL default ''"
 		),
 		'headline' => array
 		(
@@ -213,7 +213,6 @@ $GLOBALS['TL_DCA']['tl_content'] = array
 			'exclude'                 => true,
 			'inputType'               => 'fileTree',
 			'eval'                    => array('filesOnly'=>true, 'fieldType'=>'radio', 'mandatory'=>true, 'tl_class'=>'clr'),
-			'sql'                     => "binary(16) NULL",
 			'load_callback' => array
 			(
 				array('tl_content', 'setSingleSrcFlags')
@@ -221,7 +220,8 @@ $GLOBALS['TL_DCA']['tl_content'] = array
 			'save_callback' => array
 			(
 				array('tl_content', 'storeFileMetaInformation')
-			)
+			),
+			'sql'                     => "binary(16) NULL"
 		),
 		'alt' => array
 		(
@@ -886,11 +886,8 @@ class tl_content extends Backend
 		// Check the current action
 		switch (Input::get('act'))
 		{
-			case 'paste':
-				// Allow
-				break;
-
 			case '': // empty
+			case 'paste':
 			case 'create':
 			case 'select':
 				// Check access to the article
@@ -1039,9 +1036,9 @@ class tl_content extends Backend
 	/**
 	 * Show a hint if a JavaScript library needs to be included in the page layout
 	 *
-	 * @param DataContainer $dc
+	 * @param object
 	 */
-	public function showJsLibraryHint(DataContainer $dc)
+	public function showJsLibraryHint($dc)
 	{
 		if ($_POST || Input::get('act') != 'edit')
 		{
@@ -1163,7 +1160,7 @@ class tl_content extends Backend
 		return '
 <div class="cte_type ' . $key . '">' . $type . '</div>
 <div class="' . trim($class) . '">
-' . String::insertTagToSrc($this->getContentElement($objModel)) . '
+' . StringUtil::insertTagToSrc($this->getContentElement($objModel)) . '
 </div>' . "\n";
 	}
 
@@ -1281,14 +1278,14 @@ class tl_content extends Backend
 
 			if (isset($arrHeadline['value']))
 			{
-				$headline = String::substr($arrHeadline['value'], 32);
+				$headline = StringUtil::substr($arrHeadline['value'], 32);
 			}
 			else
 			{
-				$headline = String::substr(preg_replace('/[\n\r\t]+/', ' ', $arrHeadline[0]), 32);
+				$headline = StringUtil::substr(preg_replace('/[\n\r\t]+/', ' ', $arrHeadline[0]), 32);
 			}
 
-			$text = String::substr(strip_tags(preg_replace('/[\n\r\t]+/', ' ', $objAlias->text)), 32);
+			$text = StringUtil::substr(strip_tags(preg_replace('/[\n\r\t]+/', ' ', $objAlias->text)), 32);
 			$strText = $GLOBALS['TL_LANG']['CTE'][$objAlias->type][0] . ' (';
 
 			if ($headline != '')
@@ -1580,7 +1577,7 @@ class tl_content extends Backend
 	 */
 	public function pagePicker(DataContainer $dc)
 	{
-		return ' <a href="' . ((strpos($dc->value, '{{link_url::') !== false) ? 'contao/page.php' : 'contao/file.php') . '?do=' . Input::get('do') . '&amp;table=' . $dc->table . '&amp;field=' . $dc->field . '&amp;value=' . str_replace(array('{{link_url::', '}}'), '', $dc->value) . '&amp;switch=1' . '" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['pagepicker']) . '" onclick="Backend.getScrollOffset();Backend.openModalSelector({\'width\':768,\'title\':\'' . specialchars(str_replace("'", "\\'", $GLOBALS['TL_LANG']['MOD']['page'][0])) . '\',\'url\':this.href,\'id\':\'' . $dc->field . '\',\'tag\':\'ctrl_'. $dc->field . ((Input::get('act') == 'editAll') ? '_' . $dc->id : '') . '\',\'self\':this});return false">' . Image::getHtml('pickpage.gif', $GLOBALS['TL_LANG']['MSC']['pagepicker'], 'style="vertical-align:top;cursor:pointer"') . '</a>';
+		return ' <a href="' . (($dc->value == '' || strpos($dc->value, '{{link_url::') !== false) ? 'contao/page.php' : 'contao/file.php') . '?do=' . Input::get('do') . '&amp;table=' . $dc->table . '&amp;field=' . $dc->field . '&amp;value=' . rawurlencode(str_replace(array('{{link_url::', '}}'), '', $dc->value)) . '&amp;switch=1' . '" title="' . specialchars($GLOBALS['TL_LANG']['MSC']['pagepicker']) . '" onclick="Backend.getScrollOffset();Backend.openModalSelector({\'width\':768,\'title\':\'' . specialchars(str_replace("'", "\\'", $GLOBALS['TL_DCA'][$dc->table]['fields'][$dc->field]['label'][0])) . '\',\'url\':this.href,\'id\':\'' . $dc->field . '\',\'tag\':\'ctrl_'. $dc->field . ((Input::get('act') == 'editAll') ? '_' . $dc->id : '') . '\',\'self\':this});return false">' . Image::getHtml('pickpage.gif', $GLOBALS['TL_LANG']['MSC']['pagepicker'], 'style="vertical-align:top;cursor:pointer"') . '</a>';
 	}
 
 
@@ -1677,38 +1674,9 @@ class tl_content extends Backend
 	 */
 	public function storeFileMetaInformation($varValue, DataContainer $dc)
 	{
-		if ($dc->activeRecord->singleSRC == $varValue)
+		if ($dc->activeRecord->singleSRC != $varValue)
 		{
-			return $varValue;
-		}
-
-		$objFile = FilesModel::findByUuid($varValue);
-
-		if ($objFile !== null)
-		{
-			$arrMeta = deserialize($objFile->meta);
-
-			if (!empty($arrMeta))
-			{
-				$objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=(SELECT pid FROM " . ($dc->activeRecord->ptable ?: 'tl_article') . " WHERE id=?)")
-										  ->execute($dc->activeRecord->pid);
-
-				if ($objPage->numRows)
-				{
-					$objModel = new PageModel();
-					$objModel->setRow($objPage->row());
-					$objModel->loadDetails();
-
-					// Convert the language to a locale (see #5678)
-					$strLanguage = str_replace('-', '_', $objModel->rootLanguage);
-
-					if (isset($arrMeta[$strLanguage]))
-					{
-						Input::setPost('alt', $arrMeta[$strLanguage]['title']);
-						Input::setPost('caption', $arrMeta[$strLanguage]['caption']);
-					}
-				}
-			}
+			$this->addFileMetaInformationToRequest($varValue, ($dc->activeRecord->ptable ?: 'tl_article'), $dc->activeRecord->pid);
 		}
 
 		return $varValue;
@@ -1748,7 +1716,7 @@ class tl_content extends Backend
 			$icon = 'invisible.gif';
 		}
 
-		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ';
+		return '<a href="'.$this->addToUrl($href).'" title="'.specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label, 'data-state="' . ($row['invisible'] ? 0 : 1) . '"').'</a> ';
 	}
 
 
@@ -1761,9 +1729,23 @@ class tl_content extends Backend
 	 */
 	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
-		// Check permissions to edit
+		// Set the ID and action
 		Input::setGet('id', $intId);
 		Input::setGet('act', 'toggle');
+
+		if ($dc)
+		{
+			$dc->id = $intId; // see #8043
+		}
+
+		$this->checkPermission();
+
+		// Check the field access
+		if (!$this->User->hasAccess('tl_content::invisible', 'alexf'))
+		{
+			$this->log('Not enough permissions to publish/unpublish content element ID "'.$intId.'"', __METHOD__, TL_ERROR);
+			$this->redirect('contao/main.php?act=error');
+		}
 
 		// The onload_callbacks vary depending on the dynamic parent table (see #4894)
 		if (is_array($GLOBALS['TL_DCA']['tl_content']['config']['onload_callback']))
@@ -1773,20 +1755,13 @@ class tl_content extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1](($dc ?: $this));
+					$this->{$callback[0]}->{$callback[1]}(($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
 					$callback(($dc ?: $this));
 				}
 			}
-		}
-
-		// Check permissions to publish
-		if (!$this->User->hasAccess('tl_content::invisible', 'alexf'))
-		{
-			$this->log('Not enough permissions to show/hide content element ID "'.$intId.'"', __METHOD__, TL_ERROR);
-			$this->redirect('contao/main.php?act=error');
 		}
 
 		$objVersions = new Versions('tl_content', $intId);
@@ -1800,7 +1775,7 @@ class tl_content extends Backend
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$blnVisible = $this->$callback[0]->$callback[1]($blnVisible, ($dc ?: $this));
+					$blnVisible = $this->{$callback[0]}->{$callback[1]}($blnVisible, ($dc ?: $this));
 				}
 				elseif (is_callable($callback))
 				{
@@ -1814,6 +1789,5 @@ class tl_content extends Backend
 					   ->execute($intId);
 
 		$objVersions->create();
-		$this->log('A new version of record "tl_content.id='.$intId.'" has been created'.$this->getParentEntries('tl_content', $intId), __METHOD__, TL_GENERAL);
 	}
 }

@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -97,18 +97,17 @@ class ModuleCustomnav extends \Module
 
 			if (!empty($tmp) && is_array($tmp))
 			{
-				$arrPages = array_map(function(){}, array_flip($tmp));
+				$arrPages = array_map(function () {}, array_flip($tmp));
 			}
 		}
 
 		// Add the items to the pre-sorted array
 		while ($objPages->next())
 		{
-			/** @var \PageModel $objPages */
-			$objModel = $objPages->current();
-
-			$arrPages[$objPages->id] = $objModel->loadDetails()->row(); // see #3765
+			$arrPages[$objPages->id] = $objPages->current();
 		}
+
+		$arrPages = array_values(array_filter($arrPages));
 
 		// Set default template
 		if ($this->navigationTpl == '')
@@ -123,69 +122,56 @@ class ModuleCustomnav extends \Module
 		$objTemplate->cssID = $this->cssID; // see #4897 and 6129
 		$objTemplate->level = 'level_1';
 
-		foreach ($arrPages as $arrPage)
+		/** @var \PageModel[] $arrPages */
+		foreach ($arrPages as $objModel)
 		{
-			// Skip hidden pages (see #5832)
-			if (!is_array($arrPage))
-			{
-				continue;
-			}
-
-			$_groups = deserialize($arrPage['groups']);
+			$_groups = deserialize($objModel->groups);
 
 			// Do not show protected pages unless a back end or front end user is logged in
-			if (!$arrPage['protected'] || BE_USER_LOGGED_IN || (is_array($_groups) && count(array_intersect($_groups, $groups))) || $this->showProtected)
+			if (!$objModel->protected || BE_USER_LOGGED_IN || (is_array($_groups) && count(array_intersect($_groups, $groups))) || $this->showProtected)
 			{
 				// Get href
-				switch ($arrPage['type'])
+				switch ($objModel->type)
 				{
 					case 'redirect':
-						$href = $arrPage['url'];
+						$href = $objModel->url;
 						break;
 
 					case 'forward':
-						if (($objNext = \PageModel::findPublishedById($arrPage['jumpTo'])) !== null)
+						if (($objNext = $objModel->getRelated('jumpTo')) !== null || ($objNext = \PageModel::findFirstPublishedRegularByPid($objModel->id)) !== null)
 						{
-							$strForceLang = null;
-							$objNext->loadDetails();
-
-							// Check the target page language (see #4706)
-							if (\Config::get('addLanguageToUrl'))
-							{
-								$strForceLang = $objNext->language;
-							}
-
-							$href = $this->generateFrontendUrl($objNext->row(), null, $strForceLang, true);
+							/** @var \PageModel $objNext */
+							$href = $objNext->getFrontendUrl();
 							break;
 						}
 						// DO NOT ADD A break; STATEMENT
 
 					default:
-						$href = $this->generateFrontendUrl($arrPage, null, $arrPage['rootLanguage'], true);
+						$href = $objModel->getFrontendUrl();
 						break;
 				}
 
-				$trail = in_array($arrPage['id'], $objPage->trail);
+				$trail = in_array($objModel->id, $objPage->trail);
 
 				// Active page
-				if ($objPage->id == $arrPage['id'] && $href == \Environment::get('request'))
+				if ($objPage->id == $objModel->id && $href == \Environment::get('request'))
 				{
-					$strClass = trim($arrPage['cssClass']);
-					$row = $arrPage;
+					$strClass = trim($objModel->cssClass);
+					$row = $objModel->row();
 
 					$row['isActive'] = true;
 					$row['isTrail'] = false;
 					$row['class'] = trim('active ' . $strClass);
-					$row['title'] = specialchars($arrPage['title'], true);
-					$row['pageTitle'] = specialchars($arrPage['pageTitle'], true);
-					$row['link'] = $arrPage['title'];
+					$row['title'] = specialchars($objModel->title, true);
+					$row['pageTitle'] = specialchars($objModel->pageTitle, true);
+					$row['link'] = $objModel->title;
 					$row['href'] = $href;
-					$row['nofollow'] = (strncmp($arrPage['robots'], 'noindex', 7) === 0);
+					$row['nofollow'] = (strncmp($objModel->robots, 'noindex,nofollow', 16) === 0);
 					$row['target'] = '';
-					$row['description'] = str_replace(array("\n", "\r"), array(' ' , ''), $arrPage['description']);
+					$row['description'] = str_replace(array("\n", "\r"), array(' ' , ''), $objModel->description);
 
 					// Override the link target
-					if ($arrPage['type'] == 'redirect' && $arrPage['target'])
+					if ($objModel->type == 'redirect' && $objModel->target)
 					{
 						$row['target'] = ($objPage->outputFormat == 'xhtml') ? ' onclick="return !window.open(this.href)"' : ' target="_blank"';
 					}
@@ -196,22 +182,22 @@ class ModuleCustomnav extends \Module
 				// Regular page
 				else
 				{
-					$strClass = trim($arrPage['cssClass'] . ($trail ? ' trail' : ''));
-					$row = $arrPage;
+					$strClass = trim($objModel->cssClass . ($trail ? ' trail' : ''));
+					$row = $objModel->row();
 
 					$row['isActive'] = false;
 					$row['isTrail'] = $trail;
 					$row['class'] = $strClass;
-					$row['title'] = specialchars($arrPage['title'], true);
-					$row['pageTitle'] = specialchars($arrPage['pageTitle'], true);
-					$row['link'] = $arrPage['title'];
+					$row['title'] = specialchars($objModel->title, true);
+					$row['pageTitle'] = specialchars($objModel->pageTitle, true);
+					$row['link'] = $objModel->title;
 					$row['href'] = $href;
-					$row['nofollow'] = (strncmp($arrPage['robots'], 'noindex', 7) === 0);
+					$row['nofollow'] = (strncmp($objModel->robots, 'noindex,nofollow', 16) === 0);
 					$row['target'] = '';
-					$row['description'] = str_replace(array("\n", "\r"), array(' ' , ''), $arrPage['description']);
+					$row['description'] = str_replace(array("\n", "\r"), array(' ' , ''), $objModel->description);
 
 					// Override the link target
-					if ($arrPage['type'] == 'redirect' && $arrPage['target'])
+					if ($objModel->type == 'redirect' && $objModel->target)
 					{
 						$row['target'] = ($objPage->outputFormat == 'xhtml') ? ' onclick="return !window.open(this.href)"' : ' target="_blank"';
 					}

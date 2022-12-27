@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -79,7 +79,7 @@ class ModuleArticle extends \Module
 		if ($this->blnNoMarkup)
 		{
 			/** @var \FrontendTemplate|object $objTemplate */
-			$objTemplate = new \BackendTemplate('mod_article_plain');
+			$objTemplate = new \FrontendTemplate('mod_article_plain');
 
 			$this->Template = $objTemplate;
 			$this->Template->setData($this->arrData);
@@ -109,18 +109,18 @@ class ModuleArticle extends \Module
 		// Clean the RTE output
 		if ($objPage->outputFormat == 'xhtml')
 		{
-			$this->teaser = \String::toXhtml($this->teaser);
+			$this->teaser = \StringUtil::toXhtml($this->teaser);
 		}
 		else
 		{
-			$this->teaser = \String::toHtml5($this->teaser);
+			$this->teaser = \StringUtil::toHtml5($this->teaser);
 		}
 
 		// Show the teaser only
 		if ($this->multiMode && $this->showTeaser)
 		{
 			/** @var \FrontendTemplate|object $objTemplate */
-			$objTemplate = new \BackendTemplate('mod_article_teaser');
+			$objTemplate = new \FrontendTemplate('mod_article_teaser');
 
 			$this->Template = $objTemplate;
 			$this->Template->setData($this->arrData);
@@ -143,7 +143,7 @@ class ModuleArticle extends \Module
 			$href = '/articles/' . (($this->inColumn != 'main') ? $this->inColumn . ':' : '') . $article;
 
 			$this->Template->headline = $this->headline;
-			$this->Template->href = $this->generateFrontendUrl($objPage->row(), $href);
+			$this->Template->href = $objPage->getFrontendUrl($href);
 			$this->Template->teaser = $this->teaser;
 			$this->Template->readMore = specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['readMore'], $this->headline), true);
 			$this->Template->more = $GLOBALS['TL_LANG']['MSC']['more'];
@@ -269,7 +269,7 @@ class ModuleArticle extends \Module
 			foreach ($GLOBALS['TL_HOOKS']['compileArticle'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($this->Template, $this->arrData, $this);
+				$this->{$callback[0]}->{$callback[1]}($this->Template, $this->arrData, $this);
 			}
 		}
 	}
@@ -303,7 +303,7 @@ class ModuleArticle extends \Module
 			foreach ($GLOBALS['TL_HOOKS']['printArticleAsPdf'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($strArticle, $this);
+				$this->{$callback[0]}->{$callback[1]}($strArticle, $this);
 			}
 		}
 

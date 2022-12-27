@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -453,7 +453,7 @@ $GLOBALS['TL_WRAPPERS'] = array
  */
 $GLOBALS['TL_ASSETS'] = array
 (
-	'ACE'          => '1.1.8',
+	'ACE'          => '1.1.9',
 	'CSS3PIE'      => '1.0.0',
 	'DROPZONE'     => '3.12.0',
 	'HIGHLIGHTER'  => '3.0.83',
@@ -463,9 +463,9 @@ $GLOBALS['TL_ASSETS'] = array
 	'JQUERY'       => '1.11.3',
 	'JQUERY_UI'    => '1.11.4',
 	'COLORBOX'     => '1.6.1',
-	'MEDIAELEMENT' => '2.16.4',
+	'MEDIAELEMENT' => '2.21.2',
 	'TABLESORTER'  => '2.0.5',
-	'MOOTOOLS'     => '1.5.1',
+	'MOOTOOLS'     => '1.5.2',
 	'COLORPICKER'  => '1.4',
 	'DATEPICKER'   => '2.2.0',
 	'MEDIABOX'     => '1.4.6',

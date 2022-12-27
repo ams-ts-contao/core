@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -28,52 +28,52 @@ namespace Contao;
  * @property boolean $requireLogin
  * @property boolean $disableCaptcha
  *
- * @method static $this findById()
- * @method static $this findByPk()
- * @method static $this findByIdOrAlias()
- * @method static $this findOneBy()
- * @method static $this findOneByTstamp()
- * @method static $this findOneByTitle()
- * @method static $this findOneByHeadline()
- * @method static $this findOneByJumpTo()
- * @method static $this findOneByAllowComments()
- * @method static $this findOneByNotify()
- * @method static $this findOneBySortOrder()
- * @method static $this findOneByPerPage()
- * @method static $this findOneByModerate()
- * @method static $this findOneByBbcode()
- * @method static $this findOneByRequireLogin()
- * @method static $this findOneByDisableCaptcha()
+ * @method static \FaqCategoryModel|null findById($id, $opt=array())
+ * @method static \FaqCategoryModel|null findByPk($id, $opt=array())
+ * @method static \FaqCategoryModel|null findByIdOrAlias($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneBy($col, $val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByTstamp($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByTitle($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByHeadline($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByJumpTo($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByAllowComments($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByNotify($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneBySortOrder($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByPerPage($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByModerate($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByBbcode($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByRequireLogin($val, $opt=array())
+ * @method static \FaqCategoryModel|null findOneByDisableCaptcha($val, $opt=array())
  *
- * @method static \Model\Collection|\FaqCategoryModel findByTstamp()
- * @method static \Model\Collection|\FaqCategoryModel findByTitle()
- * @method static \Model\Collection|\FaqCategoryModel findByHeadline()
- * @method static \Model\Collection|\FaqCategoryModel findByJumpTo()
- * @method static \Model\Collection|\FaqCategoryModel findByAllowComments()
- * @method static \Model\Collection|\FaqCategoryModel findByNotify()
- * @method static \Model\Collection|\FaqCategoryModel findBySortOrder()
- * @method static \Model\Collection|\FaqCategoryModel findByPerPage()
- * @method static \Model\Collection|\FaqCategoryModel findByModerate()
- * @method static \Model\Collection|\FaqCategoryModel findByBbcode()
- * @method static \Model\Collection|\FaqCategoryModel findByRequireLogin()
- * @method static \Model\Collection|\FaqCategoryModel findByDisableCaptcha()
- * @method static \Model\Collection|\FaqCategoryModel findMultipleByIds()
- * @method static \Model\Collection|\FaqCategoryModel findBy()
- * @method static \Model\Collection|\FaqCategoryModel findAll()
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByTstamp($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByTitle($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByHeadline($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByJumpTo($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByAllowComments($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByNotify($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findBySortOrder($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByPerPage($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByModerate($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByBbcode($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByRequireLogin($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findByDisableCaptcha($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findMultipleByIds($val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findBy($col, $val, $opt=array())
+ * @method static \Model\Collection|\FaqCategoryModel[]|\FaqCategoryModel|null findAll($opt=array())
  *
- * @method static integer countById()
- * @method static integer countByTstamp()
- * @method static integer countByTitle()
- * @method static integer countByHeadline()
- * @method static integer countByJumpTo()
- * @method static integer countByAllowComments()
- * @method static integer countByNotify()
- * @method static integer countBySortOrder()
- * @method static integer countByPerPage()
- * @method static integer countByModerate()
- * @method static integer countByBbcode()
- * @method static integer countByRequireLogin()
- * @method static integer countByDisableCaptcha()
+ * @method static integer countById($id, $opt=array())
+ * @method static integer countByTstamp($val, $opt=array())
+ * @method static integer countByTitle($val, $opt=array())
+ * @method static integer countByHeadline($val, $opt=array())
+ * @method static integer countByJumpTo($val, $opt=array())
+ * @method static integer countByAllowComments($val, $opt=array())
+ * @method static integer countByNotify($val, $opt=array())
+ * @method static integer countBySortOrder($val, $opt=array())
+ * @method static integer countByPerPage($val, $opt=array())
+ * @method static integer countByModerate($val, $opt=array())
+ * @method static integer countByBbcode($val, $opt=array())
+ * @method static integer countByRequireLogin($val, $opt=array())
+ * @method static integer countByDisableCaptcha($val, $opt=array())
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */

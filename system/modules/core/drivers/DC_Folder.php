@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -13,6 +13,11 @@ namespace Contao;
 
 /**
  * Provide methods to modify the file system.
+ *
+ * @property string  $path
+ * @property string  $extension
+ * @property boolean $createNewVersion
+ * @property boolean $isDbAssisted
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -156,7 +161,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		// Check for valid file types
 		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['validFileTypes'])
 		{
-			$this->arrValidFileTypes = trimsplit(',', $GLOBALS['TL_DCA'][$this->strTable]['config']['validFileTypes']);
+			$this->arrValidFileTypes = trimsplit(',', strtolower($GLOBALS['TL_DCA'][$this->strTable]['config']['validFileTypes']));
 		}
 
 		// Call onload_callback (e.g. to check permissions)
@@ -167,7 +172,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($this);
+					$this->{$callback[0]}->{$callback[1]}($this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -337,8 +342,10 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		// Build the tree
 		$return = '
 <div id="tl_buttons">'.((\Input::get('act') == 'select') ? '
-<a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']).'" accesskey="b" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a> ' : '') . ((\Input::get('act') != 'select' && !$blnClipboard) ? '
-<a href="'.$this->addToUrl($hrfNew).'" class="'.$clsNew.'" title="'.specialchars($ttlNew).'" accesskey="n" onclick="Backend.getScrollOffset()">'.$lblNew.'</a> ' . ((!$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable']) ? '<a href="'.$this->addToUrl('&amp;act=paste&amp;mode=move').'" class="header_new" title="'.specialchars($GLOBALS['TL_LANG'][$this->strTable]['move'][1]).'" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG'][$this->strTable]['move'][0].'</a> ' : '') . $this->generateGlobalButtons(true) : '') . ($blnClipboard ? '<a href="'.$this->addToUrl('clipboard=1').'" class="header_clipboard" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['clearClipboard']).'" accesskey="x">'.$GLOBALS['TL_LANG']['MSC']['clearClipboard'].'</a> ' : '') . '
+<a href="'.$this->getReferer(true).'" class="header_back" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']).'" accesskey="b" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG']['MSC']['backBT'].'</a> ' : '') . ((\Input::get('act') != 'select' && !$blnClipboard && !$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable']) ? '
+<a href="'.$this->addToUrl($hrfNew).'" class="'.$clsNew.'" title="'.specialchars($ttlNew).'" accesskey="n" onclick="Backend.getScrollOffset()">'.$lblNew.'</a>
+<a href="'.$this->addToUrl('&amp;act=paste&amp;mode=move').'" class="header_new" title="'.specialchars($GLOBALS['TL_LANG'][$this->strTable]['move'][1]).'" onclick="Backend.getScrollOffset()">'.$GLOBALS['TL_LANG'][$this->strTable]['move'][0].'</a> ' : '') . ($blnClipboard ? '
+<a href="'.$this->addToUrl('clipboard=1').'" class="header_clipboard" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['clearClipboard']).'" accesskey="x">'.$GLOBALS['TL_LANG']['MSC']['clearClipboard'].'</a> ' : $this->generateGlobalButtons()) . '
 </div>' . \Message::generate(true) . ((\Input::get('act') == 'select') ? '
 
 <form action="'.ampersand(\Environment::get('request'), true).'" id="tl_select" class="tl_form'.((\Input::get('act') == 'select') ? ' unselectable' : '').'" method="post" novalidate>
@@ -396,7 +403,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
+						$arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -527,7 +534,21 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			// Update the database AFTER the file has been moved
 			if ($this->blnIsDbAssisted)
 			{
-				\Dbafs::moveResource($source, $destination);
+				$syncSource = \Dbafs::shouldBeSynchronized($source);
+				$syncTarget = \Dbafs::shouldBeSynchronized($destination);
+
+				if ($syncSource && $syncTarget)
+				{
+					\Dbafs::moveResource($source, $destination);
+				}
+				elseif ($syncSource)
+				{
+					\Dbafs::deleteResource($source);
+				}
+				elseif ($syncTarget)
+				{
+					\Dbafs::addResource($destination);
+				}
 			}
 
 			// Call the oncut_callback
@@ -538,7 +559,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($source, $destination, $this);
+						$this->{$callback[0]}->{$callback[1]}($source, $destination, $this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -667,11 +688,11 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		{
 			$count = 1;
 			$new = $destination;
+			$ext = strtolower(substr($destination, strrpos($destination, '.') + 1));
 
 			// Add a suffix if the file exists
 			while (file_exists(TL_ROOT . '/' . $new) && $count < 12)
 			{
-				$ext = pathinfo($destination, PATHINFO_EXTENSION);
 				$new = str_replace('.' . $ext, '_' . $count++ . '.' . $ext, $destination);
 			}
 
@@ -682,7 +703,17 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		// Update the database AFTER the file has been copied
 		if ($this->blnIsDbAssisted)
 		{
-			\Dbafs::copyResource($source, $destination);
+			$syncSource = \Dbafs::shouldBeSynchronized($source);
+			$syncTarget = \Dbafs::shouldBeSynchronized($destination);
+
+			if ($syncSource && $syncTarget)
+			{
+				\Dbafs::copyResource($source, $destination);
+			}
+			elseif ($syncTarget)
+			{
+				\Dbafs::addResource($destination);
+			}
 		}
 
 		// Call the oncopy_callback
@@ -693,7 +724,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($source, $destination, $this);
+					$this->{$callback[0]}->{$callback[1]}($source, $destination, $this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -703,7 +734,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		}
 
 		// Add a log entry
-		$this->log('File or folder "'.$source.'" has been duplicated', __METHOD__, TL_FILES);
+		$this->log('File or folder "'.$source.'" has been copied to "'.$destination.'"', __METHOD__, TL_FILES);
 
 		// Redirect
 		if (!$blnDoNotRedirect)
@@ -781,7 +812,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($source, $this);
+					$this->{$callback[0]}->{$callback[1]}($source, $this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -803,13 +834,13 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		}
 
 		// Update the database AFTER the resource has been deleted
-		if ($this->blnIsDbAssisted)
+		if ($this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($source))
 		{
 			\Dbafs::deleteResource($source);
 		}
 
 		// Add a log entry
-		$this->log('File or folder "' . str_replace(TL_ROOT . '/', '', $source) . '" has been deleted', __METHOD__, TL_FILES);
+		$this->log('File or folder "' . $source . '" has been deleted', __METHOD__, TL_FILES);
 
 		// Redirect
 		if (!$blnDoNotRedirect)
@@ -904,12 +935,12 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		if (\Input::post('FORM_SUBMIT') == 'tl_upload')
 		{
 			// Generate the DB entries
-			if ($this->blnIsDbAssisted)
+			if ($this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($strFolder))
 			{
 				// Upload the files
 				$arrUploaded = $objUploader->uploadTo($strFolder);
 
-				if (empty($arrUploaded))
+				if (empty($arrUploaded) && !$objUploader->hasError())
 				{
 					\Message::addError($GLOBALS['TL_LANG']['ERR']['emptyUpload']);
 					$this->reload();
@@ -947,7 +978,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($arrUploaded);
+						$this->{$callback[0]}->{$callback[1]}($arrUploaded);
 					}
 					elseif (is_callable($callback))
 					{
@@ -957,7 +988,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			}
 
 			// Update the hash of the target folder
-			if ($this->blnIsDbAssisted && $strFolder != \Config::get('uploadPath'))
+			if ($this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($strFolder))
 			{
 				\Dbafs::updateFolderHashes($strFolder);
 			}
@@ -989,7 +1020,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
+					$arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -1045,41 +1076,52 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			$this->redirect('contao/main.php?act=error');
 		}
 
-		// Get the DB entry
-		if ($this->blnIsDbAssisted && stristr($this->intId, '__new__') === false)
+		$objModel = null;
+		$objVersions = null;
+
+		// Add the versioning routines
+		if ($this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($this->intId))
 		{
-			$objFile = \FilesModel::findByPath($this->intId);
-
-			if ($objFile === null)
+			if (stristr($this->intId, '__new__') === false)
 			{
-				$objFile = \Dbafs::addResource($this->intId);
+				$objModel = \FilesModel::findByPath($this->intId);
+
+				if ($objModel === null)
+				{
+					$objModel = \Dbafs::addResource($this->intId);
+				}
+
+				$this->objActiveRecord = $objModel;
 			}
 
-			$this->objActiveRecord = $objFile;
+			$this->blnCreateNewVersion = false;
+
+			/** @var \FilesModel $objModel */
+			$objVersions = new \Versions($this->strTable, $objModel->id);
+
+			if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+			{
+				// Compare versions
+				if (\Input::get('versions'))
+				{
+					$objVersions->compare();
+				}
+
+				// Restore a version
+				if (\Input::post('FORM_SUBMIT') == 'tl_version' && \Input::post('version') != '')
+				{
+					$objVersions->restore(\Input::post('version'));
+					$this->reload();
+				}
+			}
+
+			$objVersions->initialize();
 		}
-
-		$this->blnCreateNewVersion = false;
-
-		/** @var \FilesModel $objFile */
-		$objVersions = new \Versions($this->strTable, $objFile->id);
-
-		if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+		else
 		{
-			// Compare versions
-			if (\Input::get('versions'))
-			{
-				$objVersions->compare();
-			}
-
-			// Restore a version
-			if (\Input::post('FORM_SUBMIT') == 'tl_version' && \Input::post('version') != '')
-			{
-				$objVersions->restore(\Input::post('version'));
-				$this->reload();
-			}
+			// Unset the database fields
+			$GLOBALS['TL_DCA'][$this->strTable]['fields'] = array_intersect_key($GLOBALS['TL_DCA'][$this->strTable]['fields'], array('name' => true, 'protected' => true));
 		}
-
-		$objVersions->initialize();
 
 		// Build an array from boxes and rows (do not show excluded fields)
 		$this->strPalette = $this->getPalette();
@@ -1109,7 +1151,6 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 
 			// Render boxes
 			$class = 'tl_tbox';
-			$blnIsFirst = true;
 
 			foreach ($boxes as $v)
 			{
@@ -1125,19 +1166,11 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					// Load the current value
 					if ($vv == 'name')
 					{
-						$pathinfo = pathinfo($this->intId);
-						$this->strPath = $pathinfo['dirname'];
+						$objFile = is_dir(TL_ROOT . '/' . $this->intId) ? new \Folder($this->intId) : new \File($this->intId, true);
 
-						if (is_dir(TL_ROOT . '/' . $this->intId))
-						{
-							$this->strExtension = '';
-							$this->varValue = basename($pathinfo['basename']);
-						}
-						else
-						{
-							$this->strExtension = ($pathinfo['extension'] != '') ? '.'.$pathinfo['extension'] : '';
-							$this->varValue = basename($pathinfo['basename'], $this->strExtension);
-						}
+						$this->strPath = str_replace(TL_ROOT . '/', '', $objFile->dirname);
+						$this->strExtension = ($objFile->origext != '') ? '.'.$objFile->origext : '';
+						$this->varValue = $objFile->filename;
 
 						// Fix Unix system files like .htaccess
 						if (strncmp($this->varValue, '.', 1) === 0)
@@ -1153,14 +1186,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					}
 					else
 					{
-						$this->varValue = $objFile->$vv;
-					}
-
-					// Autofocus the first field
-					if ($blnIsFirst && $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'text')
-					{
-						$GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['autofocus'] = 'autofocus';
-						$blnIsFirst = false;
+						$this->varValue = ($objModel !== null) ? $objModel->$vv : null;
 					}
 
 					// Call load_callback
@@ -1171,7 +1197,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 							if (is_array($callback))
 							{
 								$this->import($callback[0]);
-								$this->varValue = $this->$callback[0]->$callback[1]($this->varValue, $this);
+								$this->varValue = $this->{$callback[0]}->{$callback[1]}($this->varValue, $this);
 							}
 							elseif (is_callable($callback))
 							{
@@ -1193,7 +1219,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		}
 
 		// Versions overview
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] && $this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($this->intId))
 		{
 			$version = $objVersions->renderDropdown();
 		}
@@ -1215,7 +1241,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
+					$arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -1235,13 +1261,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 </div>
 
 </div>
-</form>
-
-<script>
-  window.addEvent(\'domready\', function() {
-    Theme.focusInput("'.$this->strTable.'");
-  });
-</script>';
+</form>';
 
 		// Begin the form (-> DO NOT CHANGE THIS ORDER -> this way the onsubmit attribute of the form can be changed by a field)
 		$return = $version . '
@@ -1266,7 +1286,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($this);
+						$this->{$callback[0]}->{$callback[1]}($this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -1276,35 +1296,35 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			}
 
 			// Save the current version
-			if ($this->blnCreateNewVersion)
+			if ($this->blnCreateNewVersion && $objModel !== null)
 			{
 				$objVersions->create();
 
 				// Call the onversion_callback
 				if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
 				{
+					@trigger_error('Using the onversion_callback has been deprecated and will no longer work in Contao 5.0. Use the oncreate_version_callback instead.', E_USER_DEPRECATED);
+
 					foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
 					{
 						if (is_array($callback))
 						{
 							$this->import($callback[0]);
-							$this->$callback[0]->$callback[1]($this->strTable, $objFile->id, $this);
+							$this->{$callback[0]}->{$callback[1]}($this->strTable, $objModel->id, $this);
 						}
 						elseif (is_callable($callback))
 						{
-							$callback($this->strTable, $objFile->id, $this);
+							$callback($this->strTable, $objModel->id, $this);
 						}
 					}
 				}
-
-				$this->log('A new version of file "'.$objFile->path.'" has been created', __METHOD__, TL_GENERAL);
 			}
 
 			// Set the current timestamp (-> DO NOT CHANGE THE ORDER version - timestamp)
-			if ($this->blnIsDbAssisted)
+			if ($this->blnIsDbAssisted && $objModel !== null)
 			{
 				$this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
-							   ->execute(time(), $objFile->id);
+							   ->execute(time(), $objModel->id);
 			}
 
 			// Redirect
@@ -1316,7 +1336,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			}
 
 			// Reload
-			if ($this->blnIsDbAssisted)
+			if ($this->blnIsDbAssisted && $this->objActiveRecord !== null)
 			{
 				$this->redirect($this->addToUrl('id='.$this->urlEncode($this->objActiveRecord->path)));
 			}
@@ -1380,24 +1400,32 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			{
 				$this->intId = md5($id);
 				$this->strPalette = trimsplit('[;,]', $this->getPalette());
-				$this->blnCreateNewVersion = false;
+
+				$objModel = null;
+				$objVersions = null;
 
 				// Get the DB entry
-				if ($this->blnIsDbAssisted)
+				if ($this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($id))
 				{
-					$objFile = \FilesModel::findByPath($id);
+					$objModel = \FilesModel::findByPath($id);
 
-					if ($objFile === null)
+					if ($objModel === null)
 					{
-						$objFile = \Dbafs::addResource($id);
+						$objModel = \Dbafs::addResource($id);
 					}
 
-					$this->objActiveRecord = $objFile;
-				}
+					$this->objActiveRecord = $objModel;
+					$this->blnCreateNewVersion = false;
 
-				/** @var \FilesModel $objFile */
-				$objVersions = new \Versions($this->strTable, $objFile->id);
-				$objVersions->initialize();
+					/** @var \FilesModel $objModel */
+					$objVersions = new \Versions($this->strTable, $objModel->id);
+					$objVersions->initialize();
+				}
+				else
+				{
+					// Unset the database fields
+					$this->strPalette = array_filter($this->strPalette, function ($val) { return $val == 'name' || $val == 'protected'; });
+				}
 
 				$return .= '
 <div class="'.$class.'">';
@@ -1425,11 +1453,11 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					// Load the current value
 					if ($v == 'name')
 					{
-						$pathinfo = pathinfo($id); // do not urldecode() here (see #6840)
+						$objFile = is_dir(TL_ROOT . '/' . $id) ? new \Folder($id) : new \File($id, true);
 
-						$this->strPath = $pathinfo['dirname'];
-						$this->strExtension = ($pathinfo['extension'] != '') ? '.'.$pathinfo['extension'] : '';
-						$this->varValue = basename($pathinfo['basename'], $this->strExtension);
+						$this->strPath = str_replace(TL_ROOT . '/', '', $objFile->dirname);
+						$this->strExtension = ($objFile->origext != '') ? '.'.$objFile->origext : '';
+						$this->varValue = $objFile->filename;
 
 						// Fix Unix system files like .htaccess
 						if (strncmp($this->varValue, '.', 1) === 0)
@@ -1439,7 +1467,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					}
 					else
 					{
-						$this->varValue = $objFile->$v;
+						$this->varValue = ($objModel !== null) ? $objModel->$v : null;
 					}
 
 					// Call load_callback
@@ -1450,7 +1478,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 							if (is_array($callback))
 							{
 								$this->import($callback[0]);
-								$this->varValue = $this->$callback[0]->$callback[1]($this->varValue, $this);
+								$this->varValue = $this->{$callback[0]}->{$callback[1]}($this->varValue, $this);
 							}
 							elseif (is_callable($callback))
 							{
@@ -1479,7 +1507,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 							if (is_array($callback))
 							{
 								$this->import($callback[0]);
-								$this->$callback[0]->$callback[1]($this);
+								$this->{$callback[0]}->{$callback[1]}($this);
 							}
 							elseif (is_callable($callback))
 							{
@@ -1489,35 +1517,35 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					}
 
 					// Create a new version
-					if ($this->blnCreateNewVersion)
+					if ($this->blnCreateNewVersion && $objModel !== null)
 					{
 						$objVersions->create();
 
 						// Call the onversion_callback
 						if (is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
 						{
+							@trigger_error('Using the onversion_callback has been deprecated and will no longer work in Contao 5.0. Use the oncreate_version_callback instead.', E_USER_DEPRECATED);
+
 							foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
 							{
 								if (is_array($callback))
 								{
 									$this->import($callback[0]);
-									$this->$callback[0]->$callback[1]($this->strTable, $objFile->id, $this);
+									$this->{$callback[0]}->{$callback[1]}($this->strTable, $objModel->id, $this);
 								}
 								elseif (is_callable($callback))
 								{
-									$callback($this->strTable, $objFile->id, $this);
+									$callback($this->strTable, $objModel->id, $this);
 								}
 							}
 						}
-
-						$this->log('A new version of file "'.$objFile->path.'" has been created', __METHOD__, TL_GENERAL);
 					}
 
 					// Set the current timestamp (-> DO NOT CHANGE ORDER version - timestamp)
-					if ($this->blnIsDbAssisted)
+					if ($this->blnIsDbAssisted && $objModel !== null)
 					{
 						$this->Database->prepare("UPDATE " . $this->strTable . " SET tstamp=? WHERE id=?")
-									   ->execute(time(), $objFile->id);
+									   ->execute(time(), $objModel->id);
 					}
 				}
 			}
@@ -1535,7 +1563,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
+						$arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -1563,13 +1591,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 </div>
 
 </div>
-</form>
-
-<script>
-  window.addEvent(\'domready\', function() {
-    Theme.focusInput("'.$this->strTable.'");
-  });
-</script>';
+</form>';
 
 			// Set the focus if there is an error
 			if ($this->noReload)
@@ -1611,7 +1633,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				if (!$GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['exclude'] && !$GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['eval']['doNotShow'] && (strlen($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['inputType']) || is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['input_field_callback'])))
 				{
 					$options .= '
-  <input type="checkbox" name="all_fields[]" id="all_'.$field.'" class="tl_checkbox" value="'.specialchars($field).'"> <label for="all_'.$field.'" class="tl_checkbox_label">'.($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['label'][0] ?: $GLOBALS['TL_LANG']['MSC'][$field][0]).'</label><br>';
+  <input type="checkbox" name="all_fields[]" id="all_'.$field.'" class="tl_checkbox" value="'.specialchars($field).'"> <label for="all_'.$field.'" class="tl_checkbox_label">'.($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['label'][0] ?: ($GLOBALS['TL_LANG']['MSC'][$field][0] ?: $field)).'</label><br>';
 				}
 			}
 
@@ -1688,14 +1710,17 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		$objFile = new \File($this->intId, true);
 
 		// Check whether file type is editable
-		if (!in_array($objFile->extension, trimsplit(',', \Config::get('editableFiles'))))
+		if (!in_array($objFile->extension, trimsplit(',', strtolower(\Config::get('editableFiles')))))
 		{
 			$this->log('File type "'.$objFile->extension.'" ('.$this->intId.') is not allowed to be edited', __METHOD__, TL_ERROR);
 			$this->redirect('contao/main.php?act=error');
 		}
 
+		$objMeta = null;
+		$objVersions = null;
+
 		// Add the versioning routines
-		if ($this->blnIsDbAssisted)
+		if ($this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($this->intId))
 		{
 			$objMeta = \FilesModel::findByPath($objFile->value);
 
@@ -1744,7 +1769,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		if (\Input::post('FORM_SUBMIT') == 'tl_files')
 		{
 			// Restore the basic entities (see #7170)
-			$strSource = \String::restoreBasicEntities(\Input::postRaw('source'));
+			$strSource = \StringUtil::restoreBasicEntities(\Input::postRaw('source'));
 
 			// Save the file
 			if (md5($strContent) != md5($strSource))
@@ -1759,7 +1784,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				$objFile->close();
 
 				// Update the database
-				if ($this->blnIsDbAssisted)
+				if ($this->blnIsDbAssisted && $objMeta !== null)
 				{
 					/** @var \FilesModel $objMeta */
 					$objMeta->hash = $objFile->hash;
@@ -1803,7 +1828,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 		}
 
 		// Versions overview
-		if ($this->blnIsDbAssisted && $GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] && $this->blnIsDbAssisted && $objVersions !== null)
 		{
 			$version = $objVersions->renderDropdown();
 		}
@@ -1825,7 +1850,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				if (is_array($callback))
 				{
 					$this->import($callback[0]);
-					$arrButtons = $this->$callback[0]->$callback[1]($arrButtons, $this);
+					$arrButtons = $this->{$callback[0]}->{$callback[1]}($arrButtons, $this);
 				}
 				elseif (is_callable($callback))
 				{
@@ -1927,7 +1952,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$varValue = $this->$callback[0]->$callback[1]($varValue, $this);
+						$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -1956,20 +1981,42 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			// Rename the file
 			$this->Files->rename($this->strPath . '/' . $this->varValue . $this->strExtension, $this->strPath . '/' . $varValue . $this->strExtension);
 
-			// Update the database
-			if ($this->blnIsDbAssisted)
+			// New folders
+			if (stristr($this->intId, '__new__') !== false)
 			{
-				// New folders
-				if (stristr($this->intId, '__new__') !== false)
+				// Update the database
+				if ($this->blnIsDbAssisted && \Dbafs::shouldBeSynchronized($this->strPath . '/' . $varValue . $this->strExtension))
 				{
 					$this->objActiveRecord = \Dbafs::addResource($this->strPath . '/' . $varValue . $this->strExtension);
-					$this->log('Folder "'.$this->strPath.'/'.$varValue.$this->strExtension.'" has been created', __METHOD__, TL_FILES);
 				}
-				else
+
+				$this->log('Folder "'.$this->strPath.'/'.$varValue.$this->strExtension.'" has been created', __METHOD__, TL_FILES);
+			}
+			else
+			{
+				// Update the database
+				if ($this->blnIsDbAssisted)
 				{
-					$this->objActiveRecord = \Dbafs::moveResource($this->strPath . '/' . $this->varValue . $this->strExtension, $this->strPath . '/' . $varValue . $this->strExtension);
-					$this->log('File or folder "'.$this->strPath.'/'.$this->varValue.$this->strExtension.'" has been renamed to "'.$this->strPath.'/'.$varValue.$this->strExtension.'"', __METHOD__, TL_FILES);
+					$syncSource = \Dbafs::shouldBeSynchronized($this->strPath . '/' . $this->varValue . $this->strExtension);
+					$syncTarget = \Dbafs::shouldBeSynchronized($this->strPath . '/' . $varValue . $this->strExtension);
+
+					if ($syncSource && $syncTarget)
+					{
+						\Dbafs::moveResource($this->strPath . '/' . $this->varValue . $this->strExtension, $this->strPath . '/' . $varValue . $this->strExtension);
+					}
+					elseif ($syncSource)
+					{
+						\Dbafs::deleteResource($this->strPath . '/' . $this->varValue . $this->strExtension);
+					}
+					elseif ($syncTarget)
+					{
+						\Dbafs::addResource($this->strPath . '/' . $varValue . $this->strExtension);
+					}
+
+					$this->blnCreateNewVersion = true;
 				}
+
+				$this->log('File or folder "'.$this->strPath.'/'.$this->varValue.$this->strExtension.'" has been renamed to "'.$this->strPath.'/'.$varValue.$this->strExtension.'"', __METHOD__, TL_FILES);
 			}
 
 			// Set the new value so the input field can show it
@@ -2053,7 +2100,7 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 					if (is_array($callback))
 					{
 						$this->import($callback[0]);
-						$varValue = $this->$callback[0]->$callback[1]($varValue, $this);
+						$varValue = $this->{$callback[0]}->{$callback[1]}($varValue, $this);
 					}
 					elseif (is_callable($callback))
 					{
@@ -2224,10 +2271,25 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			$arrClipboard = $arrClipboard[$this->strTable];
 		}
 
+		$blnProtected = false;
+		$strPath = $strFolder;
+
+		// Check for public parent folders (see #213)
+		while ($strPath != '' && $strPath != '.')
+		{
+			if (file_exists(TL_ROOT . '/' . $strPath . '/.htaccess'))
+			{
+				$blnProtected = true;
+				break;
+			}
+
+			$strPath = dirname($strPath);
+		}
+
 		$this->import('Files');
 		$this->import('BackendUser', 'User');
 
-		return $this->generateTree(TL_ROOT.'/'.$strFolder, ($level * 20), false, false, ($blnClipboard ? $arrClipboard : false));
+		return $this->generateTree(TL_ROOT.'/'.$strFolder, ($level * 20), false, $blnProtected, ($blnClipboard ? $arrClipboard : false));
 	}
 
 
@@ -2335,11 +2397,11 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 			}
 
 			$protected = ($blnProtected === true || array_search('.htaccess', $content) !== false) ? true : false;
-			$folderImg = ($session['filetree'][$md5] == 1 && $countFiles > 0) ? ($protected ? 'folderOP.gif' : 'folderO.gif') : ($protected ? 'folderCP.gif' : 'folderC.gif');
+			$folderImg = $protected ? 'folderCP.gif' : 'folderC.gif';
 
 			// Add the current folder
 			$strFolderNameEncoded = utf8_convert_encoding(specialchars(basename($currentFolder)), \Config::get('characterSet'));
-			$return .= \Image::getHtml($folderImg, '').' <a href="' . $this->addToUrl('node='.$currentEncoded) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'"><strong>'.$strFolderNameEncoded.'</strong></a></div> <div class="tl_right">';
+			$return .= \Image::getHtml($folderImg, '').' <a href="' . $this->addToUrl('fn='.$currentEncoded) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'"><strong>'.$strFolderNameEncoded.'</strong></a></div> <div class="tl_right">';
 
 			// Paste buttons
 			if ($arrClipboard !== false && \Input::get('act') != 'select')
@@ -2391,25 +2453,40 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 
 			$currentEncoded = $this->urlEncode($currentFile);
 			$return .= "\n  " . '<li class="tl_file click2edit toggle_select" onmouseover="Theme.hoverDiv(this,1)" onmouseout="Theme.hoverDiv(this,0)"><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
+			$thumbnail .= ' <span class="tl_gray">('.$this->getReadableSize($objFile->filesize);
+
+			if ($objFile->width && $objFile->height)
+			{
+				$thumbnail .= ', '.$objFile->width.'x'.$objFile->height.' px';
+			}
+
+			$thumbnail .= ')</span>';
 
 			// Generate the thumbnail
-			if ($objFile->isImage && $objFile->height > 0)
+			if ($objFile->isImage)
 			{
-				$popupWidth = ($objFile->width > 600) ? ($objFile->width + 61) : 661;
-				$popupHeight = ($objFile->height + 200);
-				$thumbnail .= ' <span class="tl_gray">('.$this->getReadableSize($objFile->filesize).', '.$objFile->width.'x'.$objFile->height.' px)</span>';
-
-				if (\Config::get('thumbnails') && ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth')))
+				if ($objFile->viewHeight > 0)
 				{
-					$_height = ($objFile->height < 50) ? $objFile->height : 50;
-					$_width = (($objFile->width * $_height / $objFile->height) > 400) ? 90 : '';
+					if ($objFile->width && $objFile->height)
+					{
+						$popupWidth = ($objFile->width > 600) ? ($objFile->width + 61) : 661;
+						$popupHeight = ($objFile->height + 210);
+					}
+					else
+					{
+						$popupWidth = 661;
+						$popupHeight = 625 / $objFile->viewWidth * $objFile->viewHeight + 210;
+					}
 
-					$thumbnail .= '<br><img src="' . TL_FILES_URL . \Image::get($currentEncoded, $_width, $_height) . '" alt="" style="margin:0 0 2px -19px">';
+					if (\Config::get('thumbnails') && ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth')))
+					{
+						$thumbnail .= '<br>' . \Image::getHtml(\Image::get($currentEncoded, 400, (($objFile->height && $objFile->height < 50) ? $objFile->height : 50), 'box'), '', 'style="margin:0 0 2px -19px"');
+					}
 				}
-			}
-			else
-			{
-				$thumbnail .= ' <span class="tl_gray">('.$this->getReadableSize($objFile->filesize).')</span>';
+				else
+				{
+					$popupHeight = 360; // dimensionless SVGs are rendered at 300x150px, so the popup needs to be 150px + 210px high
+				}
 			}
 
 			$strFileNameEncoded = utf8_convert_encoding(specialchars(basename($currentFile)), \Config::get('characterSet'));
@@ -2559,10 +2636,13 @@ class DC_Folder extends \DataContainer implements \listable, \editable
 				continue;
 			}
 
-			$strHash = md5(TL_ROOT . '/' . $strPath . '/' . $strFile);
+			$arrFiles[substr(md5(TL_ROOT . '/' . $strPath . '/' . $strFile), 0, 8)] = 1;
 
-			$arrFiles[substr($strHash, 0, 8)] = 1;
-			$arrFiles = array_merge($arrFiles, $this->getMD5Folders($strPath . '/' . $strFile));
+			// Do not use array_merge() here (see #8105)
+			foreach ($this->getMD5Folders($strPath . '/' . $strFile) as $k=>$v)
+			{
+				$arrFiles[$k] = $v;
+			}
 		}
 
 		return $arrFiles;

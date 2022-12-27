@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -36,7 +36,7 @@ class ContentHyperlink extends \ContentElement
 
 		if (substr($this->url, 0, 7) == 'mailto:')
 		{
-			$this->url = \String::encodeEmail($this->url);
+			$this->url = \StringUtil::encodeEmail($this->url);
 		}
 		else
 		{

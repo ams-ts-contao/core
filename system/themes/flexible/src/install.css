@@ -1,9 +1,9 @@
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 /* Body */
@@ -212,7 +212,7 @@ fieldset.tl_tbox,fieldset.tl_box {
 	margin-left:18px;
 	margin-right:18px;
 	padding:6px;
-	border:1px solid #ddd;
+	border:solid #ddd;
 	border-width:1px 0 0;
 }
 fieldset.tl_tbox > legend,fieldset.tl_box > legend {

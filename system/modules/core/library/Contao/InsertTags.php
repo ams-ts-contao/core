@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -23,6 +23,16 @@ namespace Contao;
  */
 class InsertTags extends \Controller
 {
+
+	/**
+	 * Make the constructor public
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+	}
+
+
 	/**
 	 * Replace insert tags with their values
 	 *
@@ -39,10 +49,10 @@ class InsertTags extends \Controller
 		// Preserve insert tags
 		if (\Config::get('disableInsertTags'))
 		{
-			return \String::restoreBasicEntities($strBuffer);
+			return \StringUtil::restoreBasicEntities($strBuffer);
 		}
 
-		$tags = preg_split('/\{\{(([^\{\}]*|(?R))*)\}\}/', $strBuffer, -1, PREG_SPLIT_DELIM_CAPTURE);
+		$tags = preg_split('/{{(([^{}]*|(?R))*)}}/', $strBuffer, -1, PREG_SPLIT_DELIM_CAPTURE);
 
 		$strBuffer = '';
 
@@ -106,11 +116,11 @@ class InsertTags extends \Controller
 					}
 					elseif ($objPage->outputFormat == 'xhtml')
 					{
-						$arrCache[$strTag] = '<span lang="' . $elements[1] . '" xml:lang="' . $elements[1] . '">';
+						$arrCache[$strTag] = '<span lang="' . specialchars($elements[1]) . '" xml:lang="' . specialchars($elements[1]) . '">';
 					}
 					else
 					{
-						$arrCache[$strTag] = $arrCache[$strTag] = '<span lang="' . $elements[1] . '">';
+						$arrCache[$strTag] = $arrCache[$strTag] = '<span lang="' . specialchars($elements[1]) . '">';
 					}
 					break;
 
@@ -129,7 +139,7 @@ class InsertTags extends \Controller
 						break;
 					}
 
-					$strEmail = \String::encodeEmail($elements[1]);
+					$strEmail = \StringUtil::encodeEmail($elements[1]);
 
 					// Replace the tag
 					switch (strtolower($elements[0]))
@@ -225,7 +235,7 @@ class InsertTags extends \Controller
 					if (FE_USER_LOGGED_IN)
 					{
 						$this->import('FrontendUser', 'User');
-						$value = $this->User->$elements[1];
+						$value = $this->User->{$elements[1]};
 
 						if ($value == '')
 						{
@@ -349,7 +359,7 @@ class InsertTags extends \Controller
 
 								if (strncasecmp($strUrl, 'mailto:', 7) === 0)
 								{
-									$strUrl = \String::encodeEmail($strUrl);
+									$strUrl = \StringUtil::encodeEmail($strUrl);
 								}
 								break;
 
@@ -366,31 +376,13 @@ class InsertTags extends \Controller
 
 								if ($objNext !== null)
 								{
-									$strForceLang = null;
-									$objNext->loadDetails();
-
-									// Check the target page language (see #4706)
-									if (\Config::get('addLanguageToUrl'))
-									{
-										$strForceLang = $objNext->language;
-									}
-
-									$strUrl = $this->generateFrontendUrl($objNext->row(), null, $strForceLang, true);
+									$strUrl = $objNext->getFrontendUrl();
 									break;
 								}
 								// DO NOT ADD A break; STATEMENT
 
 							default:
-								$strForceLang = null;
-								$objNextPage->loadDetails();
-
-								// Check the target page language (see #4706, #5465)
-								if (\Config::get('addLanguageToUrl'))
-								{
-									$strForceLang = $objNextPage->language;
-								}
-
-								$strUrl = $this->generateFrontendUrl($objNextPage->row(), null, $strForceLang, true);
+								$strUrl = $objNextPage->getFrontendUrl();
 								break;
 						}
 
@@ -403,7 +395,7 @@ class InsertTags extends \Controller
 					switch (strtolower($elements[0]))
 					{
 						case 'link':
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s"%s>%s</a>', $strUrl, specialchars($strTitle), $strTarget, specialchars($strName));
+							$arrCache[$strTag] = sprintf('<a href="%s" title="%s"%s>%s</a>', $strUrl, specialchars($strTitle), $strTarget, $strName);
 							break;
 
 						case 'link_open':
@@ -423,7 +415,7 @@ class InsertTags extends \Controller
 							break;
 
 						case 'link_name':
-							$arrCache[$strTag] = specialchars($strName);
+							$arrCache[$strTag] = $strName;
 							break;
 					}
 					break;
@@ -470,14 +462,14 @@ class InsertTags extends \Controller
 						break;
 					}
 
-					$strUrl = $this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && strlen($objArticle->alias)) ? $objArticle->alias : $objArticle->id));
+					/** @var \PageModel $objPid */
+					$strUrl = $objPid->getFrontendUrl('/articles/' . ((!\Config::get('disableAlias') && strlen($objArticle->alias)) ? $objArticle->alias : $objArticle->id));
 
 					// Replace the tag
 					switch (strtolower($elements[0]))
 					{
 						case 'article':
-							$strLink = specialchars($objArticle->title);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
+							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, specialchars($objArticle->title), $objArticle->title);
 							break;
 
 						case 'article_open':
@@ -504,14 +496,14 @@ class InsertTags extends \Controller
 						break;
 					}
 
-					$strUrl = $this->generateFrontendUrl($objJumpTo->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/' : '/items/') . ((!\Config::get('disableAlias') && $objFaq->alias != '') ? $objFaq->alias : $objFaq->id));
+					/** @var \PageModel $objJumpTo */
+					$strUrl = $objJumpTo->getFrontendUrl(((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/' : '/items/') . ((!\Config::get('disableAlias') && $objFaq->alias != '') ? $objFaq->alias : $objFaq->id));
 
 					// Replace the tag
 					switch (strtolower($elements[0]))
 					{
 						case 'faq':
-							$strLink = specialchars($objFaq->question);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
+							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, specialchars($objFaq->question), $objFaq->question);
 							break;
 
 						case 'faq_open':
@@ -548,21 +540,24 @@ class InsertTags extends \Controller
 					{
 						if (($objJumpTo = $objNews->getRelated('jumpTo')) !== null)
 						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row());
+							/** @var \PageModel $objJumpTo */
+							$strUrl = $objJumpTo->getFrontendUrl();
 						}
 					}
 					elseif ($objNews->source == 'article')
 					{
 						if (($objArticle = \ArticleModel::findByPk($objNews->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 						{
-							$strUrl = $this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id));
+							/** @var \PageModel $objPid */
+							$strUrl = $objPid->getFrontendUrl('/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id));
 						}
 					}
 					else
 					{
 						if (($objArchive = $objNews->getRelated('pid')) !== null && ($objJumpTo = $objArchive->getRelated('jumpTo')) !== null)
 						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/' : '/items/') . ((!\Config::get('disableAlias') && $objNews->alias != '') ? $objNews->alias : $objNews->id));
+							/** @var \PageModel $objJumpTo */
+							$strUrl = $objJumpTo->getFrontendUrl(((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/' : '/items/') . ((!\Config::get('disableAlias') && $objNews->alias != '') ? $objNews->alias : $objNews->id));
 						}
 					}
 
@@ -570,8 +565,7 @@ class InsertTags extends \Controller
 					switch (strtolower($elements[0]))
 					{
 						case 'news':
-							$strLink = specialchars($objNews->headline);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
+							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, specialchars($objNews->headline), $objNews->headline);
 							break;
 
 						case 'news_open':
@@ -608,21 +602,24 @@ class InsertTags extends \Controller
 					{
 						if (($objJumpTo = $objEvent->getRelated('jumpTo')) !== null)
 						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row());
+							/** @var \PageModel $objJumpTo */
+							$strUrl = $objJumpTo->getFrontendUrl();
 						}
 					}
 					elseif ($objEvent->source == 'article')
 					{
 						if (($objArticle = \ArticleModel::findByPk($objEvent->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 						{
-							$strUrl = $this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id));
+							/** @var \PageModel $objPid */
+							$strUrl = $objPid->getFrontendUrl('/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id));
 						}
 					}
 					else
 					{
 						if (($objCalendar = $objEvent->getRelated('pid')) !== null && ($objJumpTo = $objCalendar->getRelated('jumpTo')) !== null)
 						{
-							$strUrl = $this->generateFrontendUrl($objJumpTo->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/' : '/events/') . ((!\Config::get('disableAlias') && $objEvent->alias != '') ? $objEvent->alias : $objEvent->id));
+							/** @var \PageModel $objJumpTo */
+							$strUrl = $objJumpTo->getFrontendUrl(((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/' : '/events/') . ((!\Config::get('disableAlias') && $objEvent->alias != '') ? $objEvent->alias : $objEvent->id));
 						}
 					}
 
@@ -630,8 +627,7 @@ class InsertTags extends \Controller
 					switch (strtolower($elements[0]))
 					{
 						case 'event':
-							$strLink = specialchars($objEvent->title);
-							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, $strLink, $strLink);
+							$arrCache[$strTag] = sprintf('<a href="%s" title="%s">%s</a>', $strUrl, specialchars($objEvent->title), $objEvent->title);
 							break;
 
 						case 'event_open':
@@ -656,11 +652,11 @@ class InsertTags extends \Controller
 					{
 						if ($objPage->outputFormat == 'xhtml')
 						{
-							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
+							$arrCache[$strTag] = \StringUtil::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 						else
 						{
-							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
+							$arrCache[$strTag] = \StringUtil::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 					}
 					break;
@@ -673,11 +669,11 @@ class InsertTags extends \Controller
 					{
 						if ($objPage->outputFormat == 'xhtml')
 						{
-							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
+							$arrCache[$strTag] = \StringUtil::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 						else
 						{
-							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
+							$arrCache[$strTag] = \StringUtil::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 					}
 					break;
@@ -690,11 +686,11 @@ class InsertTags extends \Controller
 					{
 						if ($objPage->outputFormat == 'xhtml')
 						{
-							$arrCache[$strTag] = \String::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
+							$arrCache[$strTag] = \StringUtil::toXhtml($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 						else
 						{
-							$arrCache[$strTag] = \String::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
+							$arrCache[$strTag] = \StringUtil::toHtml5($this->replaceInsertTags($objTeaser->teaser, $blnCache));
 						}
 					}
 					break;
@@ -890,7 +886,7 @@ class InsertTags extends \Controller
 					{
 						if ($elements[1] != '')
 						{
-							$arrCache[$strTag] = '<acronym title="'. $elements[1] .'">';
+							$arrCache[$strTag] = '<acronym title="'. specialchars($elements[1]) .'">';
 						}
 						else
 						{
@@ -904,7 +900,7 @@ class InsertTags extends \Controller
 				case 'abbr':
 					if ($elements[1] != '')
 					{
-						$arrCache[$strTag] = '<abbr title="'. $elements[1] .'">';
+						$arrCache[$strTag] = '<abbr title="'. specialchars($elements[1]) .'">';
 					}
 					else
 					{
@@ -929,7 +925,7 @@ class InsertTags extends \Controller
 					if (strpos($elements[1], '?') !== false)
 					{
 						$arrChunks = explode('?', urldecode($elements[1]), 2);
-						$strSource = \String::decodeEntities($arrChunks[1]);
+						$strSource = \StringUtil::decodeEntities($arrChunks[1]);
 						$strSource = str_replace('[&]', '&', $strSource);
 						$arrParams = explode('&', $strSource);
 
@@ -948,7 +944,7 @@ class InsertTags extends \Controller
 									break;
 
 								case 'alt':
-									$alt = specialchars($value);
+									$alt = $value;
 									break;
 
 								case 'class':
@@ -1032,10 +1028,10 @@ class InsertTags extends \Controller
 							// Add the image dimensions
 							if (($imgSize = $objFile->imageSize) !== false)
 							{
-								$dimensions = ' width="' . $imgSize[0] . '" height="' . $imgSize[1] . '"';
+								$dimensions = ' width="' . specialchars($imgSize[0]) . '" height="' . specialchars($imgSize[1]) . '"';
 							}
 
-							$arrCache[$strTag] = '<img src="' . TL_FILES_URL . $src . '" ' . $dimensions . ' alt="' . $alt . '"' . (($class != '') ? ' class="' . $class . '"' : '') . (($objPage->outputFormat == 'xhtml') ? ' />' : '>');
+							$arrCache[$strTag] = '<img src="' . TL_FILES_URL . $src . '" ' . $dimensions . ' alt="' . specialchars($alt) . '"' . (($class != '') ? ' class="' . specialchars($class) . '"' : '') . (($objPage->outputFormat == 'xhtml') ? ' />' : '>');
 						}
 
 						// Picture
@@ -1054,14 +1050,14 @@ class InsertTags extends \Controller
 						{
 							if (strncmp($rel, 'lightbox', 8) !== 0 || $objPage->outputFormat == 'xhtml')
 							{
-								$attribute = ' rel="' . $rel . '"';
+								$attribute = ' rel="' . specialchars($rel) . '"';
 							}
 							else
 							{
-								$attribute = ' data-lightbox="' . substr($rel, 8) . '"';
+								$attribute = ' data-lightbox="' . specialchars(substr($rel, 8)) . '"';
 							}
 
-							$arrCache[$strTag] = '<a href="' . TL_FILES_URL . $strFile . '"' . (($alt != '') ? ' title="' . $alt . '"' : '') . $attribute . '>' . $arrCache[$strTag] . '</a>';
+							$arrCache[$strTag] = '<a href="' . TL_FILES_URL . $strFile . '"' . (($alt != '') ? ' title="' . specialchars($alt) . '"' : '') . $attribute . '>' . $arrCache[$strTag] . '</a>';
 						}
 					}
 					catch (\Exception $e)
@@ -1091,7 +1087,7 @@ class InsertTags extends \Controller
 					if (strpos($elements[1], '?') !== false)
 					{
 						$arrChunks = explode('?', urldecode($elements[1]));
-						$strSource = \String::decodeEntities($arrChunks[1]);
+						$strSource = \StringUtil::decodeEntities($arrChunks[1]);
 						$strSource = str_replace('[&]', '&', $strSource);
 						$arrParams = explode('&', $strSource);
 
@@ -1130,7 +1126,7 @@ class InsertTags extends \Controller
 						foreach ($GLOBALS['TL_HOOKS']['replaceInsertTags'] as $callback)
 						{
 							$this->import($callback[0]);
-							$varValue = $this->$callback[0]->$callback[1]($tag, $blnCache, $arrCache[$strTag], $flags, $tags, $arrCache, $_rit, $_cnt); // see #6672
+							$varValue = $this->{$callback[0]}->{$callback[1]}($tag, $blnCache, $arrCache[$strTag], $flags, $tags, $arrCache, $_rit, $_cnt); // see #6672
 
 							// Replace the tag and stop the loop
 							if ($varValue !== false)
@@ -1155,7 +1151,6 @@ class InsertTags extends \Controller
 					switch ($flag)
 					{
 						case 'addslashes':
-						case 'stripslashes':
 						case 'standardize':
 						case 'ampersand':
 						case 'specialchars':
@@ -1172,15 +1167,13 @@ class InsertTags extends \Controller
 						case 'rtrim':
 						case 'ltrim':
 						case 'utf8_romanize':
-						case 'strrev':
 						case 'urlencode':
 						case 'rawurlencode':
 							$arrCache[$strTag] = $flag($arrCache[$strTag]);
 							break;
 
 						case 'encodeEmail':
-						case 'decodeEntities':
-							$arrCache[$strTag] = \String::$flag($arrCache[$strTag]);
+							$arrCache[$strTag] = \StringUtil::$flag($arrCache[$strTag]);
 							break;
 
 						case 'number_format':
@@ -1195,6 +1188,30 @@ class InsertTags extends \Controller
 							$arrCache[$strTag] = \System::getReadableSize($arrCache[$strTag]);
 							break;
 
+						case 'flatten':
+							if (!is_array($arrCache[$strTag]))
+							{
+								break;
+							}
+
+							$it = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($arrCache[$strTag]));
+							$result = array();
+
+							foreach ($it as $leafValue)
+							{
+								$keys = array();
+
+								foreach (range(0, $it->getDepth()) as $depth)
+								{
+									$keys[] = $it->getSubIterator($depth)->key();
+								}
+
+								$result[] = implode('.', $keys) . ': ' . $leafValue;
+							}
+
+							$arrCache[$strTag] = implode(', ', $result);
+							break;
+
 						// HOOK: pass unknown flags to callback functions
 						default:
 							if (isset($GLOBALS['TL_HOOKS']['insertTagFlags']) && is_array($GLOBALS['TL_HOOKS']['insertTagFlags']))
@@ -1202,7 +1219,7 @@ class InsertTags extends \Controller
 								foreach ($GLOBALS['TL_HOOKS']['insertTagFlags'] as $callback)
 								{
 									$this->import($callback[0]);
-									$varValue = $this->$callback[0]->$callback[1]($flag, $tag, $arrCache[$strTag], $flags, $blnCache, $tags, $arrCache, $_rit, $_cnt); // see #5806
+									$varValue = $this->{$callback[0]}->{$callback[1]}($flag, $tag, $arrCache[$strTag], $flags, $blnCache, $tags, $arrCache, $_rit, $_cnt); // see #5806
 
 									// Replace the tag and stop the loop
 									if ($varValue !== false)
@@ -1224,6 +1241,6 @@ class InsertTags extends \Controller
 			$strBuffer .= $arrCache[$strTag];
 		}
 
-		return \String::restoreBasicEntities($strBuffer);
+		return \StringUtil::restoreBasicEntities($strBuffer);
 	}
 }

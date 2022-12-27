@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -152,6 +152,8 @@ class BackendUser extends \User
 				}
 
 				$session[$key][TL_REFERER_ID]['current'] = substr(\Environment::get('requestUri'), strlen(TL_PATH) + 1);
+
+				$this->Session->setData($session);
 			}
 		}
 
@@ -266,7 +268,7 @@ class BackendUser extends \User
 			// Check the subfolders (filemounts)
 			foreach ($this->filemounts as $folder)
 			{
-				if (preg_match('/^'. preg_quote($folder, '/') .'/i', $field[0]))
+				if (preg_match('/^' . preg_quote($folder, '/') . '(\/|$)/i', $field[0]))
 				{
 					return true;
 				}
@@ -579,7 +581,7 @@ class BackendUser extends \User
 			foreach ($GLOBALS['TL_HOOKS']['getUserNavigation'] as $callback)
 			{
 				$this->import($callback[0]);
-				$arrModules = $this->$callback[0]->$callback[1]($arrModules, $blnShowAll);
+				$arrModules = $this->{$callback[0]}->{$callback[1]}($arrModules, $blnShowAll);
 			}
 		}
 

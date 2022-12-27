@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 
@@ -165,6 +165,7 @@ ClassLoader::addClasses(array
 	'Contao\Session'                   => 'system/modules/core/library/Contao/Session.php',
 	'Contao\SortedIterator'            => 'system/modules/core/library/Contao/SortedIterator.php',
 	'Contao\String'                    => 'system/modules/core/library/Contao/String.php',
+	'Contao\StringUtil'                => 'system/modules/core/library/Contao/StringUtil.php',
 	'Contao\System'                    => 'system/modules/core/library/Contao/System.php',
 	'Contao\Template'                  => 'system/modules/core/library/Contao/Template.php',
 	'Contao\TemplateLoader'            => 'system/modules/core/library/Contao/TemplateLoader.php',

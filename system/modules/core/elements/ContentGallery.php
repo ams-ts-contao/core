@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -234,7 +234,7 @@ class ContentGallery extends \ContentElement
 					if (!empty($tmp) && is_array($tmp))
 					{
 						// Remove all values
-						$arrOrder = array_map(function(){}, array_flip($tmp));
+						$arrOrder = array_map(function () {}, array_flip($tmp));
 
 						// Move the matching elements to their position in $arrOrder
 						foreach ($images as $k=>$v)
@@ -276,8 +276,8 @@ class ContentGallery extends \ContentElement
 		$total = count($images);
 		$limit = $total;
 
-		// Pagination
-		if ($this->perPage > 0)
+		// Paginate the result of not randomly sorted (see #8033)
+		if ($this->perPage > 0 && $this->sortBy != 'random')
 		{
 			// Get the current page
 			$id = 'page_g' . $this->id;

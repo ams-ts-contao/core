@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -88,8 +88,8 @@ abstract class ModuleNews extends \Module
 
 		/** @var \FrontendTemplate|object $objTemplate */
 		$objTemplate = new \FrontendTemplate($this->news_template);
-
 		$objTemplate->setData($objArticle->row());
+
 		$objTemplate->class = (($objArticle->cssClass != '') ? ' ' . $objArticle->cssClass : '') . $strClass;
 		$objTemplate->newsHeadline = $objArticle->headline;
 		$objTemplate->subHeadline = $objArticle->subheadline;
@@ -100,26 +100,31 @@ abstract class ModuleNews extends \Module
 		$objTemplate->archive = $objArticle->getRelated('pid');
 		$objTemplate->count = $intCount; // see #5708
 		$objTemplate->text = '';
+		$objTemplate->hasText = false;
+		$objTemplate->hasTeaser = false;
 
 		// Clean the RTE output
 		if ($objArticle->teaser != '')
 		{
+			$objTemplate->hasTeaser = true;
+
 			if ($objPage->outputFormat == 'xhtml')
 			{
-				$objTemplate->teaser = \String::toXhtml($objArticle->teaser);
+				$objTemplate->teaser = \StringUtil::toXhtml($objArticle->teaser);
 			}
 			else
 			{
-				$objTemplate->teaser = \String::toHtml5($objArticle->teaser);
+				$objTemplate->teaser = \StringUtil::toHtml5($objArticle->teaser);
 			}
 
-			$objTemplate->teaser = \String::encodeEmail($objTemplate->teaser);
+			$objTemplate->teaser = \StringUtil::encodeEmail($objTemplate->teaser);
 		}
 
 		// Display the "read more" button for external/article links
 		if ($objArticle->source != 'default')
 		{
 			$objTemplate->text = true;
+			$objTemplate->hasText = true;
 		}
 
 		// Compile the news text
@@ -141,6 +146,11 @@ abstract class ModuleNews extends \Module
 				}
 
 				return $strText;
+			};
+
+			$objTemplate->hasText = function () use ($objArticle)
+			{
+				return \ContentModel::countPublishedByPidAndTable($objArticle->id, 'tl_news') > 0;
 			};
 		}
 
@@ -204,7 +214,7 @@ abstract class ModuleNews extends \Module
 			foreach ($GLOBALS['TL_HOOKS']['parseArticles'] as $callback)
 			{
 				$this->import($callback[0]);
-				$this->$callback[0]->$callback[1]($objTemplate, $objArticle->row(), $this);
+				$this->{$callback[0]}->{$callback[1]}($objTemplate, $objArticle->row(), $this);
 			}
 		}
 
@@ -282,7 +292,7 @@ abstract class ModuleNews extends \Module
 					break;
 
 				case 'comments':
-					if ($objArticle->noComments || $objArticle->source != 'default')
+					if ($objArticle->noComments || !in_array('comments', \ModuleLoader::getActive()) || $objArticle->source != 'default')
 					{
 						break;
 					}
@@ -324,7 +334,7 @@ abstract class ModuleNews extends \Module
 			case 'external':
 				if (substr($objItem->url, 0, 7) == 'mailto:')
 				{
-					self::$arrUrlCache[$strCacheKey] = \String::encodeEmail($objItem->url);
+					self::$arrUrlCache[$strCacheKey] = \StringUtil::encodeEmail($objItem->url);
 				}
 				else
 				{
@@ -336,7 +346,8 @@ abstract class ModuleNews extends \Module
 			case 'internal':
 				if (($objTarget = $objItem->getRelated('jumpTo')) !== null)
 				{
-					self::$arrUrlCache[$strCacheKey] = ampersand($this->generateFrontendUrl($objTarget->row()));
+					/** @var \PageModel $objTarget */
+					self::$arrUrlCache[$strCacheKey] = ampersand($objTarget->getFrontendUrl());
 				}
 				break;
 
@@ -344,7 +355,8 @@ abstract class ModuleNews extends \Module
 			case 'article':
 				if (($objArticle = \ArticleModel::findByPk($objItem->articleId, array('eager'=>true))) !== null && ($objPid = $objArticle->getRelated('pid')) !== null)
 				{
-					self::$arrUrlCache[$strCacheKey] = ampersand($this->generateFrontendUrl($objPid->row(), '/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
+					/** @var \PageModel $objPid */
+					self::$arrUrlCache[$strCacheKey] = ampersand($objPid->getFrontendUrl('/articles/' . ((!\Config::get('disableAlias') && $objArticle->alias != '') ? $objArticle->alias : $objArticle->id)));
 				}
 				break;
 		}
@@ -352,7 +364,7 @@ abstract class ModuleNews extends \Module
 		// Link to the default page
 		if (self::$arrUrlCache[$strCacheKey] === null)
 		{
-			$objPage = \PageModel::findByPk($objItem->getRelated('pid')->jumpTo);
+			$objPage = \PageModel::findWithDetails($objItem->getRelated('pid')->jumpTo);
 
 			if ($objPage === null)
 			{
@@ -360,7 +372,7 @@ abstract class ModuleNews extends \Module
 			}
 			else
 			{
-				self::$arrUrlCache[$strCacheKey] = ampersand($this->generateFrontendUrl($objPage->row(), ((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ?  '/' : '/items/') . ((!\Config::get('disableAlias') && $objItem->alias != '') ? $objItem->alias : $objItem->id)));
+				self::$arrUrlCache[$strCacheKey] = ampersand($objPage->getFrontendUrl(((\Config::get('useAutoItem') && !\Config::get('disableAlias')) ? '/' : '/items/') . ((!\Config::get('disableAlias') && $objItem->alias != '') ? $objItem->alias : $objItem->id)));
 			}
 
 			// Add the current archive parameter (news archive)
@@ -393,13 +405,13 @@ abstract class ModuleNews extends \Module
 							$this->generateNewsUrl($objArticle, $blnAddArchive),
 							specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['readMore'], $objArticle->headline), true),
 							$strLink,
-							($blnIsReadMore ? ' <span class="invisible">'.$objArticle->headline.'</span>' : ''));
+							($blnIsReadMore ? '<span class="invisible"> '.$objArticle->headline.'</span>' : ''));
 		}
 
 		// Encode e-mail addresses
 		if (substr($objArticle->url, 0, 7) == 'mailto:')
 		{
-			$strArticleUrl = \String::encodeEmail($objArticle->url);
+			$strArticleUrl = \StringUtil::encodeEmail($objArticle->url);
 		}
 
 		// Ampersand URIs

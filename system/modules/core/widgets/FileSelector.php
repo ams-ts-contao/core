@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -77,7 +77,24 @@ class FileSelector extends \Widget
 		// Root nodes (breadcrumb menu)
 		if (!empty($GLOBALS['TL_DCA']['tl_files']['list']['sorting']['root']))
 		{
-			$nodes = $this->eliminateNestedPaths($GLOBALS['TL_DCA']['tl_files']['list']['sorting']['root']);
+			$root = $GLOBALS['TL_DCA']['tl_files']['list']['sorting']['root'];
+
+			// Allow only those roots that are within the custom path
+			if ($this->path != '')
+			{
+				$root = array_intersect(preg_grep('/^' . preg_quote($this->path, '/') . '(?:$|\/)/', $root), $root);
+
+				if (empty($root))
+				{
+					// Set all folders inside the custom path as root nodes
+					$root = array_map(function ($el) { return $this->path . '/' . $el; }, scan(TL_ROOT . '/' . $this->path));
+
+					// Hide the breadcrumb
+					$GLOBALS['TL_DCA']['tl_file']['list']['sorting']['breadcrumb'] = '';
+				}
+			}
+
+			$nodes = $this->eliminateNestedPaths($root);
 
 			foreach ($nodes as $node)
 			{
@@ -164,7 +181,7 @@ class FileSelector extends \Widget
 					break;
 				}
 
-				$objField = $this->Database->prepare("SELECT " . $this->strField . " FROM " . $this->strTable . " WHERE id=?")
+				$objField = $this->Database->prepare("SELECT " . \Database::quoteIdentifier($this->strField) . " FROM " . $this->strTable . " WHERE id=?")
 										   ->limit(1)
 										   ->execute($this->strId);
 
@@ -177,7 +194,22 @@ class FileSelector extends \Widget
 
 		$this->convertValuesToPaths();
 
-		return $this->renderFiletree(TL_ROOT . '/' . $folder, ($level * 20), $mount);
+		$blnProtected = false;
+		$strPath = $folder;
+
+		// Check for public parent folders (see #213)
+		while ($strPath != '' && $strPath != '.')
+		{
+			if (file_exists(TL_ROOT . '/' . $strPath . '/.htaccess'))
+			{
+				$blnProtected = true;
+				break;
+			}
+
+			$strPath = dirname($strPath);
+		}
+
+		return $this->renderFiletree(TL_ROOT . '/' . $folder, ($level * 20), $mount, $blnProtected);
 	}
 
 
@@ -300,11 +332,11 @@ class FileSelector extends \Widget
 			}
 
 			$protected = ($blnProtected === true || array_search('.htaccess', $content) !== false) ? true : false;
-			$folderImg = ($blnIsOpen && $countFiles > 0) ? ($protected ? 'folderOP.gif' : 'folderO.gif') : ($protected ? 'folderCP.gif' : 'folderC.gif');
+			$folderImg = $protected ? 'folderCP.gif' : 'folderC.gif';
 			$folderLabel = ($this->files || $this->filesOnly) ? '<strong>'.specialchars(basename($currentFolder)).'</strong>' : specialchars(basename($currentFolder));
 
 			// Add the current folder
-			$return .= \Image::getHtml($folderImg, '', $folderAttribute).' <a href="' . $this->addToUrl('node='.$this->urlEncode($currentFolder)) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">'.$folderLabel.'</a></div> <div class="tl_right">';
+			$return .= \Image::getHtml($folderImg, '', $folderAttribute).' <a href="' . $this->addToUrl('fn='.$this->urlEncode($currentFolder)) . '" title="'.specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']).'">'.$folderLabel.'</a></div> <div class="tl_right">';
 
 			// Add a checkbox or radio button
 			if (!$this->filesOnly)
@@ -315,6 +347,7 @@ class FileSelector extends \Widget
 						$return .= '<input type="checkbox" name="'.$this->strName.'[]" id="'.$this->strName.'_'.md5($currentFolder).'" class="tl_tree_checkbox" value="'.specialchars($currentFolder).'" onfocus="Backend.getScrollOffset()"'.$this->optionChecked($currentFolder, $this->varValue).'>';
 						break;
 
+					default:
 					case 'radio':
 						$return .= '<input type="radio" name="'.$this->strName.'" id="'.$this->strName.'_'.md5($currentFolder).'" class="tl_tree_radio" value="'.specialchars($currentFolder).'" onfocus="Backend.getScrollOffset()"'.$this->optionChecked($currentFolder, $this->varValue).'>';
 						break;
@@ -339,7 +372,7 @@ class FileSelector extends \Widget
 
 			if ($this->extensions != '')
 			{
-				$allowedExtensions = trimsplit(',', $this->extensions);
+				$allowedExtensions = trimsplit(',', strtolower($this->extensions));
 			}
 
 			for ($h=0, $c=count($files); $h<$c; $h++)
@@ -357,19 +390,19 @@ class FileSelector extends \Widget
 				}
 
 				$return .= "\n    " . '<li class="tl_file toggle_select" onmouseover="Theme.hoverDiv(this, 1)" onmouseout="Theme.hoverDiv(this, 0)"><div class="tl_left" style="padding-left:'.($intMargin + $intSpacing).'px">';
+				$thumbnail .= ' <span class="tl_gray">('.$this->getReadableSize($objFile->filesize);
+
+				if ($objFile->width && $objFile->height)
+				{
+					$thumbnail .= ', '.$objFile->width.'x'.$objFile->height.' px';
+				}
+
+				$thumbnail .= ')</span>';
 
 				// Generate thumbnail
-				if ($objFile->isImage && $objFile->height > 0)
+				if ($objFile->isImage && $objFile->viewHeight > 0 && \Config::get('thumbnails') && ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth')))
 				{
-					$thumbnail .= ' <span class="tl_gray">(' . $objFile->width . 'x' . $objFile->height . ')</span>';
-
-					if (\Config::get('thumbnails') && ($objFile->isSvgImage || $objFile->height <= \Config::get('gdMaxImgHeight') && $objFile->width <= \Config::get('gdMaxImgWidth')))
-					{
-						$_height = ($objFile->height < 50) ? $objFile->height : 50;
-						$_width = (($objFile->width * $_height / $objFile->height) > 400) ? 90 : '';
-
-						$thumbnail .= '<br><img src="' . TL_FILES_URL . \Image::get($currentEncoded, $_width, $_height) . '" alt="" style="margin:0 0 2px -19px">';
-					}
+					$thumbnail .= '<br>' . \Image::getHtml(\Image::get($currentEncoded, 400, (($objFile->height && $objFile->height < 50) ? $objFile->height : 50), 'box'), '', 'style="margin:0 0 2px -19px"');
 				}
 
 				$return .= \Image::getHtml($objFile->icon, $objFile->mime).' '.utf8_convert_encoding(specialchars(basename($currentFile)), \Config::get('characterSet')).$thumbnail.'</div> <div class="tl_right">';
@@ -381,6 +414,7 @@ class FileSelector extends \Widget
 						$return .= '<input type="checkbox" name="'.$this->strName.'[]" id="'.$this->strName.'_'.md5($currentFile).'" class="tl_tree_checkbox" value="'.specialchars($currentFile).'" onfocus="Backend.getScrollOffset()"'.$this->optionChecked($currentFile, $this->varValue).'>';
 						break;
 
+					default:
 					case 'radio':
 						$return .= '<input type="radio" name="'.$this->strName.'" id="'.$this->strName.'_'.md5($currentFile).'" class="tl_tree_radio" value="'.specialchars($currentFile).'" onfocus="Backend.getScrollOffset()"'.$this->optionChecked($currentFile, $this->varValue).'>';
 						break;
@@ -419,13 +453,19 @@ class FileSelector extends \Widget
 		}
 
 		// TinyMCE will pass the path instead of the ID
-		if (strncmp($this->varValue[0], \Config::get('uploadPath') . '/', strlen(\Config::get('uploadPath')) + 1) === 0)
+		if (strpos($this->varValue[0], \Config::get('uploadPath') . '/') === 0)
 		{
 			return;
 		}
 
 		// Ignore the numeric IDs when in switch mode (TinyMCE)
 		if (\Input::get('switch'))
+		{
+			return;
+		}
+
+		// Return if the custom path is not within the upload path (see #8562)
+		if ($this->path != '' && strpos($this->path, \Config::get('uploadPath') . '/') !== 0)
 		{
 			return;
 		}

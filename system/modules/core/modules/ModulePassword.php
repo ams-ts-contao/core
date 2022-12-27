@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -176,7 +176,7 @@ class ModulePassword extends \Module
 	 */
 	protected function setNewPassword()
 	{
-		$objMember = \MemberModel::findByActivation(\Input::get('token'));
+		$objMember = \MemberModel::findOneByActivation(\Input::get('token'));
 
 		if ($objMember === null || $objMember->login == '')
 		{
@@ -191,6 +191,15 @@ class ModulePassword extends \Module
 
 			return;
 		}
+
+		$strTable = $objMember->getTable();
+
+		// Initialize the versioning (see #8301)
+		$objVersions = new \Versions($strTable, $objMember->id);
+		$objVersions->setUsername($objMember->username);
+		$objVersions->setUserId(0);
+		$objVersions->setEditUrl('contao/main.php?do=member&act=edit&id=%s&rt=1');
+		$objVersions->initialize();
 
 		// Define the form field
 		$arrField = $GLOBALS['TL_DCA']['tl_member']['fields']['password'];
@@ -222,12 +231,18 @@ class ModulePassword extends \Module
 			if (!$objWidget->hasErrors())
 			{
 				$this->Session->set('setPasswordToken', '');
-				array_pop($_SESSION['TL_CONFIRM']);
 
 				$objMember->tstamp = time();
 				$objMember->activation = '';
+				$objMember->locked = 0; // see #8545
 				$objMember->password = $objWidget->value;
 				$objMember->save();
+
+				// Create a new version
+				if ($GLOBALS['TL_DCA'][$strTable]['config']['enableVersioning'])
+				{
+					$objVersions->create();
+				}
 
 				// HOOK: set new password callback
 				if (isset($GLOBALS['TL_HOOKS']['setNewPassword']) && is_array($GLOBALS['TL_HOOKS']['setNewPassword']))
@@ -235,14 +250,19 @@ class ModulePassword extends \Module
 					foreach ($GLOBALS['TL_HOOKS']['setNewPassword'] as $callback)
 					{
 						$this->import($callback[0]);
-						$this->$callback[0]->$callback[1]($objMember, $objWidget->value, $this);
+						$this->{$callback[0]}->{$callback[1]}($objMember, $objWidget->value, $this);
 					}
 				}
+
+				// Invalidate the user sessions if the password changes
+				$this->Database->prepare("DELETE FROM tl_session WHERE name='FE_USER_AUTH' AND pid=? AND sessionID!=?")
+							   ->execute($objMember->id, session_id());
 
 				// Redirect to the jumpTo page
 				if (($objTarget = $this->objModel->getRelated('reg_jumpTo')) !== null)
 				{
-					$this->redirect($this->generateFrontendUrl($objTarget->row()));
+					/** @var \PageModel $objTarget */
+					$this->redirect($objTarget->getFrontendUrl());
 				}
 
 				// Confirm
@@ -295,10 +315,10 @@ class ModulePassword extends \Module
 		$objEmail->from = $GLOBALS['TL_ADMIN_EMAIL'];
 		$objEmail->fromName = $GLOBALS['TL_ADMIN_NAME'];
 		$objEmail->subject = sprintf($GLOBALS['TL_LANG']['MSC']['passwordSubject'], \Idna::decode(\Environment::get('host')));
-		$objEmail->text = \String::parseSimpleTokens($this->reg_password, $arrData);
+		$objEmail->text = \StringUtil::parseSimpleTokens($this->reg_password, $arrData);
 		$objEmail->sendTo($objMember->email);
 
-		$this->log('A new password has been requested for user ID ' . $objMember->id . ' (' . $objMember->email . ')', __METHOD__, TL_ACCESS);
+		$this->log('A new password has been requested for user ID ' . $objMember->id . ' (' . \Idna::decodeEmail($objMember->email) . ')', __METHOD__, TL_ACCESS);
 
 		// Check whether there is a jumpTo page
 		if (($objJumpTo = $this->objModel->getRelated('jumpTo')) !== null)

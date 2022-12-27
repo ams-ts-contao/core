@@ -1,11 +1,11 @@
 <?php
 
-/**
- * Contao Open Source CMS
+/*
+ * This file is part of Contao.
  *
- * Copyright (c) 2005-2015 Leo Feyer
+ * (c) Leo Feyer
  *
- * @license LGPL-3.0+
+ * @license LGPL-3.0-or-later
  */
 
 namespace Contao;
@@ -90,6 +90,14 @@ class ModuleChangePassword extends \Module
 		$strFields = '';
 		$doNotSubmit = false;
 		$objMember = \MemberModel::findByPk($this->User->id);
+		$strTable = $objMember->getTable();
+
+		// Initialize the versioning (see #8301)
+		$objVersions = new \Versions($strTable, $objMember->id);
+		$objVersions->setUsername($objMember->username);
+		$objVersions->setUserId(0);
+		$objVersions->setEditUrl('contao/main.php?do=member&act=edit&id=%s&rt=1');
+		$objVersions->initialize();
 
 		/** @var \FormTextField $objOldPassword */
 		$objOldPassword = null;
@@ -136,24 +144,11 @@ class ModuleChangePassword extends \Module
 				$objWidget->validate();
 
 				// Validate the old password
-				if ($strKey == 'oldPassword')
+				if ($strKey == 'oldPassword' && !password_verify($objWidget->value, $objMember->password))
 				{
-					if (\Encryption::test($objMember->password))
-					{
-						$blnAuthenticated = \Encryption::verify($objWidget->value, $objMember->password);
-					}
-					else
-					{
-						list($strPassword, $strSalt) = explode(':', $objMember->password);
-						$blnAuthenticated = ($strSalt == '') ? ($strPassword === sha1($objWidget->value)) : ($strPassword === sha1($strSalt . $objWidget->value));
-					}
-
-					if (!$blnAuthenticated)
-					{
-						$objWidget->value = '';
-						$objWidget->addError($GLOBALS['TL_LANG']['MSC']['oldPasswordWrong']);
-						sleep(2); // Wait 2 seconds while brute forcing :)
-					}
+					$objWidget->value = '';
+					$objWidget->addError($GLOBALS['TL_LANG']['MSC']['oldPasswordWrong']);
+					sleep(2); // Wait 2 seconds while brute forcing :)
 				}
 
 				if ($objWidget->hasErrors())
@@ -175,15 +170,25 @@ class ModuleChangePassword extends \Module
 			$objMember->password = $objNewPassword->value;
 			$objMember->save();
 
+			// Create a new version
+			if ($GLOBALS['TL_DCA'][$strTable]['config']['enableVersioning'])
+			{
+				$objVersions->create();
+			}
+
 			// HOOK: set new password callback
 			if (isset($GLOBALS['TL_HOOKS']['setNewPassword']) && is_array($GLOBALS['TL_HOOKS']['setNewPassword']))
 			{
 				foreach ($GLOBALS['TL_HOOKS']['setNewPassword'] as $callback)
 				{
 					$this->import($callback[0]);
-					$this->$callback[0]->$callback[1]($objMember, $objNewPassword->value, $this);
+					$this->{$callback[0]}->{$callback[1]}($objMember, $objNewPassword->value, $this);
 				}
 			}
+
+			// Invalidate the user sessions if the password changes
+			$this->Database->prepare("DELETE FROM tl_session WHERE name='FE_USER_AUTH' AND pid=? AND sessionID!=?")
+						   ->execute($objMember->id, session_id());
 
 			// Check whether there is a jumpTo page
 			if (($objJumpTo = $this->objModel->getRelated('jumpTo')) !== null)
@@ -191,6 +196,7 @@ class ModuleChangePassword extends \Module
 				$this->jumpToOrReload($objJumpTo->row());
 			}
 
+			\Message::addConfirmation($GLOBALS['TL_LANG']['MSC']['newPasswordSet']);
 			$this->reload();
 		}
 
